@@ -9,3 +9,6 @@ configure config.sub config.guess aclocal.m4 ltmain.sh Makefile.in: configure.ac
 
 override_dh_auto_configure: configure
 	dh_auto_configure
+
+override_dh_install:
+	dh_install -X"*.la" -X"*.a"
