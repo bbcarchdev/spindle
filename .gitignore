@@ -15,12 +15,6 @@ core
 Makefile.in
 Makefile
 autom4te.cache
-/twine-writer
-/*.rdf
-/*.trig
-/*.ttl
-/*.nt
-/*.nq
 /aclocal.m4
 /config.guess
 /config.h
@@ -35,4 +29,4 @@ autom4te.cache
 /ltmain.sh
 /missing
 /stamp-h1
-/twine.conf
+
