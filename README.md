@@ -7,15 +7,15 @@ found, it generates "proxy" entities within a named graph that connect
 together all of the co-references for a given source entity, and as more
 co-references are discovered, they're also added to the proxy entity.
 
-For example, if graphs are processed which assert that <A> owl:sameAs <B>,
-<B> owl:sameAs <C> and <C> owl:sameAs <D>, the end result is the following:
+For example, if graphs are processed which assert that `<A> owl:sameAs <B>`,
+`<B> owl:sameAs <C>` and `<C> owl:sameAs <D>`, the end result is the following:
 
-<http://spindle.example.com/> {
+	<http://spindle.example.com/> {
 
-  <http://spindle.example.com/abc123#id>
-    owl:sameAs <A>, <B>, <C>, <D> .
+  		<http://spindle.example.com/abc123#id>
+    	owl:sameAs <A>, <B>, <C>, <D> .
 
-}
+	}
 
 By collecting together the co-references in this fashion, it becomes
 possible to deal with a unified view (stored as quads internally) of
