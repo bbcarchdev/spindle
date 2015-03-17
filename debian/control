@@ -9,3 +9,8 @@ Package: twine-processor-spindle
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}, libuuid1, libtwine, liburi, libsql, libsparqlclient
 Description: Linked Open Data aggregator engine for Twine
+
+Package: quilt-engine-spindle
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, libuuid1, libquilt, liburi, libsql, libsparqlclient
+Description: Quilt engine for Spindle-processed graphs
