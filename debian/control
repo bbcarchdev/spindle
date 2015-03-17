@@ -3,7 +3,7 @@ Section: misc
 Priority: optional
 Maintainer: Mo McRoberts <mo.mcroberts@bbc.co.uk>
 Standards-Version: 3.9.3
-Build-Depends: debhelper (>= 8.0.0), autoconf, automake, libtool, libltdl-dev, libtwine-dev, uuid-dev, liburi-dev, libsql-dev, libsparqlclient-dev
+Build-Depends: debhelper (>= 8.0.0), autoconf, automake, libtool, libltdl-dev, libtwine-dev, uuid-dev, liburi-dev, libsql-dev, libsparqlclient-dev, libquilt-dev
 
 Package: twine-processor-spindle
 Architecture: any
