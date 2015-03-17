@@ -27,9 +27,7 @@ EXTRA_DIST = README.md LICENSE-2.0
 AM_CPPFLAGS = @AM_CPPFLAGS@ \
 	-I$(top_builddir)/libs3client -I$(top_srcdir)/libs3client
 
-moduledir = $(libdir)/twine
-
-module_LTLIBRARIES = spindle.la
+twinemodule_LTLIBRARIES = spindle.la
 
 spindle_la_SOURCES = p_spindle.h \
 	module.c preproc.c postproc.c proxy.c refset.c cache.c classes.c props.c \
@@ -39,4 +37,4 @@ spindle_la_LDFLAGS = -no-undefined -module -avoid-version
 
 spindle_la_LIBADD = $(top_builddir)/libs3client/libs3client.la
 
-dist_module_DATA = rulebase.ttl
+dist_twinemodule_DATA = rulebase.ttl
