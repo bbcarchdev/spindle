@@ -20,6 +20,6 @@ ACLOCAL_AMFLAGS = -I m4
 
 DIST_SUBDIRS = m4 libs3client
 
-SUBDIRS = libs3client twine
+SUBDIRS = libs3client twine quilt
 
 EXTRA_DIST = LICENSE-2.0

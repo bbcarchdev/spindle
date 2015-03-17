@@ -16,20 +16,15 @@
 ##  See the License for the specific language governing permissions and
 ##  limitations under the License.
 
-EXTRA_DIST = README.md
-
-AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ \
+AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBQUILT_CPPFLAGS@ \
 	-I$(top_builddir)/libs3client -I$(top_srcdir)/libs3client
 
-twinemodule_LTLIBRARIES = spindle.la
+quiltmodule_LTLIBRARIES = spindle.la
 
 spindle_la_SOURCES = p_spindle.h \
-	module.c preproc.c postproc.c proxy.c refset.c cache.c classes.c props.c \
-	strset.c rulebase.c doc.c licenses.c
+	module.c request.c home.c index.c item.c
 
 spindle_la_LDFLAGS = -no-undefined -module -avoid-version
 
 spindle_la_LIBADD = $(top_builddir)/libs3client/libs3client.la \
-	@LIBTWINE_LOCAL_LIBS@ @LIBTWINE_LIBS@
-
-dist_twinemodule_DATA = rulebase.ttl
+	@LIBQUILT_LOCAL_LIBS@ @LIBQUILT_LIBS@
