@@ -16,10 +16,19 @@
 ##  See the License for the specific language governing permissions and
 ##  limitations under the License.
 
-ACLOCAL_AMFLAGS = -I m4
+EXTRA_DIST = README.md
 
-DIST_SUBDIRS = m4 libs3client
+AM_CPPFLAGS = @AM_CPPFLAGS@ \
+	-I$(top_builddir)/libs3client -I$(top_srcdir)/libs3client
 
-SUBDIRS = libs3client twine
+twinemodule_LTLIBRARIES = spindle.la
 
-EXTRA_DIST = LICENSE-2.0
+spindle_la_SOURCES = p_spindle.h \
+	module.c preproc.c postproc.c proxy.c refset.c cache.c classes.c props.c \
+	strset.c rulebase.c doc.c licenses.c
+
+spindle_la_LDFLAGS = -no-undefined -module -avoid-version
+
+spindle_la_LIBADD = $(top_builddir)/libs3client/libs3client.la
+
+dist_twinemodule_DATA = rulebase.ttl

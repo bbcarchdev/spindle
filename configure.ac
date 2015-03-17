@@ -48,6 +48,7 @@ BT_DEFINE_PREFIX
 AC_CONFIG_FILES([Makefile
 m4/Makefile
 libs3client/Makefile
+twine/Makefile
 ])
 
 AC_OUTPUT
