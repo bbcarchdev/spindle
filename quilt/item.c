@@ -31,6 +31,7 @@ struct data_struct
 	size_t pos;
 };
 
+static int spindle_item_post_(QUILTREQ *request);
 static size_t spindle_s3_write_(char *ptr, size_t size, size_t nemb, void *userdata);
 
 int
@@ -133,8 +134,7 @@ spindle_item(QUILTREQ *request)
 		return 404;
 	}
 	free(query);
-	/* Return 200, rather than 0, to auto-serialise the model */
-	return 200;
+	return spindle_item_post_(request);
 }
 
 /* Fetch an item by retrieving triples or quads from an S3 bucket */
@@ -201,6 +201,33 @@ spindle_item_s3(QUILTREQ *request)
 	}
 	free(data.buf);
 	s3_request_destroy(req);
+	return spindle_item_post_(request);
+}
+
+/* Fetch additional information about an item */
+static int
+spindle_item_post_(QUILTREQ *request)
+{
+	SPARQL *sparql;
+	
+	sparql = quilt_sparql();
+	
+	if(sparql_queryf_model(sparql, request->model, "SELECT DISTINCT ?s ?p ?o ?g WHERE {\n"
+						   "  GRAPH ?g {\n"
+						   "    ?s <http://xmlns.com/foaf/0.1/topic> <%s#id>\n"
+						   "  }"
+						   "  GRAPH ?g {\n"
+						   "    ?s ?p ?o\n"
+						   "  }\n"
+						   "  FILTER regex(str(?g), \"^%s\", \"i\")\n"
+						   "}",
+						   request->subject, request->base))
+	{
+		quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": failed to retrieve related items\n");
+		return 500;
+	}
+	
+	/* Return 200, rather than 0, to auto-serialise the model */
 	return 200;
 }
 
