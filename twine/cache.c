@@ -32,6 +32,7 @@ struct s3_upload_struct
 
 static int spindle_cache_init_(SPINDLECACHE *data, SPINDLE *spindle, const char *localname);
 static int spindle_cache_cleanup_(SPINDLECACHE *data);
+static int spindle_cache_cleanup_literalset_(struct spindle_literalset_struct *set);
 static int spindle_cache_store_(SPINDLECACHE *data);
 static int spindle_cache_store_s3_(SPINDLECACHE *data);
 static int spindle_cache_source_(SPINDLECACHE *data);
@@ -254,6 +255,8 @@ spindle_cache_init_(SPINDLECACHE *data, SPINDLE *spindle, const char *localname)
 static int
 spindle_cache_cleanup_(SPINDLECACHE *data)
 {
+	spindle_cache_cleanup_literalset_(&(data->titleset));
+	spindle_cache_cleanup_literalset_(&(data->descset));
 	if(data->doc)
 	{
 		librdf_free_node(data->doc);
@@ -285,6 +288,22 @@ spindle_cache_cleanup_(SPINDLECACHE *data)
 	free(data->graphname);
 	return 0;
 }
+
+/* Free resources used by a literal set */
+static int
+spindle_cache_cleanup_literalset_(struct spindle_literalset_struct *set)
+{
+	size_t c;
+
+	for(c = 0; c < set->nliterals; c++)
+	{
+		free(set->literals[c].lang);
+		free(set->literals[c].str);
+	}
+	free(set->literals);
+	return 0;
+}
+
 
 /* Obtain cached source data for processing */
 static int
@@ -545,6 +564,17 @@ spindle_cache_store_(SPINDLECACHE *data)
 	char *triples;
 	size_t triplen;
 
+#if SPINDLE_DB_INDEX
+	if(data->spindle->db)
+	{
+		if(spindle_db_cache_store(data))
+		{
+			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to update index database\n");
+			return -1;
+		}
+		return 0;
+	}
+#endif
 	/* First update the root graph */
 
 	/* Note that our owl:sameAs statements take the form

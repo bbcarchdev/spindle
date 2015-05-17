@@ -27,7 +27,11 @@ static SPINDLE spindle;
 
 static int spindle_init_(SPINDLE *spindle);
 static int spindle_s3_init_(SPINDLE *spindle);
+static int spindle_db_init_(SPINDLE *spindle);
 static int spindle_cleanup_(SPINDLE *spindle);
+static int spindle_db_querylog_(SQL *restrict sql, const char *query);
+static int spindle_db_noticelog_(SQL *restrict sql, const char *notice);
+static int spindle_db_errorlog_(SQL *restrict sql, const char *sqlstate, const char *message);
 
 /* Twine plug-in entry-point */
 int
@@ -129,6 +133,10 @@ spindle_init_(SPINDLE *spindle)
 	{
 		return -1;
 	}
+	if(spindle_db_init_(spindle))
+	{
+		return -1;
+	}
 	return 0;
 }
 
@@ -167,6 +175,61 @@ spindle_s3_init_(SPINDLE *spindle)
 		free(t);
 	}
 	spindle->s3_verbose = twine_config_get_bool("s3:verbose", 0);
+	return 0;
+}
+
+static int
+spindle_db_init_(SPINDLE *spindle)
+{
+	char *t;
+
+	t = twine_config_geta("spindle:db", NULL);
+	if(!t)
+	{
+		return 0;
+	}
+	spindle->db = sql_connect(t);
+	if(!spindle->db)
+	{
+		twine_logf(LOG_CRIT, "failed to connect to database <%s>\n", t);
+		free(t);
+		return -1;
+	}
+	free(t);
+	sql_set_querylog(spindle->db, spindle_db_querylog_);
+	sql_set_errorlog(spindle->db, spindle_db_errorlog_);
+	sql_set_noticelog(spindle->db, spindle_db_noticelog_);
+	if(spindle_db_schema_update(spindle))
+	{
+		return -1;
+	}
+	return 0;
+}
+
+static int
+spindle_db_querylog_(SQL *restrict sql, const char *query)
+{
+	(void) sql;
+
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": SQL: %s\n", query);
+	return 0;
+}
+
+static int
+spindle_db_noticelog_(SQL *restrict sql, const char *notice)
+{
+	(void) sql;
+
+	twine_logf(LOG_NOTICE, PLUGIN_NAME ": %s\n", notice);
+	return 0;
+}
+
+static int
+spindle_db_errorlog_(SQL *restrict sql, const char *sqlstate, const char *message)
+{
+	(void) sql;
+
+	twine_logf(LOG_ERR, PLUGIN_NAME ": [%s] %s\n", sqlstate, message);
 	return 0;
 }
 
@@ -211,6 +274,10 @@ spindle_cleanup_(SPINDLE *spindle)
 		}
 		twine_rdf_model_destroy(spindle->graphcache[c].model);
 		free(spindle->graphcache[c].uri);
+	}
+	if(spindle->db)
+	{
+		sql_disconnect(spindle->db);
 	}
 	free(spindle->graphcache);
 	free(spindle->titlepred);

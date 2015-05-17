@@ -78,8 +78,14 @@ spindle_proxy_locate(SPINDLE *spindle, const char *uri)
 	librdf_node *node;
 	librdf_uri *ruri;
 
+#if SPINDLE_DB_PROXIES
+	if(spindle->db)
+	{
+		return spindle_db_proxy_locate(spindle, uri);
+	}
+#endif
 	/* TODO: if uri is within our namespace and is valid, return it as-is */
-	errno = 0;	
+	errno = 0;
 	localname = NULL;
 	l = strlen(uri) + strlen(spindle->root) + 127;
 	qbuf = (char *) calloc(1, l + 1);

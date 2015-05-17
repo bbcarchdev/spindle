@@ -41,6 +41,9 @@ BT_REQUIRE_LIBUUID
 BT_REQUIRE_LIBURI
 BT_REQUIRE_LIBSQL
 
+BT_DEFINE_PATH([TWINEMODULEDIR], [twinemoduledir], [Twine module path])
+BT_DEFINE_PATH([QUILTMODULEDIR], [quiltmoduledir], [Quilt module path])
+
 use_docbook_html5=yes
 BT_BUILD_DOCS
 

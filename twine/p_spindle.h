@@ -30,6 +30,7 @@
 # include <uuid/uuid.h>
 # include <liburi.h>
 # include <libs3client.h>
+# include <libsql.h>
 
 # include "libtwine.h"
 
@@ -41,6 +42,9 @@
 
 /* The number of entries in the graph cache */
 # define SPINDLE_GRAPHCACHE_SIZE        16
+
+# define SPINDLE_DB_INDEX               1
+# define SPINDLE_DB_INDEX_VERSION       1
 
 /* Flags on strsets */
 # define SF_NONE                        0
@@ -59,6 +63,7 @@
 # define NS_SPINDLE                     "http://bbcarchdev.github.io/ns/spindle#"
 # define NS_OLO                         "http://purl.org/ontology/olo/core#"
 # define NS_DCTERMS                     "http://purl.org/dc/terms/"
+# define NS_GEO                         "http://www.w3.org/2003/01/geo/wgs84_pos#"
 
 typedef struct spindle_context_struct SPINDLE;
 typedef struct spindle_cache_struct SPINDLECACHE;
@@ -71,6 +76,8 @@ struct spindle_context_struct
 	char *root;
 	/* The SPARQL connection handle from Twine */
 	SPARQL *sparql;
+	/* The RDBMS connection */
+	SQL *db;
 	/* rdf:type */
 	librdf_node *rdftype;
 	/* owl:sameAs */
@@ -172,6 +179,19 @@ struct spindle_predicatematch_struct
 	int prominence;
 };
 
+/* A set of literal strings */
+struct spindle_literalset_struct
+{
+	struct spindle_literalstring_struct *literals;
+	size_t nliterals;
+};
+
+struct spindle_literalstring_struct
+{
+	char *lang;
+	char *str;
+};
+
 struct spindle_coref_struct
 {
 	char *left;
@@ -238,6 +258,12 @@ struct spindle_cache_struct
 	librdf_node *sameas;
 	/* The proxy's prominence score */
 	int score;
+	/* Copies of literal predicates we need to keep */
+	struct spindle_literalset_struct titleset;
+	struct spindle_literalset_struct descset;
+	/* Geographical co-ordinates */
+	int has_geo;
+	double lat, lon;
 };
 
 struct spindle_graphcache_struct
@@ -327,5 +353,9 @@ int spindle_doc_apply(SPINDLECACHE *cache);
 /* Relay information about licensing */
 int spindle_license_init(SPINDLE *spindle);
 int spindle_license_apply(SPINDLECACHE *spindle);
+
+/* SQL index */
+int spindle_db_schema_update(SPINDLE *spindle);
+int spindle_db_cache_store(SPINDLECACHE *data);
 
 #endif /*!P_SPINDLE_H_*/

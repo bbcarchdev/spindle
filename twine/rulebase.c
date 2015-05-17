@@ -76,7 +76,7 @@ spindle_rulebase_init(SPINDLE *spindle)
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create new RDF model\n");
 		return -1;
 	}
-	rulebase = twine_config_geta("spindle:rulebase", LIBDIR "/" PACKAGE_TARNAME "/rulebase.ttl");
+	rulebase = twine_config_geta("spindle:rulebase", TWINEMODULEDIR "/rulebase.ttl");
 	buf = spindle_loadfile_(rulebase);
 	if(!buf)
 	{

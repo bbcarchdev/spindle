@@ -23,14 +23,6 @@
 
 #include "p_spindle.h"
 
-/* A single entry in a list of multi-lingual literals */
-struct literal_struct
-{
-	const char *lang;
-	librdf_node *node;
-	int priority;
-};
-
 /* The matching state for a single property; 'map' points to the predicate
  * mapping data (defined above).
  *
@@ -53,6 +45,14 @@ struct propmatch_struct
 	size_t nliterals;
 };
 
+/* A single entry in a list of multi-lingual literals */
+struct literal_struct
+{
+	const char *lang;
+	librdf_node *node;
+	int priority;
+};
+
 /* Current property matching state data */
 struct propdata_struct
 {
@@ -66,6 +66,11 @@ struct propdata_struct
 	librdf_model *rootmodel;
 	struct spindle_predicatemap_struct *maps;
 	struct propmatch_struct *matches;
+	/* Property-matching structures for specific cached predicates */
+	struct propmatch_struct *titlematch;
+	struct propmatch_struct *descmatch;
+	int has_geo;
+	double lat, lon;
 };
 
 static int spindle_prop_init_(struct propdata_struct *data, SPINDLECACHE *cache);
@@ -78,6 +83,7 @@ static int spindle_prop_candidate_literal_(struct propdata_struct *data, struct 
 static int spindle_prop_candidate_lang_(struct propdata_struct *data, struct propmatch_struct *match, struct spindle_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj, const char *lang);
 
 static int spindle_prop_apply_(struct propdata_struct *data);
+static int spindle_prop_copystrings_(struct spindle_literalset_struct *dest, struct propmatch_struct *source);
 
 int
 spindle_prop_update(SPINDLECACHE *cache)
@@ -97,6 +103,21 @@ spindle_prop_update(SPINDLECACHE *cache)
 	if(!r)
 	{
 		r = spindle_prop_apply_(&data);
+	}
+	if(!r)
+	{
+		/* Take the titlematch and descmatch matching sets and copy their
+		 * literals into the spindle->titleset and spindle->descset
+		 * string-sets for further reuse.
+		 */
+		spindle_prop_copystrings_(&(cache->titleset), data.titlematch);
+		spindle_prop_copystrings_(&(cache->descset), data.descmatch);
+		if(data.has_geo == 3)
+		{
+			cache->has_geo = 1;
+			cache->lat = data.lat;
+			cache->lon = data.lon;
+		}
 	}
 	if(!r)
 	{
@@ -237,6 +258,8 @@ spindle_prop_apply_(struct propdata_struct *data)
 	size_t c, d;
 	librdf_node *node;
 	librdf_statement *base, *pst, *lpst;
+	librdf_uri *uri;
+	const char *uristr;
 	int r;
 
 	/* Generate a model containing the new data for the proxy */
@@ -254,6 +277,14 @@ spindle_prop_apply_(struct propdata_struct *data)
 	r = 0;
 	for(c = 0; !r && data->matches[c].map && data->matches[c].map->target; c++)
 	{
+		if(!strcmp(data->matches[c].map->target, NS_RDFS "label"))
+		{
+			data->titlematch = &(data->matches[c]);
+		}
+		else if(!strcmp(data->matches[c].map->target, NS_DCTERMS "description"))
+		{
+			data->descmatch = &(data->matches[c]);
+		}
 		data->cache->score -= data->matches[c].prominence;
 		pst = twine_rdf_st_clone(base);
 		if(!pst)
@@ -271,7 +302,31 @@ spindle_prop_apply_(struct propdata_struct *data)
 		librdf_statement_set_predicate(pst, node);		
 		if(data->matches[c].resource)
 		{
-			twine_logf(LOG_DEBUG, "==> Property <%s>\n", data->matches[c].map->target);		
+			twine_logf(LOG_DEBUG, "==> Property <%s>\n", data->matches[c].map->target);
+			if(!strcmp(data->matches[c].map->target, NS_GEO "long"))
+			{
+				if((uri = librdf_node_get_literal_value_datatype_uri(data->matches[c].resource)))
+				{
+					if((uristr = (const char *) librdf_uri_as_string(uri)) &&
+					   !strcmp(uristr, NS_XSD "decimal"))
+					{
+						data->has_geo |= 1;
+						data->lon = strtod((const char *) librdf_node_get_literal_value(data->matches[c].resource), NULL);
+					}
+				}
+			}
+			else if(!strcmp(data->matches[c].map->target, NS_GEO "lat"))
+			{
+				if((uri = librdf_node_get_literal_value_datatype_uri(data->matches[c].resource)))
+				{
+					if((uristr = (const char *) librdf_uri_as_string(uri)) &&
+					   !strcmp(uristr, NS_XSD "decimal"))
+					{
+						data->has_geo |= 2;
+						data->lat = strtod((const char *) librdf_node_get_literal_value(data->matches[c].resource), NULL);
+					}
+				}
+			}
 			librdf_statement_set_object(pst, data->matches[c].resource);
 			data->matches[c].resource = NULL;
 			if(twine_rdf_model_add_st(data->proxymodel, pst, data->context))
@@ -302,8 +357,8 @@ spindle_prop_apply_(struct propdata_struct *data)
 					r = -1;
 					break;
 				}
-				librdf_statement_set_object(lpst, data->matches[c].literals[d].node);
-				data->matches[c].literals[d].node = NULL;
+				node = twine_rdf_node_clone(data->matches[c].literals[d].node);
+				librdf_statement_set_object(lpst, node);
 				if(twine_rdf_model_add_st(data->proxymodel, lpst, data->context))
 				{
 					twine_logf(LOG_ERR, PLUGIN_NAME ": failed to add statement to model\n");
@@ -673,4 +728,49 @@ spindle_prop_candidate_lang_(struct propdata_struct *data, struct propmatch_stru
 		}
 	}
 	return 1;
+}
+
+/* Copy a set of literal string nodes from source to dest */
+static int
+spindle_prop_copystrings_(struct spindle_literalset_struct *dest, struct propmatch_struct *source)
+{
+	size_t c;
+	char *p;
+
+	if(!source || !source->nliterals)
+	{
+		/* Nothing to do */
+		return 0;
+	}
+	dest->literals = (struct spindle_literalstring_struct *) calloc(source->nliterals, sizeof(struct spindle_literalstring_struct));
+	if(!dest->literals)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate literal set\n");
+		return -1;
+	}
+	dest->nliterals = source->nliterals;
+	for(c = 0; c < source->nliterals; c++)
+	{
+		if(source->literals[c].lang)
+		{
+			dest->literals[c].lang = strdup(source->literals[c].lang);
+			if(!dest->literals[c].lang)
+			{
+				twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to duplicate literal string language tag\n");
+				return -1;
+			}
+			for(p = dest->literals[c].lang; *p; p++)
+			{
+				*p = tolower(*p);
+			}
+		}
+		dest->literals[c].str = strdup((const char *) librdf_node_get_literal_value(source->literals[c].node));
+		if(!dest->literals[c].str)
+		{
+			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to duplicate literal string\n");
+			return -1;
+		}
+/*		twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%s] = '%s'\n", dest->literals[c].lang, dest->literals[c].str); */
+	}
+	return 0;
 }
