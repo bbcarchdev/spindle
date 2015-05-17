@@ -281,6 +281,10 @@ spindle_cache_cleanup_(SPINDLECACHE *data)
 	{
 		twine_rdf_model_destroy(data->extradata);
 	}
+	if(data->classes)
+	{
+		spindle_strset_destroy(data->classes);
+	}
 	/* Never free data->graph - it is a pointer to data->doc or spindle->rootgraph */
 	free(data->title);
 	free(data->title_en);

@@ -149,7 +149,10 @@ spindle_class_update(SPINDLECACHE *cache)
 		librdf_free_statement(st);
 	}
 	librdf_free_statement(base);
+#if SPINDLE_DB_INDEX
+	cache->classes = classes;
+#else
 	spindle_strset_destroy(classes);
-	
+#endif
 	return 0;
 }

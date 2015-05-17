@@ -261,6 +261,7 @@ struct spindle_cache_struct
 	/* Copies of literal predicates we need to keep */
 	struct spindle_literalset_struct titleset;
 	struct spindle_literalset_struct descset;
+	struct spindle_strset_struct *classes;	
 	/* Geographical co-ordinates */
 	int has_geo;
 	double lat, lon;

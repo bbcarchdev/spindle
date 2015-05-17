@@ -26,6 +26,7 @@
 #if SPINDLE_DB_INDEX
 
 static char *spindle_db_literalset_(struct spindle_literalset_struct *set);
+static char *spindle_db_strset_(struct spindle_strset_struct *set);
 static size_t spindle_db_esclen_(const char *src);
 static char *spindle_db_escstr_(char *dest, const char *src);
 static char *spindle_db_escstr_lower_(char *dest, const char *src);
@@ -55,7 +56,7 @@ spindle_db_cache_store(SPINDLECACHE *data)
 {
 	SQL *sql;
 	const char *t;
-	char *id, *p, *title, *desc;
+	char *id, *p, *title, *desc, *classes;
 	char lbuf[64];
 
 	sql = data->spindle->db;
@@ -90,6 +91,7 @@ spindle_db_cache_store(SPINDLECACHE *data)
 	}
 	title = spindle_db_literalset_(&(data->titleset));
 	desc = spindle_db_literalset_(&(data->descset));
+	classes = spindle_db_strset_(data->classes);
 	if(data->has_geo)
 	{
 		snprintf(lbuf, sizeof(lbuf), "(%f, %f)", data->lat, data->lon);
@@ -99,17 +101,18 @@ spindle_db_cache_store(SPINDLECACHE *data)
 	{
 		t = NULL;
 	}
-	if(sql_executef(sql, "INSERT INTO \"index\" (\"id\", \"version\", \"modified\", \"score\", \"title\", \"description\", \"coordinates\") VALUES (%Q, %d, now(), %d, %Q, %Q, %Q)",
-					id, SPINDLE_DB_INDEX_VERSION, data->score, title, desc, t))
+	if(sql_executef(sql, "INSERT INTO \"index\" (\"id\", \"version\", \"modified\", \"score\", \"title\", \"description\", \"coordinates\", \"classes\") VALUES (%Q, %d, now(), %d, %Q, %Q, %Q, %Q)",
+					id, SPINDLE_DB_INDEX_VERSION, data->score, title, desc, t, classes))
 	{
 		free(id);
 		free(title);
 		free(desc);
+		free(classes);
 		return -1;
 	}
 	free(title);
 	free(desc);
-
+	free(classes);
 	if(sql_executef(sql, "UPDATE \"index\" SET "
 					"\"index_en_gb\" = setweight(to_tsvector(coalesce(\"title\" -> 'en-gb', \"title\" -> 'en', \"title\" -> '_')), 'A') || "
 					" setweight(to_tsvector(coalesce(\"description\" -> 'en-gb', \"description\" -> 'en', \"description\" -> '_')), 'B')  "
@@ -171,7 +174,7 @@ spindle_db_literalset_(struct spindle_literalset_struct *set)
 	str = (char *) malloc(nbytes);
 	if(!str)
 	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate %lu bytes for literal string-set\n", (unsigned long) nbytes);
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate %lu bytes for literal set\n", (unsigned long) nbytes);
 		return NULL;
 	}
 	p = str;
@@ -199,6 +202,47 @@ spindle_db_literalset_(struct spindle_literalset_struct *set)
 		*p = '"';
 		p++;
 	}
+	*p = 0;
+	return str;
+}
+
+static char *
+spindle_db_strset_(struct spindle_strset_struct *set)
+{
+	size_t c, nbytes;
+	char *str, *p;
+
+	nbytes = 3;
+	for(c = 0; c < set->count; c++)
+	{
+		/* "string", */
+		nbytes += 3;
+		nbytes += spindle_db_esclen_(set->strings[c]);
+	}
+	str = (char *) malloc(nbytes);
+	if(!str)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate %lu bytes for string set\n", (unsigned long) nbytes);
+		return NULL;
+	}
+	p = str;
+	*p = '{';
+	p++;
+	for(c = 0; c < set->count; c++)
+	{
+		if(c)
+		{
+			*p = ',';
+			p++;
+		}
+		*p = '"';
+		p++;
+		p = spindle_db_escstr_(p, set->strings[c]);
+		*p = '"';
+		p++;
+	}
+	*p = '}';
+	p++;
 	*p = 0;
 	return str;
 }
