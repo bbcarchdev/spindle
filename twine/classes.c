@@ -35,9 +35,11 @@ spindle_class_match(SPINDLECACHE *cache, struct spindle_strset_struct *classes)
 	size_t c, d;
 	struct spindle_classmap_struct *mapentry;
 	struct spindle_classmatch_struct *match;
+	int score;
 
 	mapentry = NULL;
 	match = NULL;
+	score = 1000;
 	node = librdf_new_node_from_uri_string(cache->spindle->world, (const unsigned char *) NS_RDF "type");
 	query = librdf_new_statement(cache->spindle->world);
 	librdf_statement_set_predicate(query, node);
@@ -54,25 +56,23 @@ spindle_class_match(SPINDLECACHE *cache, struct spindle_strset_struct *classes)
 			{
 				spindle_strset_add(classes, (const char *) uristr);
 			}
-			if(!match)
+			for(c = 0; c < cache->spindle->classcount; c++)
 			{
-				for(c = 0; c < cache->spindle->classcount; c++)
+				if(cache->spindle->classes[c].score > score)
 				{
-					for(d = 0; d < cache->spindle->classes[c].matchcount; d++)
+					continue;
+				}
+				for(d = 0; d < cache->spindle->classes[c].matchcount; d++)
+				{
+					if(!strcmp((const char *) uristr, cache->spindle->classes[c].match[d].uri))
 					{
-						if(!strcmp((const char *) uristr, cache->spindle->classes[c].match[d].uri))
+						mapentry = &(cache->spindle->classes[c]);
+						match = &(cache->spindle->classes[c].match[d]);
+						score = cache->spindle->classes[c].score;
+						if(classes)
 						{
-							mapentry = &(cache->spindle->classes[c]);
-							match = &(cache->spindle->classes[c].match[d]);
-							if(classes)
-							{
-								spindle_strset_add(classes, mapentry->uri);
-							}
-							break;
+							spindle_strset_add(classes, mapentry->uri);
 						}
-					}
-					if(match)
-					{
 						break;
 					}
 				}
