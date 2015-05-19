@@ -25,7 +25,12 @@
 #include "p_spindle.h"
 
 S3BUCKET *spindle_bucket;
+SQL *spindle_db;
 int spindle_s3_verbose;
+
+static int spindle_db_querylog_(SQL *restrict sql, const char *query);
+static int spindle_db_noticelog_(SQL *restrict sql, const char *notice);
+static int spindle_db_errorlog_(SQL *restrict sql, const char *sqlstate, const char *message);
 
 int
 quilt_plugin_init(void)
@@ -36,6 +41,22 @@ quilt_plugin_init(void)
 	{
 		quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": failed to register engine\n");
 		return -1;
+	}
+	spindle_bucket = NULL;
+	spindle_db = NULL;
+	if((t = quilt_config_geta(QUILT_PLUGIN_NAME ":db", NULL)))
+	{
+		spindle_db = sql_connect(t);
+		if(!spindle_db)
+		{
+			quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": failed to connect to database <%s>\n", t);
+			free(t);
+			return -1;
+		}
+		free(t);
+		sql_set_querylog(spindle_db, spindle_db_querylog_);
+		sql_set_errorlog(spindle_db, spindle_db_errorlog_);
+		sql_set_noticelog(spindle_db, spindle_db_noticelog_);
 	}
 	if((t = quilt_config_geta(QUILT_PLUGIN_NAME ":bucket", NULL)))
 	{
@@ -66,3 +87,32 @@ quilt_plugin_init(void)
 	}
 	return 0;
 }
+
+static int
+spindle_db_querylog_(SQL *restrict sql, const char *query)
+{
+	(void) sql;
+
+	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": SQL: %s\n", query);
+	return 0;
+}
+
+static int
+spindle_db_noticelog_(SQL *restrict sql, const char *notice)
+{
+	(void) sql;
+
+	quilt_logf(LOG_NOTICE, QUILT_PLUGIN_NAME ": %s\n", notice);
+	return 0;
+}
+
+static int
+spindle_db_errorlog_(SQL *restrict sql, const char *sqlstate, const char *message)
+{
+	(void) sql;
+
+	quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": [%s] %s\n", sqlstate, message);
+	return 0;
+}
+
+

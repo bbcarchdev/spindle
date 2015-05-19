@@ -25,6 +25,9 @@
 #include "p_spindle.h"
 
 static int spindle_index_metadata_sparqlres_(QUILTREQ *request, SPARQLRES *res);
+static int spindle_index_db_(QUILTREQ *request, const char *qclass);
+static int spindle_index_db_rs_(QUILTREQ *request, SQL_STATEMENT *rs);
+static int spindle_db_index_row_(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, const char *uri);
 
 int
 spindle_index(QUILTREQ *request, const char *qclass)
@@ -35,7 +38,11 @@ spindle_index(QUILTREQ *request, const char *qclass)
 	char *uristr;
 	librdf_statement *st;
 	int r, i;
-
+	
+	if(spindle_db)
+	{
+		return spindle_index_db_(request, qclass);
+	}
 	if(request->offset)
 	{
 		snprintf(limofs, sizeof(limofs) - 1, "OFFSET %d LIMIT %d", request->offset, request->limit);
@@ -198,5 +205,165 @@ spindle_index_metadata_sparqlres_(QUILTREQ *request, SPARQLRES *res)
 		}
 	}
 	free(query);
+	return 0;
+}
+
+static int
+spindle_index_db_(QUILTREQ *request, const char *qclass)
+{
+	char limofs[64];
+	SQL_STATEMENT *rs;
+
+	if(request->offset)
+	{
+		snprintf(limofs, sizeof(limofs), "LIMIT %d OFFSET %d", request->limit + 1, request->offset);
+	}
+	else
+	{
+		snprintf(limofs, sizeof(limofs), "LIMIT %d", request->limit + 1);
+	}
+	if(qclass)
+	{
+		rs = sql_queryf(spindle_db, "SELECT \"id\", \"classes\", \"title\", \"description\", \"coordinates\" FROM \"index\" WHERE \"score\" < 40 AND %Q = ANY(\"classes\") ORDER BY \"modified\" DESC %s", qclass, limofs);
+	}
+	else
+	{
+		rs = sql_queryf(spindle_db, "SELECT \"id\", \"classes\", \"title\", \"description\", \"coordinates\" FROM \"index\" WHERE \"score\" < 40 ORDER BY \"modified\" DESC %s", limofs);
+	}
+	if(!rs)
+	{
+		quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": query execution failed\n");
+		return 500;
+	}
+	return spindle_index_db_rs_(request, rs);
+}
+
+static int
+spindle_index_db_rs_(QUILTREQ *request, SQL_STATEMENT *rs)
+{
+	int c, more;
+	const char *t;
+	char idbuf[36], *uribuf, *p, *tbuf, *buf;
+	size_t l;
+	librdf_statement *st;
+
+	if(request->base)
+	{
+		l = strlen(request->base);
+	}
+	else
+	{
+		l = 0;
+	}
+	more = 0;
+	uribuf = (char *) malloc(l + 48);
+	if(l)
+	{
+		strcpy(uribuf, request->base);
+		if(isalnum(uribuf[l - 1]))
+		{
+			uribuf[l] = '/';
+			l++;
+		}
+	}
+	else
+	{
+		uribuf[0] = '/';
+		l = 1;
+	}
+	for(c = 0; !sql_stmt_eof(rs) && c < request->limit; sql_stmt_next(rs))
+	{
+		c++;
+		t = sql_stmt_str(rs, 0);
+		for(p = idbuf; p - idbuf < 32; t++)
+		{
+			if(isalnum(*t))
+			{
+				*p = tolower(*t);
+				p++;
+			}
+		}
+		*p = 0;
+		strcpy(&(uribuf[l]), idbuf);
+		strcat(uribuf, "#id");
+		spindle_db_index_row_(request, rs, idbuf, uribuf);
+	}
+	if(!sql_stmt_eof(rs))
+	{
+		more = 1;
+	}
+	sql_stmt_destroy(rs);
+
+	l = strlen(request->path);
+	tbuf = (char *) malloc(l + 64);
+	buf = (char *) malloc(l + 64);
+
+	strcpy(tbuf, request->path);
+	strcpy(buf, request->path);
+	if(request->offset)
+	{
+		snprintf(&(tbuf[l]), 64, "?offset=%d", request->offset);
+		/* ... xhv:prev </?offset=...> */
+		c = request->offset - request->limit;
+		if(c < 0)
+		{
+			c = 0;
+		}
+		if(c)
+		{
+			snprintf(buf, l + 64, "%s?offset=%d", request->path, c);
+		}
+		else
+		{
+			strcpy(buf, request->path);
+		}
+		st = quilt_st_create_uri(tbuf, "http://www.w3.org/1999/xhtml/vocab#prev", buf);
+		librdf_model_add_statement(request->model, st);
+		librdf_free_statement(st);
+	}
+	if(tbuf[l])
+	{
+		st = quilt_st_create_uri(tbuf, "http://purl.org/dc/terms/isPartOf", request->path);
+		librdf_model_add_statement(request->model, st);
+		librdf_free_statement(st);
+
+		st = quilt_st_create_uri(request->path, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://rdfs.org/ns/void#Dataset");
+		librdf_model_add_statement(request->model, st);
+		librdf_free_statement(st);
+	}
+	if(more)
+	{
+		/* ... xhv:next </?offset=...> */
+		snprintf(&(buf[l]), 64, "?offset=%d", request->offset + request->limit);
+		st = quilt_st_create_uri(tbuf, "http://www.w3.org/1999/xhtml/vocab#next", buf);
+		librdf_model_add_statement(request->model, st);
+		librdf_free_statement(st);
+	}
+	/* ... rdf:type void:Dataset */
+	st = quilt_st_create_uri(tbuf, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://rdfs.org/ns/void#Dataset");
+	librdf_model_add_statement(request->model, st);
+	librdf_free_statement(st);
+
+	/* ... rdf:label */
+	if(request->indextitle)
+	{
+		st = quilt_st_create_literal(tbuf, "http://www.w3.org/2000/01/rdf-schema#label", request->indextitle, "en-gb");
+		librdf_model_add_statement(request->model, st);
+		librdf_free_statement(st);
+	}
+	free(tbuf);
+	free(buf);
+	return 200;
+}
+
+static int
+spindle_db_index_row_(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, const char *uri)
+{
+	librdf_statement *st;
+
+	st = quilt_st_create_uri(request->path, "http://www.w3.org/2000/01/rdf-schema#seeAlso", uri);
+	librdf_model_add_statement(request->model, st);
+	librdf_free_statement(st);
+
 	return 0;
 }

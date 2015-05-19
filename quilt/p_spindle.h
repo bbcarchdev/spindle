@@ -23,8 +23,10 @@
 
 # include <stdlib.h>
 # include <string.h>
+# include <ctype.h>
 # include <libsparqlclient.h>
 # include <libs3client.h>
+# include <libsql.h>
 
 # include "libquilt.h"
 
@@ -37,6 +39,7 @@ struct index_struct
 	const char *qclass;
 };
 
+extern SQL *spindle_db;
 extern S3BUCKET *spindle_bucket;
 extern int spindle_s3_verbose;
 extern struct index_struct spindle_indices[];

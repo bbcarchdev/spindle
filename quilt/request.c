@@ -37,7 +37,14 @@ spindle_process(QUILTREQ *request)
 	if(t)
 	{
 		qclass = (char *) calloc(1, 32 + strlen(t));
-		sprintf(qclass, "FILTER ( ?class = <%s> )", t);
+		if(spindle_db)
+		{
+			strcpy(qclass, t);
+		}
+		else
+		{
+			sprintf(qclass, "FILTER ( ?class = <%s> )", t);
+		}
 		request->indextitle = t;
 		request->index = 1;
 		request->home = 0;
@@ -51,7 +58,14 @@ spindle_process(QUILTREQ *request)
 				if(spindle_indices[c].qclass)
 				{
 					qclass = (char *) calloc(1, 32 + strlen(spindle_indices[c].qclass));
-					sprintf(qclass, "FILTER ( ?class = <%s> )", spindle_indices[c].qclass);
+					if(spindle_db)
+					{
+						strcpy(qclass, spindle_indices[c].qclass);
+					}
+					else
+					{
+						sprintf(qclass, "FILTER ( ?class = <%s> )", spindle_indices[c].qclass);
+					}
 				}
 				request->indextitle = spindle_indices[c].title;
 				request->index = 1;

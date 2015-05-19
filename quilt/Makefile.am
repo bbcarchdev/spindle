@@ -16,7 +16,7 @@
 ##  See the License for the specific language governing permissions and
 ##  limitations under the License.
 
-AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBQUILT_CPPFLAGS@ \
+AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBQUILT_CPPFLAGS@ @LIBSQL_CPPFLAGS@ \
 	-I$(top_builddir)/libs3client -I$(top_srcdir)/libs3client
 
 quiltmodule_LTLIBRARIES = spindle.la
@@ -27,4 +27,5 @@ spindle_la_SOURCES = p_spindle.h \
 spindle_la_LDFLAGS = -no-undefined -module -avoid-version
 
 spindle_la_LIBADD = $(top_builddir)/libs3client/libs3client.la \
-	@LIBQUILT_LOCAL_LIBS@ @LIBQUILT_LIBS@
+	@LIBQUILT_LOCAL_LIBS@ @LIBQUILT_LIBS@ \
+	@LIBSQL_LOCAL_LIBS@ @LIBSQL_LIBS@
