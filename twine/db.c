@@ -114,32 +114,32 @@ spindle_db_cache_store(SPINDLECACHE *data)
 	free(desc);
 	free(classes);
 	if(sql_executef(sql, "UPDATE \"index\" SET "
-					"\"index_en_gb\" = setweight(to_tsvector(coalesce(\"title\" -> 'en-gb', \"title\" -> 'en', \"title\" -> '_')), 'A') || "
-					" setweight(to_tsvector(coalesce(\"description\" -> 'en-gb', \"description\" -> 'en', \"description\" -> '_')), 'B')  "
+					"\"index_en_gb\" = setweight(to_tsvector(coalesce(\"title\" -> 'en-gb', \"title\" -> 'en', \"title\" -> '_', '')), 'A') || "
+					" setweight(to_tsvector(coalesce(\"description\" -> 'en-gb', \"description\" -> 'en', \"description\" -> '_', '')), 'B')  "
 					"WHERE \"id\" = %Q", id))
 	{
 		free(id);
 		return -1;
 	}
 	if(sql_executef(sql, "UPDATE \"index\" SET "
-					"\"index_cy_gb\" = setweight(to_tsvector(coalesce(\"title\" -> 'cy-gb', \"title\" -> 'cy', \"title\" -> '_')), 'A') || "
-					" setweight(to_tsvector(coalesce(\"description\" -> 'cy-gb', \"description\" -> 'cy', \"description\" -> '_')), 'B')  "
+					"\"index_cy_gb\" = setweight(to_tsvector(coalesce(\"title\" -> 'cy-gb', \"title\" -> 'cy', \"title\" -> '_', '')), 'A') || "
+					" setweight(to_tsvector(coalesce(\"description\" -> 'cy-gb', \"description\" -> 'cy', \"description\" -> '_', '')), 'B')  "
 					"WHERE \"id\" = %Q", id))
 	{
 		free(id);
 		return -1;
 	}
 	if(sql_executef(sql, "UPDATE \"index\" SET "
-					"\"index_ga_gb\" = setweight(to_tsvector(coalesce(\"title\" -> 'ga-gb', \"title\" -> 'ga', \"title\" -> '_')), 'A') || "
-					" setweight(to_tsvector(coalesce(\"description\" -> 'ga-gb', \"description\" -> 'ga', \"description\" -> '_')), 'B')  "
+					"\"index_ga_gb\" = setweight(to_tsvector(coalesce(\"title\" -> 'ga-gb', \"title\" -> 'ga', \"title\" -> '_', '')), 'A') || "
+					" setweight(to_tsvector(coalesce(\"description\" -> 'ga-gb', \"description\" -> 'ga', \"description\" -> '_', '')), 'B')  "
 					"WHERE \"id\" = %Q", id))
 	{
 		free(id);
 		return -1;
 	}
 	if(sql_executef(sql, "UPDATE \"index\" SET "
-					"\"index_gd_gb\" = setweight(to_tsvector(coalesce(\"title\" -> 'gd-gb', \"title\" -> 'gd', \"title\" -> '_')), 'A') || "
-					" setweight(to_tsvector(coalesce(\"description\" -> 'gd-gb', \"description\" -> 'gd', \"description\" -> '_')), 'B')  "
+					"\"index_gd_gb\" = setweight(to_tsvector(coalesce(\"title\" -> 'gd-gb', \"title\" -> 'gd', \"title\" -> '_', '')), 'A') || "
+					" setweight(to_tsvector(coalesce(\"description\" -> 'gd-gb', \"description\" -> 'gd', \"description\" -> '_', '')), 'B')  "
 					"WHERE \"id\" = %Q", id))
 	{
 		free(id);
