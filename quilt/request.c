@@ -33,8 +33,18 @@ spindle_process(QUILTREQ *request)
 	int r;
 		
 	qclass = NULL;
+	t = quilt_request_getparam(request, "q");
+	if(t && t[0])
+	{
+		if(!request->indextitle)
+		{
+			request->indextitle = t;
+		}
+		request->index = 1;
+		request->home = 0;
+	}
 	t = quilt_request_getparam(request, "class");
-	if(t)
+	if(t && t[0])
 	{
 		qclass = (char *) calloc(1, 32 + strlen(t));
 		if(spindle_db)
@@ -45,7 +55,10 @@ spindle_process(QUILTREQ *request)
 		{
 			sprintf(qclass, "FILTER ( ?class = <%s> )", t);
 		}
-		request->indextitle = t;
+		if(!request->indextitle)
+		{
+			request->indextitle = t;
+		}
 		request->index = 1;
 		request->home = 0;
 	}

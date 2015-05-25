@@ -21,6 +21,8 @@
 #ifndef P_SPINDLE_H_
 # define P_SPINDLE_H_                  1
 
+# define _BSD_SOURCE                   1
+
 # include <stdlib.h>
 # include <string.h>
 # include <ctype.h>
