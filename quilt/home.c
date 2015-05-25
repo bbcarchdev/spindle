@@ -55,7 +55,7 @@ spindle_home(QUILTREQ *request)
 	}
 
 	/* Add OpenSearch information to the index */
-	st = quilt_st_create_literal(request->path, "http://a9.com/-/spec/opensearch/1.1/template", "/?q={searchTerms?}&language={language?}&limit={count?}&offset={startIndex?}&class={rdfs:Class?}", NULL);
+	st = quilt_st_create_literal(request->path, "http://a9.com/-/spec/opensearch/1.1/template", "/?q={searchTerms?}&lang={language?}&limit={count?}&offset={startIndex?}&class={rdfs:Class?}", NULL);
 	librdf_model_context_add_statement(request->model, request->basegraph, st);
 	librdf_free_statement(st);
 

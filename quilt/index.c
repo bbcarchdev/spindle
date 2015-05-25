@@ -823,7 +823,8 @@ spindle_checklang_(const char *lang)
 	}
 	if(!strcasecmp(lang, "en") ||
 	   !strcasecmp(lang, "en-gb") ||
-	   !strcasecmp(lang, "en_gb"))
+	   !strcasecmp(lang, "en_gb") ||
+	   !strcasemp(lang, "en-us"))
 	{
 		return "en_gb";
 	}
