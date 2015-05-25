@@ -49,29 +49,69 @@ spindle_home(QUILTREQ *request)
 	const char *uri;
 
 	uri = quilt_request_getparam(request, "uri");
-	if(uri)
+	if(uri && uri[0])
 	{
 		return spindle_lookup(request, uri);
 	}
 
+	/* Add OpenSearch information to the index */
+	st = quilt_st_create_literal(request->path, "http://a9.com/-/spec/opensearch/1.1/template", "/?q={searchTerms?}&language={language?}&limit={count?}&offset={startIndex?}&class={rdfs:Class?}", NULL);
+	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_free_statement(st);
+
+	st = quilt_st_create_literal(request->path, "http://a9.com/-/spec/opensearch/1.1/Language", "en-gb", NULL);
+	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_free_statement(st);
+	st = quilt_st_create_literal(request->path, "http://a9.com/-/spec/opensearch/1.1/Language", "cy-gb", NULL);
+	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_free_statement(st);
+	st = quilt_st_create_literal(request->path, "http://a9.com/-/spec/opensearch/1.1/Language", "gd-gb", NULL);
+	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_free_statement(st);
+	st = quilt_st_create_literal(request->path, "http://a9.com/-/spec/opensearch/1.1/Language", "ga-gb", NULL);
+	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_free_statement(st);
+
+	/* Add VoID descriptive metadata */
+	st = quilt_st_create_uri(request->path, "http://rdfs.org/ns/void#uriLookupEndpoint", "/?uri=");
+	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_free_statement(st);	
+
+	st = quilt_st_create_uri(request->path, "http://rdfs.org/ns/void#openSearchDescription", "/index.osd");
+	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_free_statement(st);	
+	
 	/* Add all of the indices as void:Datasets */
 	for(c = 0; spindle_indices[c].uri; c++)
-	{		
-		st = quilt_st_create_uri(request->path, "http://www.w3.org/2000/01/rdf-schema#seeAlso", spindle_indices[c].uri);
+	{
+		if(spindle_indices[c].qclass)
+		{
+			st = quilt_st_create_uri(request->path, "http://rdfs.org/ns/void#classPartition", spindle_indices[c].uri);
+		}
+		else
+		{
+			st = quilt_st_create_uri(request->path, "http://rdfs.org/ns/void#rootResource", spindle_indices[c].uri);
+		}
 		if(!st) return -1;
 		librdf_model_context_add_statement(request->model, request->basegraph, st);
+		librdf_free_statement(st);
+	
 		st = quilt_st_create_literal(spindle_indices[c].uri, "http://www.w3.org/2000/01/rdf-schema#label", spindle_indices[c].title, "en");
 		if(!st) return -1;
 		librdf_model_context_add_statement(request->model, request->basegraph, st);
+		librdf_free_statement(st);
+
 		st = quilt_st_create_uri(spindle_indices[c].uri, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://rdfs.org/ns/void#Dataset");
 		if(!st) return -1;
 		librdf_model_context_add_statement(request->model, request->basegraph, st);
+		librdf_free_statement(st);
 
 		if(spindle_indices[c].qclass)
 		{
 			st = quilt_st_create_uri(spindle_indices[c].uri, "http://rdfs.org/ns/void#class", spindle_indices[c].qclass);
 			if(!st) return -1;
 			librdf_model_context_add_statement(request->model, request->basegraph, st);
+			librdf_free_statement(st);
 		}
 	}
 	/* Return 200, rather than 0, to auto-serialise the model */
