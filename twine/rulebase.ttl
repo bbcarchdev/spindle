@@ -657,3 +657,17 @@ mrss:player spindle:property [
 	spindle:expressedAs mrss:player
 ] .
 
+## mrss:content
+
+mrss:content
+	a spindle:Property ;
+	olo:index 16 ;
+	spindle:prominence 10 ;
+	spindle:expect rdfs:Resource ;
+	spindle:proxyOnly false .
+
+mrss:content spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs mrss:content
+] .
+
