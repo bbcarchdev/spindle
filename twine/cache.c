@@ -301,7 +301,6 @@ spindle_cache_cleanup_literalset_(struct spindle_literalset_struct *set)
 
 	for(c = 0; c < set->nliterals; c++)
 	{
-		free(set->literals[c].lang);
 		free(set->literals[c].str);
 	}
 	free(set->literals);

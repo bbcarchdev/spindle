@@ -48,7 +48,7 @@ struct propmatch_struct
 /* A single entry in a list of multi-lingual literals */
 struct literal_struct
 {
-	const char *lang;
+	char lang[4];
 	librdf_node *node;
 	int priority;
 };
@@ -665,15 +665,37 @@ spindle_prop_candidate_lang_(struct propdata_struct *data, struct propmatch_stru
 	struct literal_struct *entry, *p;
 	size_t c;
 	librdf_node *node;
+	const char *s;
+	char *t;
 
 	(void) data;
 	(void) st;
 
+	if(lang && !lang)
+	{
+		lang = NULL;
+	}
+	if(lang)
+	{
+		for(s = lang; *s; s++)
+		{
+			if(!isalpha(*s))
+			{
+				twine_logf(LOG_WARNING, PLUGIN_NAME ": encountered invalid byte '%02x' in language specifier\n", *s);
+				return -1;
+			}
+		}
+		if(strlen(lang) < 2 || strlen(lang) > 3)
+		{
+			twine_logf(LOG_WARNING, PLUGIN_NAME ": ignoring invalid language '%s'\n", lang);
+			return -1;
+		}
+	}
 	entry = NULL;
 	for(c = 0; c < match->nliterals; c++)
 	{
-		if((!lang && !match->literals[c].lang) ||
-		   (lang && match->literals[c].lang &&
+		if((!lang && !match->literals[c].lang[0]) ||
+		   (lang && match->literals[c].lang[0] &&
 			!strcasecmp(match->literals[c].lang, lang)))
 		{
 			entry = &(match->literals[c]);
@@ -695,7 +717,14 @@ spindle_prop_candidate_lang_(struct propdata_struct *data, struct propmatch_stru
 		match->literals = p;
 		entry = &(match->literals[match->nliterals]);
 		memset(entry, 0, sizeof(struct literal_struct));
-		entry->lang = lang;
+		if(lang)
+		{
+			strncpy(entry->lang, lang, 4);
+			for(t = entry->lang; *t; t++)
+			{
+				*t = tolower(*t);
+			}
+		}
 		match->nliterals++;
 	}
 	node = twine_rdf_node_clone(obj);
@@ -735,7 +764,6 @@ static int
 spindle_prop_copystrings_(struct spindle_literalset_struct *dest, struct propmatch_struct *source)
 {
 	size_t c;
-	char *p;
 
 	if(!source || !source->nliterals)
 	{
@@ -751,19 +779,7 @@ spindle_prop_copystrings_(struct spindle_literalset_struct *dest, struct propmat
 	dest->nliterals = source->nliterals;
 	for(c = 0; c < source->nliterals; c++)
 	{
-		if(source->literals[c].lang)
-		{
-			dest->literals[c].lang = strdup(source->literals[c].lang);
-			if(!dest->literals[c].lang)
-			{
-				twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to duplicate literal string language tag\n");
-				return -1;
-			}
-			for(p = dest->literals[c].lang; *p; p++)
-			{
-				*p = tolower(*p);
-			}
-		}
+		strcpy(dest->literals[c].lang, source->literals[c].lang);
 		dest->literals[c].str = strdup((const char *) librdf_node_get_literal_value(source->literals[c].node));
 		if(!dest->literals[c].str)
 		{

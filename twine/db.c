@@ -160,7 +160,7 @@ spindle_db_literalset_(struct spindle_literalset_struct *set)
 	{
 		/* "lang"=>"string", */
 		nbytes += 7;
-		if(set->literals[c].lang)
+		if(set->literals[c].lang[0])
 		{
 			nbytes += spindle_db_esclen_(set->literals[c].lang);
 		}
@@ -187,7 +187,7 @@ spindle_db_literalset_(struct spindle_literalset_struct *set)
 		}
 		*p = '"';
 		p++;
-		if(set->literals[c].lang)
+		if(set->literals[c].lang[0])
 		{
 			p = spindle_db_escstr_lower_(p, set->literals[c].lang);
 		}

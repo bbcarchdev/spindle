@@ -188,7 +188,7 @@ struct spindle_literalset_struct
 
 struct spindle_literalstring_struct
 {
-	char *lang;
+	char lang[4];
 	char *str;
 };
 
