@@ -23,7 +23,7 @@
 
 #include "p_spindle.h"
 
-#if SPINDLE_DB_INDEX
+#if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
 static int spindle_db_migrate_(SQL *restrict, const char *identifier, int newversion, void *restrict userdata);
 
@@ -62,7 +62,7 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 	if(newversion == 0)
 	{
 		/* Return target version */
-		return 1;
+		return 2;
 	}
 	twine_logf(LOG_NOTICE, PLUGIN_NAME ": updating database schema to version %d\n", newversion);
 	if(newversion == 1)
@@ -114,6 +114,26 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 			return -1;
 		}
 		return 0;		
+	}
+	if(newversion == 2)
+	{
+		if(sql_execute(sql, "CREATE TABLE \"proxy\" ("
+					   " \"id\" uuid NOT NULL,"
+					   " \"sameas\" text[],"
+					   " PRIMARY KEY(\"id\")"
+					   ")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE UNIQUE INDEX \"proxy_id\" ON \"proxy\" (\"id\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"proxy_sameas\" ON \"proxy\" USING HASH (\"sameas\")"))
+		{
+			return -1;
+		}
+		return 0;
 	}
 	return -1;
 }

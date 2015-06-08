@@ -23,13 +23,28 @@
 
 #include "p_spindle.h"
 
-#if SPINDLE_DB_INDEX
-
+#if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
+static char *spindle_db_id_(const char *localname);
 static char *spindle_db_literalset_(struct spindle_literalset_struct *set);
 static char *spindle_db_strset_(struct spindle_strset_struct *set);
 static size_t spindle_db_esclen_(const char *src);
 static char *spindle_db_escstr_(char *dest, const char *src);
 static char *spindle_db_escstr_lower_(char *dest, const char *src);
+#endif
+
+#if SPINDLE_DB_PROXIES
+struct relate_struct
+{
+	SPINDLE *spindle;
+	const char *id;
+	const char *uri;
+};
+
+
+static int spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict userdata);
+#endif
+
+#if SPINDLE_DB_INDEX
 
 /* Store an index entry in a PostgreSQL (or compatible) database for a proxy.
  *
@@ -56,32 +71,15 @@ spindle_db_cache_store(SPINDLECACHE *data)
 {
 	SQL *sql;
 	const char *t;
-	char *id, *p, *title, *desc, *classes;
+	char *id, *title, *desc, *classes;
 	char lbuf[64];
 
 	sql = data->spindle->db;
-	id = (char *) calloc(1, strlen(data->localname) + 1);
+	id = spindle_db_id_(data->localname);
 	if(!id)
 	{
 		return -1;
 	}
-	if(!(t = strrchr(data->localname, '/')))
-	{
-		t = data->localname;
-	}
-	for(p = id; *t; t++)
-	{
-		if(isalnum(*t))
-		{
-			*p = *t;
-			p++;
-		}
-		else if(*t == '#')
-		{
-			break;
-		}
-	}
-	*p = 0;
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": DB: ID is '%s'\n", id);
 	if(sql_executef(sql, "DELETE FROM \"index\" WHERE \"id\" = %Q",
 					id))
@@ -148,6 +146,207 @@ spindle_db_cache_store(SPINDLECACHE *data)
 	free(id);
 	return 0;
 }
+
+#endif
+
+
+#if SPINDLE_DB_PROXIES
+
+char *
+spindle_db_proxy_locate(SPINDLE *spindle, const char *uri)
+{
+	SQL_STATEMENT *rs;
+	char *buf, *p;
+	const char *s;
+	
+	rs = sql_queryf(spindle->db, "SELECT \"id\" FROM \"proxy\" WHERE %Q = ANY(\"sameas\")", uri);
+	if(!rs)
+	{
+		return NULL;
+	}
+	if(sql_stmt_eof(rs))
+	{
+		return NULL;
+	}
+    /* root + '/' + uuid + '#id' + NUL */
+	buf = (char *) malloc(strlen(spindle->root) + 1 + 32 + 3 + 1);
+	if(!buf)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate buffer for proxy URI\n");
+		sql_stmt_destroy(rs);
+		return NULL;
+	}
+	strcpy(buf, spindle->root);
+	p = strchr(buf, 0);
+	if(p > buf)
+	{
+		p--;
+		if(*p == '/')
+		{
+			p++;
+		}
+		else
+		{
+			p++;
+			*p = '/';
+			p++;
+		}
+	}
+	else
+	{
+		*p = '/';
+		p++;
+	}
+	for(s = sql_stmt_str(rs, 0); *s; s++)
+	{
+		if(isalnum(*s))
+		{
+			*p = tolower(*s);
+			p++;
+		}
+	}
+	strcpy(p, "#id");
+	return buf;
+}
+
+/* Store a relationship between a proxy and a processed entity */
+int
+spindle_db_proxy_relate(SPINDLE *spindle, const char *remote, const char *local)
+{
+	char *id;
+	struct relate_struct data;
+
+	id = spindle_db_id_(local);
+	if(!id)
+	{
+		return -1;
+	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": DB: adding %s = <%s>\n", id, remote);
+	data.spindle = spindle;
+	data.id = id;
+	data.uri = remote;
+	if(sql_perform(spindle->db, spindle_db_perform_proxy_relate_, (void *) &data, -1, SQL_TXN_CONSISTENT))
+	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to relate <%s> to %s\n", remote, id);
+		free(id);
+		return -1;
+	}
+	free(id);
+	return 0;
+}
+
+/* Obtain all of the outbound references from a proxy */
+char **
+spindle_db_proxy_refs(SPINDLE *spindle, const char *uri)
+{
+	SQL_STATEMENT *rs;
+	char *id;
+	char **refset;
+	size_t count;
+
+	id = spindle_db_id_(uri);
+	if(!id)
+	{
+		return NULL;
+	}
+	
+	rs = sql_queryf(spindle->db, "SELECT unnest(\"sameas\") AS \"uri\" FROM \"proxy\" WHERE \"id\" = %Q", id);
+	free(id);
+	if(!rs)
+	{
+		return NULL;
+	}
+	for(count = 0; !sql_stmt_eof(rs); sql_stmt_next(rs))
+	{
+		count++;
+	}
+	refset = (char **) calloc(count + 1, sizeof(char *));
+	if(!refset)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate buffer for reference-set\n");		
+		sql_stmt_destroy(rs);
+		return NULL;
+	}
+	sql_stmt_rewind(rs);
+	for(count = 0; !sql_stmt_eof(rs); sql_stmt_next(rs))
+	{
+		refset[count] = strdup(sql_stmt_str(rs, 0));
+		if(!refset[count])
+		{
+			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to duplicate reference <%s>\n", sql_stmt_str(rs, 0));
+			for(count--; ; count--)
+			{
+				free(refset[count]);
+				if(!count)
+				{
+					break;
+				}
+			}
+			free(refset);
+			sql_stmt_destroy(rs);
+			return NULL;
+		}
+		count++;
+	}
+	sql_stmt_destroy(rs);
+	return refset;
+}
+
+/* Move a set of references from one proxy to another */
+int
+spindle_db_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, char **refs)
+{
+	char *oldid, *newid;
+
+	(void) refs;
+
+	oldid = spindle_db_id_(from);
+	newid = spindle_db_id_(to);
+	if(!oldid || !newid)
+	{
+		free(oldid);
+		free(newid);
+		return -1;
+	}
+	/* Transaction */
+	sql_executef(spindle->db, "UPDATE \"proxy\" SET \"sameas\" = \"sameas\" || ( SELECT \"sameas\" FROM \"proxy\" WHERE \"id\" = %Q ) WHERE \"id\" = %Q", oldid, newid); 
+	sql_executef(spindle->db, "DELETE FROM \"proxy\" WHERE \"id\" = %Q", oldid);
+	free(oldid);
+	free(newid);
+	return 0;
+}
+
+static int
+spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict userdata)
+{
+	struct relate_struct *data;
+	SQL_STATEMENT *rs;
+
+	data = (struct relate_struct *) userdata;
+	rs = sql_queryf(db, "SELECT \"id\" FROM \"proxy\" WHERE \"id\" = %Q", data->id);
+	if(!rs)
+	{
+		return -2;
+	}
+	if(sql_stmt_eof(rs))
+	{
+		if(sql_executef(db, "INSERT INTO \"proxy\" (\"id\", \"sameas\") VALUES (%Q, ARRAY[]::text[])", data->id))
+		{
+			sql_stmt_destroy(rs);
+			return -2;
+		}
+	}
+	sql_stmt_destroy(rs);
+	if(sql_executef(db, "UPDATE \"proxy\" SET \"sameas\" = array_append(\"sameas\", %Q) WHERE \"id\" = %Q", data->uri, data->id))
+	{
+		return -2;
+	}
+	return 1;
+}
+
+#endif /* SPINDLE_DB_PROXIES */
+
+#if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
 static char *
 spindle_db_literalset_(struct spindle_literalset_struct *set)
@@ -296,49 +495,36 @@ spindle_db_escstr_lower_(char *dest, const char *src)
 	return dest;
 }
 
-#endif
-
-
-#if SPINDLE_DB_PROXIES
-/* Not currently used or implemented */
-
-char *
-spindle_db_proxy_locate(SPINDLE *spindle, const char *uri)
+static char *
+spindle_db_id_(const char *localname)
 {
-	SQL_STATEMENT *rs;
+	char *id, *p;
+	const char *t;
 
-	rs = sql_queryf(spindle->db, "SELECT \"id\" FROM \"proxy\" WHERE %V = ANY(\"sameas\")", uri);
-	/* ... */
+	id = (char *) calloc(1, strlen(localname) + 1);
+	if(!id)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate buffer for ID\n");
+		return NULL;
+	}
+	if(!(t = strrchr(localname, '/')))
+	{
+		t = id;
+	}
+	for(p = id; *t; t++)
+	{
+		if(isalnum(*t))
+		{
+			*p = *t;
+			p++;
+		}
+		else if(*t == '#')
+		{
+			break;
+		}
+	}
+	*p = 0;
+	return id;
 }
 
-/* Store a relationship between a proxy and a processed entity */
-int
-spindle_db_proxy_relate(SPINDLE *spindle, const char *remote, const char *local)
-{
-	
-	/* Ensure proxy exists */
-	sql_executef(spindle->db, "UPDATE \"proxy\" SET \"sameas\" = array_append(\"sameas\", %V) WHERE \"id\" = %V", remote, uuid);
-	
-}
-
-/* Obtain all of the outbound references from a proxy */
-char **
-spindle_db_proxy_refs(SPINDLE *spindle, const char *uri)
-{
-	SQL_STATEMENT *rs;
-
-	rs = sql_queryf(spindle->db, "SELECT unnest(\"sameas\") AS \"uri\" FROM \"proxy\" WHERE \"id\" = %V", uuid);
-}
-
-/* Move a set of references from one proxy to another */
-int
-spindle_db_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, char **refs)
-{
-	/* Ensure new proxy exists */
-	sql_executef("UPDATE \"proxy\" SET \"sameas\" = \"sameas\" || ( SELECT \"sameas\" FROM \"proxy\" WHERE \"id\" = %V ) WHERE \"id\" = %V", olduuid, newuuid); 
-	sql_executef("DELETE FROM \"proxy\" WHERE \"id\" = %V", olduuid);
-	return 0;
-}
-
-#endif /* SPINDLE_DB_PROXIES */
-
+#endif /* SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES */

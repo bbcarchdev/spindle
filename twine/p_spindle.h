@@ -45,6 +45,7 @@
 
 # define SPINDLE_DB_INDEX               1
 # define SPINDLE_DB_INDEX_VERSION       1
+# define SPINDLE_DB_PROXIES             1
 
 /* Flags on strsets */
 # define SF_NONE                        0
@@ -356,7 +357,16 @@ int spindle_license_init(SPINDLE *spindle);
 int spindle_license_apply(SPINDLECACHE *spindle);
 
 /* SQL index */
+# if SPINDLE_DB_INDEX
 int spindle_db_schema_update(SPINDLE *spindle);
 int spindle_db_cache_store(SPINDLECACHE *data);
+# endif
+
+# if SPINDLE_DB_PROXIES
+char *spindle_db_proxy_locate(SPINDLE *spindle, const char *uri);
+int spindle_db_proxy_relate(SPINDLE *spindle, const char *remote, const char *local);
+char **spindle_db_proxy_refs(SPINDLE *spindle, const char *uri);
+int spindle_db_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, char **refs);
+# endif
 
 #endif /*!P_SPINDLE_H_*/
