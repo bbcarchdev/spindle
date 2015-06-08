@@ -40,12 +40,52 @@ spindle_lookup(QUILTREQ *request, const char *target)
 	SPARQL *sparql;
 	SPARQLRES *res;
 	SPARQLROW *row;
+	SQL_STATEMENT *rs;
 	librdf_node *node;
 	librdf_uri *uri;
 	const char *uristr;
 	size_t l;
-	char *buf;
+	const char *t;
+	char *buf, *p;
 
+	if(spindle_db)
+	{
+		rs = sql_queryf(spindle_db, "SELECT \"id\" FROM \"proxy\" WHERE %Q = ANY(\"sameas\")", target);
+		if(!rs)
+		{
+			return 500;
+		}
+		if(sql_stmt_eof(rs))
+		{
+			sql_stmt_destroy(rs);
+			return 404;
+		}
+		buf = (char *) calloc(1, 1 + 32 + 4 + 1);
+		if(!buf)
+		{
+			quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": failed to allocate buffer for redirect URL\n");
+			sql_stmt_destroy(rs);
+			return 500;
+		}
+		buf[0] = '/';
+		p = &(buf[1]);
+		for(t = sql_stmt_str(rs, 0); *t; t++)
+		{
+			if(isalnum(*t))
+			{
+				*p = *t;
+				p++;
+			}
+		}
+		strcpy(p, "#id");
+		sql_stmt_destroy(rs);
+		quilt_request_printf(request, "Status: 303 See other\n"
+							 "Server: Quilt/" PACKAGE_VERSION "\n"
+							 "Location: %s\n"
+							 "\n", buf);
+		free(buf);
+		return 0;
+	}
 	sparql = quilt_sparql();
 	if(!sparql)
 	{
