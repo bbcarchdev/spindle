@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               3
+#define DB_SCHEMA_VERSION               4
 
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
@@ -148,6 +148,26 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 			return -1;
 		}
 		if(sql_execute(sql, "CREATE INDEX \"index_parent\" ON \"index\" (\"parent\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 4)
+	{
+		if(sql_execute(sql, "CREATE TABLE \"about\" ("
+					   " \"id\" uuid NOT NULL,"
+					   " \"about\" uuid NOT NULL,"
+					   " PRIMARY KEY(\"id\", \"about\")"
+					   ")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"about_id\" ON \"about\" (\"id\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"about_about\" ON \"about\" (\"about\")"))
 		{
 			return -1;
 		}
