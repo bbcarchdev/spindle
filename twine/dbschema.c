@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               4
+#define DB_SCHEMA_VERSION               5
 
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
@@ -157,7 +157,7 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 	{
 		if(sql_execute(sql, "CREATE TABLE \"about\" ("
 					   " \"id\" uuid NOT NULL,"
-					   " \"about\" uuid NOT NULL,"
+					   " \"class\" text NOT NULL,"
 					   " PRIMARY KEY(\"id\", \"about\")"
 					   ")"))
 		{
@@ -168,6 +168,35 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 			return -1;
 		}
 		if(sql_execute(sql, "CREATE INDEX \"about_about\" ON \"about\" (\"about\")"))
+		{
+			return -1;
+		}
+	}
+	if(newversion == 5)
+	{
+		if(sql_execute(sql, "CREATE TABLE \"media\" ("
+					   " \"id\" uuid NOT NULL,"
+					   " \"uri\" text,"
+					   " \"class\" text,"
+					   " \"type\" varchar(64), "
+					   " \"audience\" text "
+					   ")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"media_id\" ON \"media\" (\"id\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"media_class\" ON \"media\" USING hash (\"class\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"media_type\" ON \"media\" (\"type\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"media_audience\" ON \"media\" USING hash (\"audience\")"))
 		{
 			return -1;
 		}
