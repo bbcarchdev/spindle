@@ -33,6 +33,7 @@ static char *spindle_db_escstr_lower_(char *dest, const char *src);
 #endif
 
 #if SPINDLE_DB_INDEX
+static int spindle_db_remove_(SQL *sql, const char *id);
 static int spindle_db_langindex_(SQL *sql, const char *id, const char *target, const char *specific, const char *generic);
 #endif
 
@@ -100,8 +101,7 @@ spindle_db_cache_store(SPINDLECACHE *data)
 		return -1;
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": DB: ID is '%s'\n", id);
-	if(sql_executef(sql, "DELETE FROM \"index\" WHERE \"id\" = %Q",
-					id))
+	if(spindle_db_remove_(sql, id))
 	{
 		free(id);
 		return -1;
@@ -151,6 +151,27 @@ spindle_db_cache_store(SPINDLECACHE *data)
 		return -1;
 	}
 	free(id);
+	return 0;
+}
+
+static int
+spindle_db_remove_(SQL *sql, const char *id)
+{
+	if(sql_executef(sql, "DELETE FROM \"index\" WHERE \"id\" = %Q",
+					id))
+	{
+		return -1;
+	}
+	if(sql_executef(sql, "DELETE FROM \"about\" WHERE \"id\" = %Q",
+					id))
+	{
+		return -1;
+	}
+	if(sql_executef(sql, "DELETE FROM \"media\" WHERE \"id\" = %Q",
+					id))
+	{
+		return -1;
+	}
 	return 0;
 }
 
