@@ -34,6 +34,7 @@ static char *spindle_db_escstr_lower_(char *dest, const char *src);
 
 #if SPINDLE_DB_INDEX
 static int spindle_db_remove_(SQL *sql, const char *id);
+static int spindle_db_add_(SQL *sql, const char *id, SPINDLECACHE *data);
 static int spindle_db_langindex_(SQL *sql, const char *id, const char *target, const char *specific, const char *generic);
 #endif
 
@@ -90,9 +91,7 @@ int
 spindle_db_cache_store(SPINDLECACHE *data)
 {
 	SQL *sql;
-	const char *t;
-	char *id, *title, *desc, *classes;
-	char lbuf[64];
+	char *id;
 
 	sql = data->spindle->db;
 	id = spindle_db_id_(data->localname);
@@ -106,30 +105,11 @@ spindle_db_cache_store(SPINDLECACHE *data)
 		free(id);
 		return -1;
 	}
-	title = spindle_db_literalset_(&(data->titleset));
-	desc = spindle_db_literalset_(&(data->descset));
-	classes = spindle_db_strset_(data->classes);
-	if(data->has_geo)
-	{
-		snprintf(lbuf, sizeof(lbuf), "(%f, %f)", data->lat, data->lon);
-		t = lbuf;
-	}
-	else
-	{
-		t = NULL;
-	}
-	if(sql_executef(sql, "INSERT INTO \"index\" (\"id\", \"version\", \"modified\", \"score\", \"title\", \"description\", \"coordinates\", \"classes\") VALUES (%Q, %d, now(), %d, %Q, %Q, %Q, %Q)",
-					id, SPINDLE_DB_INDEX_VERSION, data->score, title, desc, t, classes))
+	if(spindle_db_add_(sql, id, data))
 	{
 		free(id);
-		free(title);
-		free(desc);
-		free(classes);
 		return -1;
 	}
-	free(title);
-	free(desc);
-	free(classes);
 	if(spindle_db_langindex_(sql, id, "en_gb", "en-gb", "en"))
 	{
 		free(id);
@@ -169,6 +149,39 @@ spindle_db_remove_(SQL *sql, const char *id)
 	}
 	if(sql_executef(sql, "DELETE FROM \"media\" WHERE \"id\" = %Q",
 					id))
+	{
+		return -1;
+	}
+	return 0;
+}
+
+static int
+spindle_db_add_(SQL *sql, const char *id, SPINDLECACHE *data)
+{
+	const char *t;
+	char *title, *desc, *classes;
+	char lbuf[64];
+	int r;
+
+	title = spindle_db_literalset_(&(data->titleset));
+	desc = spindle_db_literalset_(&(data->descset));
+	classes = spindle_db_strset_(data->classes);
+	if(data->has_geo)
+	{
+		snprintf(lbuf, sizeof(lbuf), "(%f, %f)", data->lat, data->lon);
+		t = lbuf;
+	}
+	else
+	{
+		t = NULL;
+	}
+	r = sql_executef(sql, "INSERT INTO \"index\" (\"id\", \"version\", \"modified\", \"score\", \"title\", \"description\", \"coordinates\", \"classes\") VALUES (%Q, %d, now(), %d, %Q, %Q, %Q, %Q)",
+					 id, SPINDLE_DB_INDEX_VERSION, data->score, title, desc, t, classes);
+	
+	free(title);
+	free(desc);
+	free(classes);
+	if(r)
 	{
 		return -1;
 	}
