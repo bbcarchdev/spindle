@@ -32,6 +32,10 @@ static char *spindle_db_escstr_(char *dest, const char *src);
 static char *spindle_db_escstr_lower_(char *dest, const char *src);
 #endif
 
+#if SPINDLE_DB_INDEX
+static int spindle_db_langindex_(SQL *sql, const char *id, const char *target, const char *specific, const char *generic);
+#endif
+
 #if SPINDLE_DB_PROXIES
 struct relate_struct
 {
@@ -65,7 +69,22 @@ static int spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict use
  *  index_cy_gb  (v1) The cy-gb (Welsh) full-text index
  *  index_gd_gb  (v1) The gd-gb (Scottish Gaelic) full-text index
  *  index_ga_gb  (v1) The ga-gb (Irish Gaelic) full-text index
+ *
+ * The 'about' table tracks topicality references:
+ *
+ *  id       The UUID of an entity being cached
+ *  about    The UUID of another reference this entity is about
+ *
+ * The 'media' table tracks information about media items (digital assets):
+ *
+ *  id       The UUID of the digital asset
+ *  uri      The complete URI of the digital asset
+ *  class    The DCMIT member for this asset (:Image, :Sound, etc.)
+ *  type     The MIME type of the asset
+ *  audience If known to be restricted, the URI of the audience it's
+ *           restricted to.
  */
+
 int
 spindle_db_cache_store(SPINDLECACHE *data)
 {
@@ -111,39 +130,51 @@ spindle_db_cache_store(SPINDLECACHE *data)
 	free(title);
 	free(desc);
 	free(classes);
-	if(sql_executef(sql, "UPDATE \"index\" SET "
-					"\"index_en_gb\" = setweight(to_tsvector(coalesce(\"title\" -> 'en-gb', \"title\" -> 'en', \"title\" -> '_', '')), 'A') || "
-					" setweight(to_tsvector(coalesce(\"description\" -> 'en-gb', \"description\" -> 'en', \"description\" -> '_', '')), 'B')  "
-					"WHERE \"id\" = %Q", id))
+	if(spindle_db_langindex_(sql, id, "en_gb", "en-gb", "en"))
 	{
 		free(id);
 		return -1;
 	}
-	if(sql_executef(sql, "UPDATE \"index\" SET "
-					"\"index_cy_gb\" = setweight(to_tsvector(coalesce(\"title\" -> 'cy-gb', \"title\" -> 'cy', \"title\" -> '_', '')), 'A') || "
-					" setweight(to_tsvector(coalesce(\"description\" -> 'cy-gb', \"description\" -> 'cy', \"description\" -> '_', '')), 'B')  "
-					"WHERE \"id\" = %Q", id))
+	if(spindle_db_langindex_(sql, id, "cy_gb", "cy-gb", "cy"))
 	{
 		free(id);
 		return -1;
 	}
-	if(sql_executef(sql, "UPDATE \"index\" SET "
-					"\"index_ga_gb\" = setweight(to_tsvector(coalesce(\"title\" -> 'ga-gb', \"title\" -> 'ga', \"title\" -> '_', '')), 'A') || "
-					" setweight(to_tsvector(coalesce(\"description\" -> 'ga-gb', \"description\" -> 'ga', \"description\" -> '_', '')), 'B')  "
-					"WHERE \"id\" = %Q", id))
+	if(spindle_db_langindex_(sql, id, "ga_gb", "ga-gb", "ga"))
 	{
 		free(id);
 		return -1;
 	}
-	if(sql_executef(sql, "UPDATE \"index\" SET "
-					"\"index_gd_gb\" = setweight(to_tsvector(coalesce(\"title\" -> 'gd-gb', \"title\" -> 'gd', \"title\" -> '_', '')), 'A') || "
-					" setweight(to_tsvector(coalesce(\"description\" -> 'gd-gb', \"description\" -> 'gd', \"description\" -> '_', '')), 'B')  "
-					"WHERE \"id\" = %Q", id))
+	if(spindle_db_langindex_(sql, id, "gd_gb", "gd-gb", "gd"))
 	{
 		free(id);
 		return -1;
 	}
 	free(id);
+	return 0;
+}
+
+static int
+spindle_db_langindex_(SQL *sql, const char *id, const char *target, const char *specific, const char *generic)
+{
+	if(specific)
+	{
+		if(sql_executef(sql, "UPDATE \"index\" SET "
+						"\"index_%s\" = setweight(to_tsvector(coalesce(\"title\" -> '%s', \"title\" -> '%s', \"title\" -> '_', '')), 'A') || "
+						" setweight(to_tsvector(coalesce(\"description\" -> '%s', \"description\" -> '%s', \"description\" -> '_', '')), 'B')  "
+						"WHERE \"id\" = %Q", target, specific, generic, specific, generic, id))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(sql_executef(sql, "UPDATE \"index\" SET "
+					"\"index_%s\" = setweight(to_tsvector(coalesce(\"title\" -> '%s', \"title\" -> '_', '')), 'A') || "
+					" setweight(to_tsvector(coalesce(\"description\" -> '%s', \"description\" -> '_', '')), 'B')  "
+					"WHERE \"id\" = %Q", target, generic, generic, id))
+	{
+		return -1;
+	}
 	return 0;
 }
 
