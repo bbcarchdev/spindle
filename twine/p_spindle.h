@@ -363,6 +363,7 @@ int spindle_db_cache_store(SPINDLECACHE *data);
 # endif
 
 # if SPINDLE_DB_PROXIES
+int spindle_db_cache_source(SPINDLECACHE *data);
 char *spindle_db_proxy_locate(SPINDLE *spindle, const char *uri);
 int spindle_db_proxy_relate(SPINDLE *spindle, const char *remote, const char *local);
 char **spindle_db_proxy_refs(SPINDLE *spindle, const char *uri);

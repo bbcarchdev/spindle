@@ -409,6 +409,48 @@ spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict userdata)
 	return 1;
 }
 
+/* Fetch all of the source data about the entities that relate to this
+ * proxy
+ */
+int
+spindle_db_cache_source(SPINDLECACHE *data)
+{
+	char **refs;
+	int r;
+	size_t c;
+
+	refs = spindle_db_proxy_refs(data->spindle, data->localname);
+	if(!refs)
+	{
+		return -1;
+	}
+	r = 0;
+	for(c = 0; refs[c]; c++)
+	{
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": DB: fetching data for <%s>\n", refs[c]);
+		if(sparql_queryf_model(data->spindle->sparql, data->sourcedata,
+							   "SELECT DISTINCT ?s ?p ?o ?g\n"
+							   " WHERE {\n"
+							   "  GRAPH ?g {\n"
+							   "   ?s ?p ?o .\n"
+							   "   FILTER(?s = <%s>)\n"
+							   "  }\n"
+							   "}",
+							   refs[c]))
+		{
+			r = -1;
+			break;
+		}
+	}
+	
+	for(c = 0; refs[c]; c++)
+	{
+		free(refs[c]);
+	}
+	free(refs);
+	return r;
+}
+
 #endif /* SPINDLE_DB_PROXIES */
 
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES

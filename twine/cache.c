@@ -49,6 +49,11 @@ spindle_cache_update_set(SPINDLE *spindle, struct spindle_strset_struct *set)
 { 
 	size_t c, origcount;
 
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": updating proxies:\n");
+	for(c = 0; c < set->count; c++)
+	{
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": <%s>\n", set->strings[c]);
+	}
 	/* Keep track of how many things were in the original set, so that we
 	 * don't recursively re-cache a huge amount
 	 */
@@ -188,6 +193,7 @@ spindle_cache_init_(SPINDLECACHE *data, SPINDLE *spindle, const char *localname)
 {	
 	char *t;
 
+	twine_logf(LOG_DEBUG, PLUGIN_NAME " ---------------------------------------\n");
 	memset(data, 0, sizeof(SPINDLECACHE));
 	data->spindle = spindle;
 	data->sparql = spindle->sparql;
@@ -255,6 +261,7 @@ spindle_cache_init_(SPINDLECACHE *data, SPINDLE *spindle, const char *localname)
 static int
 spindle_cache_cleanup_(SPINDLECACHE *data)
 {
+	twine_logf(LOG_DEBUG, PLUGIN_NAME " ---------------------------------------\n");
 	spindle_cache_cleanup_literalset_(&(data->titleset));
 	spindle_cache_cleanup_literalset_(&(data->descset));
 	if(data->doc)
@@ -312,25 +319,37 @@ spindle_cache_cleanup_literalset_(struct spindle_literalset_struct *set)
 static int
 spindle_cache_source_(SPINDLECACHE *data)
 {
-	/* Find all of the triples related to all of the subjects linked to the
-	 * proxy.
-	 *
-	 * Note that this includes data in both the root and proxy graphs,
-	 * but they will be removed by spindle_cache_source_clean_().
-	 */
-	if(sparql_queryf_model(data->spindle->sparql, data->sourcedata,
-						   "SELECT DISTINCT ?s ?p ?o ?g\n"
-						   " WHERE {\n"
-						   "  GRAPH %V {\n"
-						   "   ?s %V %V .\n"
-						   "  }\n"
-						   "  GRAPH ?g {\n"
-						   "   ?s ?p ?o .\n"
-						   "  }\n"
-						   "}",
-						   data->spindle->rootgraph, data->sameas, data->self))
+#if SPINDLE_DB_PROXIES
+	if(data->spindle->db)
 	{
-		return -1;
+		if(spindle_db_cache_source(data))
+		{
+			return -1;
+		}
+	}
+	else
+#endif
+	{
+		/* Find all of the triples related to all of the subjects linked to the
+		 * proxy.
+		 *
+		 * Note that this includes data in both the root and proxy graphs,
+		 * but they will be removed by spindle_cache_source_clean_().
+		 */
+		if(sparql_queryf_model(data->spindle->sparql, data->sourcedata,
+							   "SELECT DISTINCT ?s ?p ?o ?g\n"
+							   " WHERE {\n"
+							   "  GRAPH %V {\n"
+							   "   ?s %V %V .\n"
+							   "  }\n"
+							   "  GRAPH ?g {\n"
+							   "   ?s ?p ?o .\n"
+							   "  }\n"
+							   "}",
+							   data->spindle->rootgraph, data->sameas, data->self))
+		{
+			return -1;
+		}
 	}
 	if(spindle_cache_source_sameas_(data))
 	{
@@ -575,37 +594,41 @@ spindle_cache_store_(SPINDLECACHE *data)
 			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to update index database\n");
 			return -1;
 		}
-		return 0;
 	}
+	else
 #endif
-	/* First update the root graph */
+	{
+		/* First update the root graph - only if we're not using a SQL-based
+		 * index
+		 */
 
-	/* Note that our owl:sameAs statements take the form
-	 * <external> owl:sameAs <proxy>, so we can delete <proxy> ?p ?o with
-	 * impunity.
-	 */
-	if(sparql_updatef(data->spindle->sparql,
-					  "WITH %V\n"
-					  " DELETE { %V ?p ?o }\n"
-					  " WHERE { %V ?p ?o }",
-					  data->spindle->rootgraph, data->self, data->self))
-	{
-		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to delete previously-cached triples\n");
-		return -1;
-	}
-	if(sparql_updatef(data->spindle->sparql,
-					  "WITH %V\n"
-					  " DELETE { %V ?p ?o }\n"
-					  " WHERE { %V ?p ?o }",
-					  data->spindle->rootgraph, data->doc, data->doc))
-	{
-		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to delete previously-cached triples\n");
-		return -1;
-	}
-	if(sparql_insert_model(data->spindle->sparql, data->rootdata))
-	{
-		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to push new proxy data into the root graph of the store\n");
-		return -1;
+		/* Note that our owl:sameAs statements take the form
+		 * <external> owl:sameAs <proxy>, so we can delete <proxy> ?p ?o with
+		 * impunity.
+		 */
+		if(sparql_updatef(data->spindle->sparql,
+						  "WITH %V\n"
+						  " DELETE { %V ?p ?o }\n"
+						  " WHERE { %V ?p ?o }",
+						  data->spindle->rootgraph, data->self, data->self))
+		{
+			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to delete previously-cached triples\n");
+			return -1;
+		}
+		if(sparql_updatef(data->spindle->sparql,
+						  "WITH %V\n"
+						  " DELETE { %V ?p ?o }\n"
+						  " WHERE { %V ?p ?o }",
+						  data->spindle->rootgraph, data->doc, data->doc))
+		{
+			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to delete previously-cached triples\n");
+			return -1;
+		}
+		if(sparql_insert_model(data->spindle->sparql, data->rootdata))
+		{
+			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to push new proxy data into the root graph of the store\n");
+			return -1;
+		}
 	}
 
 	/* Now update the proxy data */
