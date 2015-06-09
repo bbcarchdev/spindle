@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               2
+#define DB_SCHEMA_VERSION               3
 
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
@@ -136,6 +136,18 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 			return -1;
 		}
 		if(sql_execute(sql, "CREATE INDEX \"proxy_sameas\" ON \"proxy\" USING HASH (\"sameas\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 3)
+	{
+		if(sql_execute(sql, "ALTER TABLE \"index\" ADD COLUMN \"parent\" uuid"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"index_parent\" ON \"index\" (\"parent\")"))
 		{
 			return -1;
 		}
