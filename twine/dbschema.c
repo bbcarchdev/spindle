@@ -23,6 +23,12 @@
 
 #include "p_spindle.h"
 
+/* The current version of the database schema: each schema version number in
+ * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
+ * below.
+ */
+#define DB_SCHEMA_VERSION               2
+
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
 static int spindle_db_migrate_(SQL *restrict, const char *identifier, int newversion, void *restrict userdata);
@@ -62,7 +68,7 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 	if(newversion == 0)
 	{
 		/* Return target version */
-		return 2;
+		return DB_SCHEMA_VERSION;
 	}
 	twine_logf(LOG_NOTICE, PLUGIN_NAME ": updating database schema to version %d\n", newversion);
 	if(newversion == 1)
@@ -135,6 +141,7 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 		}
 		return 0;
 	}
+	twine_logf(LOG_NOTICE, PLUGIN_NAME ": unsupported database schema version %d\n", newversion);
 	return -1;
 }
 
