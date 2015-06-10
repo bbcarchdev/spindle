@@ -326,6 +326,12 @@ spindle_proxy_refs(SPINDLE *spindle, const char *uri)
 	size_t count, size;
 	const char *str;
 
+#if SPINDLE_DB_PROXIES
+	if(spindle->db)
+	{
+		return spindle_db_proxy_refs(spindle, uri);
+	}
+#endif
 	refs = NULL;
 	count = 0;
 	size = 0;
