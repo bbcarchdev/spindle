@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               5
+#define DB_SCHEMA_VERSION               6
 
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
@@ -197,6 +197,18 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 			return -1;
 		}
 		if(sql_execute(sql, "CREATE INDEX \"media_audience\" ON \"media\" USING hash (\"audience\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 6)
+	{
+		if(sql_execute(sql, "ALTER TABLE \"index\" ADD COLUMN \"media\" uuid"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"index_media\" ON \"index\" USING hash (\"media\")"))
 		{
 			return -1;
 		}
