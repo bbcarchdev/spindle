@@ -671,3 +671,15 @@ mrss:content spindle:property [
 	spindle:expressedAs mrss:content
 ] .
 
+## dct:format
+
+dct:format
+	a spindle:Property ;
+	olo:index 17 ;
+	spindle:expect rdfs:Resource ;
+	spindle:proxyOnly false .
+
+dct:format spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs dct:format
+] .
