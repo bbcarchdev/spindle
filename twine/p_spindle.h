@@ -65,6 +65,8 @@
 # define NS_OLO                         "http://purl.org/ontology/olo/core#"
 # define NS_DCTERMS                     "http://purl.org/dc/terms/"
 # define NS_GEO                         "http://www.w3.org/2003/01/geo/wgs84_pos#"
+# define NS_DCMITYPE                    "http://purl.org/dc/dcmitype/"
+# define NS_MIME                        "http://purl.org/NET/mediatypes/"
 
 typedef struct spindle_context_struct SPINDLE;
 typedef struct spindle_cache_struct SPINDLECACHE;

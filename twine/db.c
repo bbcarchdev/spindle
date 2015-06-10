@@ -37,6 +37,9 @@ static int spindle_db_remove_(SQL *sql, const char *id);
 static int spindle_db_add_(SQL *sql, const char *id, SPINDLECACHE *data);
 static int spindle_db_langindex_(SQL *sql, const char *id, const char *target, const char *specific, const char *generic);
 static int spindle_db_topics_(SQL *sql, const char *id, SPINDLECACHE *data);
+static int spindle_db_media_(SQL *sql, const char *id, SPINDLECACHE *data);
+static char *spindle_db_media_kind_(SPINDLECACHE *data);
+static char *spindle_db_media_type_(SPINDLECACHE *data);
 #endif
 
 #if SPINDLE_DB_PROXIES
@@ -132,6 +135,11 @@ spindle_db_cache_store(SPINDLECACHE *data)
 		return -1;
 	}
 	if(spindle_db_topics_(sql, id, data))
+	{
+		free(id);
+		return -1;
+	}
+	if(spindle_db_media_(sql, id, data))
 	{
 		free(id);
 		return -1;
@@ -233,7 +241,7 @@ spindle_db_topics_(SQL *sql, const char *id, SPINDLECACHE *data)
 		   librdf_node_is_resource(node) &&
 		   (uri = librdf_node_get_uri(node)) &&
 		   (uristr = (const char *) librdf_uri_as_string(uri)))
-		{					
+		{
 			tid = spindle_db_id_(uristr);
 			if(!tid)
 			{
@@ -251,6 +259,180 @@ spindle_db_topics_(SQL *sql, const char *id, SPINDLECACHE *data)
 	librdf_free_stream(stream);
 	librdf_free_statement(query);
 	return r;
+}
+
+/* If this entity is a digital object, store information about it the "media"
+ * database table.
+ */
+static int
+spindle_db_media_(SQL *sql, const char *id, SPINDLECACHE *data)
+{
+	size_t c;
+	char **refs;
+	char *kind, *type;
+	int r;
+
+	if(strcmp(data->classname, NS_FOAF "Document"))
+	{
+		/* This isn't a digital asset */
+		return 0;
+	}
+	/* Find the source URI (there can be only one) */
+	refs = spindle_proxy_refs(data->spindle, data->localname);
+	if(!refs)
+	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to retrieve co-reference set for digital object\n");
+		return -1;
+	}
+	for(c = 0; refs[c]; c++) { }
+	if(c != 1)
+	{
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": will not track media for a digital object with multiple co-references\n");
+		for(c = 0; refs[c]; c++)
+		{
+			free(refs[c]);
+		}
+		free(refs[c]);
+		return 0;
+	}
+	kind = spindle_db_media_kind_(data);
+	if(!kind)
+	{
+		free(refs[0]);
+		free(refs);
+		return -1;
+	}
+	type = spindle_db_media_type_(data);
+	/* For each target audience (based upon ODRL descriptions), add a row	   
+	 * to the media table.
+	 * If no ODRL description is present, add a row with a NULL audience.
+	 */
+	r = sql_executef(sql, "INSERT INTO \"media\" (\"id\", \"uri\", \"class\", \"type\", \"audience\") VALUES (%Q, %Q, %Q, %Q, %Q)",
+					 id, refs[0], kind, type, NULL);
+	free(refs[0]);
+	free(refs);
+	free(kind);
+	free(type);
+	return r;
+}
+
+/* Determine the kind of object we're dealing with
+ * XXX should be driven by the rulebase
+ */
+static char *
+spindle_db_media_kind_(SPINDLECACHE *data)
+{
+	librdf_statement *query;
+	librdf_statement *st;
+	librdf_stream *stream;
+	librdf_node *node;
+	librdf_uri *uri;
+	const char *uristr;
+	char *kind;
+
+	kind = NULL;
+	if(!(query = librdf_new_statement(data->spindle->world)))
+	{
+		return NULL;
+	}
+	if(!(node = librdf_new_node_from_node(data->self)))
+	{
+		librdf_free_statement(query);
+		return NULL;
+	}
+	librdf_statement_set_subject(query, node);
+	if(!(node = librdf_new_node_from_uri_string(data->spindle->world, (const unsigned char *) NS_RDF "type")))
+	{
+		librdf_free_statement(query);
+		return NULL;
+	}
+	librdf_statement_set_predicate(query, node);
+	for(stream = librdf_model_find_statements_in_context(data->proxydata, query, data->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
+	{
+		st = librdf_stream_get_object(stream);
+		if((node = librdf_statement_get_object(st)) &&
+		   librdf_node_is_resource(node) &&
+		   (uri = librdf_node_get_uri(node)) &&
+		   (uristr = (const char *) librdf_uri_as_string(uri)))
+		{
+			if(!strncmp(uristr, NS_DCMITYPE, strlen(NS_DCMITYPE)))
+			{
+				kind = strdup(uristr);
+				if(!kind)
+				{
+					librdf_free_stream(stream);
+					librdf_free_statement(query);
+					return NULL;
+				}
+				break;
+			}
+		}
+	}
+	librdf_free_stream(stream);
+	librdf_free_statement(query);	
+	if(!kind)
+	{
+		kind = strdup(NS_FOAF "Document");
+		if(!kind)
+		{
+			return NULL;
+		}
+	}
+	return kind;
+}
+
+/* Determine the MIME type of object we're dealing with */
+static char *
+spindle_db_media_type_(SPINDLECACHE *data)
+{
+	librdf_statement *query;
+	librdf_statement *st;
+	librdf_stream *stream;
+	librdf_node *node;
+	librdf_uri *uri;
+	const char *uristr;
+	char *type;
+	size_t l;
+
+	type = NULL;
+	if(!(query = librdf_new_statement(data->spindle->world)))
+	{
+		return NULL;
+	}
+	if(!(node = librdf_new_node_from_node(data->self)))
+	{
+		librdf_free_statement(query);
+		return NULL;
+	}
+	librdf_statement_set_subject(query, node);
+	if(!(node = librdf_new_node_from_uri_string(data->spindle->world, (const unsigned char *) NS_DCTERMS "format")))
+	{
+		librdf_free_statement(query);
+		return NULL;
+	}
+	librdf_statement_set_predicate(query, node);
+	l = strlen(NS_MIME);
+	for(stream = librdf_model_find_statements_in_context(data->proxydata, query, data->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
+	{
+		st = librdf_stream_get_object(stream);
+		if((node = librdf_statement_get_object(st)) &&
+		   librdf_node_is_resource(node) &&
+		   (uri = librdf_node_get_uri(node)) &&
+		   (uristr = (const char *) librdf_uri_as_string(uri)))
+		{
+			if(!strncmp(uristr, NS_MIME, strlen(NS_MIME)) &&
+			   strlen(uristr) > l)
+			{
+				type = strdup(uristr + l);
+				librdf_free_stream(stream);
+				librdf_free_statement(query);
+				return type;
+			}
+		}
+	}
+	librdf_free_stream(stream);
+	librdf_free_statement(query);	
+	return NULL;
 }
 
 /* Update the language-specific index "index_<target>" using (in order of
