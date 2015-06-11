@@ -48,7 +48,7 @@ struct propmatch_struct
 /* A single entry in a list of multi-lingual literals */
 struct literal_struct
 {
-	char lang[4];
+	char lang[8];
 	librdf_node *node;
 	int priority;
 };
@@ -666,7 +666,7 @@ spindle_prop_candidate_lang_(struct propdata_struct *data, struct propmatch_stru
 	size_t c;
 	librdf_node *node;
 	const char *s;
-	char *t;
+	char langstr[8];
 
 	(void) data;
 	(void) st;
@@ -679,24 +679,40 @@ spindle_prop_candidate_lang_(struct propdata_struct *data, struct propmatch_stru
 	{
 		for(s = lang; *s; s++)
 		{
-			if(!isalpha(*s))
+			if(!isalpha(*s) && *s != '-' && *s != '_')
 			{
 				twine_logf(LOG_WARNING, PLUGIN_NAME ": encountered invalid byte '%02x' in language specifier\n", *s);
 				return -1;
 			}
 		}
-		if(strlen(lang) < 2 || strlen(lang) > 3)
+		if(strlen(lang) < 2 || strlen(lang) > 7)
 		{
 			twine_logf(LOG_WARNING, PLUGIN_NAME ": ignoring invalid language '%s'\n", lang);
 			return -1;
 		}
+		for(c = 0; *lang; lang++)
+		{
+			if(*lang == '_')
+			{
+				langstr[c] = '-';
+			}
+			else
+			{
+				langstr[c] = tolower(*lang);
+			}
+			c++;
+		}
+		langstr[c] = 0;
+		lang = langstr;
+	}
+	else
+	{
+		langstr[0] = 0;
 	}
 	entry = NULL;
 	for(c = 0; c < match->nliterals; c++)
 	{
-		if((!lang && !match->literals[c].lang[0]) ||
-		   (lang && match->literals[c].lang[0] &&
-			!strcasecmp(match->literals[c].lang, lang)))
+		if(!strcmp(match->literals[c].lang, langstr))
 		{
 			entry = &(match->literals[c]);
 			break;
@@ -717,14 +733,7 @@ spindle_prop_candidate_lang_(struct propdata_struct *data, struct propmatch_stru
 		match->literals = p;
 		entry = &(match->literals[match->nliterals]);
 		memset(entry, 0, sizeof(struct literal_struct));
-		if(lang)
-		{
-			strncpy(entry->lang, lang, 4);
-			for(t = entry->lang; *t; t++)
-			{
-				*t = tolower(*t);
-			}
-		}
+		strcpy(entry->lang, langstr);
 		match->nliterals++;
 	}
 	node = twine_rdf_node_clone(obj);

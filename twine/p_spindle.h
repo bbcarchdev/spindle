@@ -67,6 +67,7 @@
 # define NS_GEO                         "http://www.w3.org/2003/01/geo/wgs84_pos#"
 # define NS_DCMITYPE                    "http://purl.org/dc/dcmitype/"
 # define NS_MIME                        "http://purl.org/NET/mediatypes/"
+# define NS_ODRL                        "http://www.w3.org/ns/odrl/2/"
 
 typedef struct spindle_context_struct SPINDLE;
 typedef struct spindle_cache_struct SPINDLECACHE;
@@ -191,7 +192,7 @@ struct spindle_literalset_struct
 
 struct spindle_literalstring_struct
 {
-	char lang[4];
+	char lang[8];
 	char *str;
 };
 

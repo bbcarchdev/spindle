@@ -48,6 +48,7 @@
 @prefix xhtml: <http://www.w3.org/1999/xhtml/vocab#> .
 @prefix schema: <http://schema.org/> .
 @prefix gazetteer: <http://data.ordnancesurvey.co.uk/ontology/50kGazetteer/> .
+@prefix odrl: <http://www.w3.org/ns/odrl/2/> .
 
 #### Co-reference predicates
 
@@ -683,3 +684,39 @@ dct:format spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs dct:format
 ] .
+
+## odrl:permission
+
+odrl:permission
+	a spindle:Property ;
+	olo:index 18 ;
+	spindle:expect rdfs:Resource ;
+	spindle:proxyOnly false .
+
+odrl:permission
+	olo:index 0 ;
+	spindle:expressedAs odrl:permission .
+
+## odrl:action
+
+odrl:action
+	a spindle:Property ;
+	olo:index 18 ;
+	spindle:expect rdfs:Resource ;
+	spindle:proxyOnly false .
+
+odrl:action
+	olo:index 0 ;
+	spindle:expressedAs odrl:action .
+
+## odrl:assignee
+
+odrl:assignee
+	a spindle:Property ;
+	olo:index 19 ;
+	spindle:expect rdfs:Resource ;
+	spindle:proxyOnly false .
+
+odrl:assignee
+	olo:index 0 ;
+	spindle:expressedAs odrl:assginee .
