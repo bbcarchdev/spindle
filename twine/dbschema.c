@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               6
+#define DB_SCHEMA_VERSION               9
 
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
@@ -209,6 +209,58 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 			return -1;
 		}
 		if(sql_execute(sql, "CREATE INDEX \"index_media\" ON \"index\" USING hash (\"media\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}	
+	if(newversion == 7)
+	{
+		if(sql_execute(sql, "DROP INDEX \"index_media\""))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE TABLE \"index_media\" ("
+					   "  \"id\" uuid NOT NULL, "
+					   "  \"media\" uuid NOT NULL, "
+					   "  PRIMARY KEY(\"id\", \"media\")"
+					   ")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"index_media_id\" ON \"index_media\" (\"id\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"index_media_media\" ON \"index_media\" (\"media\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 8)
+	{
+		if(sql_execute(sql, "ALTER TABLE \"index\" DROP COLUMN \"media\""))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 9)
+	{
+		if(sql_execute(sql, "CREATE TABLE \"index_about\" ("
+					   "  \"id\" uuid NOT NULL, "
+					   "  \"about\" uuid NOT NULL, "
+					   "  PRIMARY KEY(\"id\", \"about\")"
+					   ")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"index_about_id\" ON \"index_about\" (\"id\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"index_about_about\" ON \"index_about\" (\"about\")"))
 		{
 			return -1;
 		}
