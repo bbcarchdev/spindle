@@ -30,6 +30,8 @@ spindle_la_SOURCES = p_spindle.h \
 spindle_la_LDFLAGS = -no-undefined -module -avoid-version
 
 spindle_la_LIBADD = $(top_builddir)/libs3client/libs3client.la \
-	@LIBTWINE_LOCAL_LIBS@ @LIBTWINE_LIBS@
+	@LIBTWINE_LOCAL_LIBS@ @LIBTWINE_LIBS@ \
+	@LIBSQL_LOCAL_LIBS@ @LIBSQL_LIBS@ \
+	@LIBURI_LOCAL_LIBS@ @LIBURI_LIBS@
 
 dist_twinemodule_DATA = rulebase.ttl
