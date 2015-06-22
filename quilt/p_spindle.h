@@ -34,6 +34,30 @@
 
 # define QUILT_PLUGIN_NAME              "spindle"
 
+/* Namespaces */
+# define NS_RDF                         "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+# define NS_XSD                         "http://www.w3.org/2001/XMLSchema#"
+# define NS_RDFS                        "http://www.w3.org/2000/01/rdf-schema#"
+# define NS_FOAF                        "http://xmlns.com/foaf/0.1/"
+# define NS_POWDER                      "http://www.w3.org/2007/05/powder-s#"
+# define NS_MRSS                        "http://search.yahoo.com/mrss/"
+# define NS_OWL                         "http://www.w3.org/2002/07/owl#"
+# define NS_SPINDLE                     "http://bbcarchdev.github.io/ns/spindle#"
+# define NS_OLO                         "http://purl.org/ontology/olo/core#"
+# define NS_DCTERMS                     "http://purl.org/dc/terms/"
+# define NS_GEO                         "http://www.w3.org/2003/01/geo/wgs84_pos#"
+# define NS_DCMITYPE                    "http://purl.org/dc/dcmitype/"
+# define NS_MIME                        "http://purl.org/NET/mediatypes/"
+# define NS_ODRL                        "http://www.w3.org/ns/odrl/2/"
+# define NS_XHTML                       "http://www.w3.org/1999/xhtml/vocab#"
+# define NS_VOID                        "http://rdfs.org/ns/void#"
+# define NS_FORMATS                     "http://www.w3.org/ns/formats/"
+# define NS_EVENT                       "http://purl.org/NET/c4dm/event.owl#"
+# define NS_CRM                         "http://www.cidoc-crm.org/cidoc-crm/"
+# define NS_SKOS                        "http://www.w3.org/2004/02/skos/core#"
+# define NS_FRBR                        "http://purl.org/vocab/frbr/core#"
+# define NS_OSD                         "http://a9.com/-/spec/opensearch/1.1/"
+
 struct index_struct
 {
 	const char *uri;
@@ -52,5 +76,7 @@ int spindle_home(QUILTREQ *req);
 int spindle_item(QUILTREQ *req);
 int spindle_item_s3(QUILTREQ *req);
 int spindle_lookup(QUILTREQ *req, const char *uri);
+
+int spindle_add_concrete(QUILTREQ *request);
 
 #endif /*!P_SPINDLE_H_*/

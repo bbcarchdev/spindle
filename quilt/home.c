@@ -27,16 +27,17 @@
 /* XXX replace with config */
 struct index_struct spindle_indices[] = {
 	{ "/everything", "Everything", NULL },
-	{ "/people", "People", "http://xmlns.com/foaf/0.1/Person" },
-	{ "/groups", "Groups", "http://xmlns.com/foaf/0.1/Group" },
-	{ "/agents", "Agents", "http://xmlns.com/foaf/0.1/Agent" },
-	{ "/places", "Places", "http://www.w3.org/2003/01/geo/wgs84_pos#SpatialThing" },
-	{ "/events", "Events", "http://purl.org/NET/c4dm/event.owl#Event" },
-	{ "/things", "Physical things", "http://www.cidoc-crm.org/cidoc-crm/E18_Physical_Thing" },
-	{ "/collections", "Collections", "http://purl.org/dc/dcmitype/Collection" },
-	{ "/works", "Creative works", "http://purl.org/vocab/frbr/core#Work" },
-	{ "/assets", "Digital assets", "http://xmlns.com/foaf/0.1/Document" },
-	{ "/concepts", "Concepts", "http://www.w3.org/2004/02/skos/core#Concept" },
+	{ "/people", "People", NS_FOAF "Person" },
+	{ "/groups", "Groups", NS_FOAF "Group" },
+	{ "/agents", "Agents", NS_FOAF "Agent" },
+	{ "/places", "Places", NS_GEO "SpatialThing" },
+	{ "/events", "Events", NS_EVENT "Event" },
+
+	{ "/things", "Physical things", NS_CRM "E18_Physical_Thing" },
+	{ "/collections", "Collections", NS_DCMITYPE "Collection" },
+	{ "/works", "Creative works", NS_FRBR "Work" },
+	{ "/assets", "Digital assets", NS_FOAF "Document" },
+	{ "/concepts", "Concepts", NS_SKOS "Concept" },
 	{ NULL, NULL, NULL }
 };
 
@@ -45,7 +46,9 @@ spindle_home(QUILTREQ *request)
 {
 	librdf_statement *st;
 	size_t c;
-
+	QUILTCANON *partcanon, *link;
+	char *abstract, *partstr, *linkstr;
+	int r;
 	const char *uri;
 
 	uri = quilt_request_getparam(request, "uri");
@@ -56,65 +59,139 @@ spindle_home(QUILTREQ *request)
 	}
 
 	/* Add OpenSearch information to the index */
-	st = quilt_st_create_literal(request->path, "http://a9.com/-/spec/opensearch/1.1/template", "/?q={searchTerms?}&lang={language?}&limit={count?}&offset={startIndex?}&class={rdfs:Class?}", NULL);
+	abstract = quilt_canon_str(request->canonical, QCO_ABSTRACT);
+	link = quilt_canon_create(request->canonical);
+	quilt_canon_reset_params(link);
+	quilt_canon_add_param(link, "q", "{searchTerms?}");
+	quilt_canon_add_param(link, "lang", "{language?}");
+	quilt_canon_add_param(link, "limit", "{count?}");
+	quilt_canon_add_param(link, "offset", "{startIndex?}");
+	quilt_canon_add_param(link, "class", "{rdfs:Class?}");
+	quilt_canon_set_ext(link, NULL);						
+	linkstr = quilt_canon_str(link, QCO_ABSTRACT);
+	st = quilt_st_create_literal(abstract, NS_OSD "template", linkstr, NULL);
+	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_free_statement(st);
+	free(linkstr);
+	quilt_canon_destroy(link);
+
+	st = quilt_st_create_literal(abstract, NS_OSD "Language", "en-gb", NULL);
 	librdf_model_context_add_statement(request->model, request->basegraph, st);
 	librdf_free_statement(st);
 
-	st = quilt_st_create_literal(request->path, "http://a9.com/-/spec/opensearch/1.1/Language", "en-gb", NULL);
+	st = quilt_st_create_literal(abstract, NS_OSD "Language", "cy-gb", NULL);
 	librdf_model_context_add_statement(request->model, request->basegraph, st);
 	librdf_free_statement(st);
-	st = quilt_st_create_literal(request->path, "http://a9.com/-/spec/opensearch/1.1/Language", "cy-gb", NULL);
+
+	st = quilt_st_create_literal(abstract, NS_OSD "Language", "gd-gb", NULL);
 	librdf_model_context_add_statement(request->model, request->basegraph, st);
 	librdf_free_statement(st);
-	st = quilt_st_create_literal(request->path, "http://a9.com/-/spec/opensearch/1.1/Language", "gd-gb", NULL);
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
-	librdf_free_statement(st);
-	st = quilt_st_create_literal(request->path, "http://a9.com/-/spec/opensearch/1.1/Language", "ga-gb", NULL);
+
+	st = quilt_st_create_literal(abstract, NS_OSD "Language", "ga-gb", NULL);
 	librdf_model_context_add_statement(request->model, request->basegraph, st);
 	librdf_free_statement(st);
 
 	/* Add VoID descriptive metadata */
-	st = quilt_st_create_uri(request->path, "http://rdfs.org/ns/void#uriLookupEndpoint", "/?uri=");
+	abstract = quilt_canon_str(request->canonical, QCO_ABSTRACT);
+	link = quilt_canon_create(request->canonical);
+	quilt_canon_reset_params(link);
+	quilt_canon_add_param(link, "uri", "");
+	linkstr = quilt_canon_str(link, QCO_ABSTRACT);
+	st = quilt_st_create_uri(abstract, NS_VOID "uriLookupEndpoint", linkstr);
 	librdf_model_context_add_statement(request->model, request->basegraph, st);
 	librdf_free_statement(st);	
+	free(linkstr);
+	quilt_canon_destroy(link);
 
-	st = quilt_st_create_uri(request->path, "http://rdfs.org/ns/void#openSearchDescription", "/index.osd");
+	link = quilt_canon_create(request->canonical);
+	quilt_canon_reset_params(link);
+	quilt_canon_set_explicitext(link, NULL);
+	quilt_canon_set_ext(link, "osd");
+	linkstr = quilt_canon_str(link, QCO_CONCRETE);
+	st = quilt_st_create_uri(abstract, NS_VOID "openSearchDescription", linkstr);	
 	librdf_model_context_add_statement(request->model, request->basegraph, st);
 	librdf_free_statement(st);	
+	free(linkstr);
+	quilt_canon_destroy(link);
 	
 	/* Add all of the indices as void:Datasets */
+	r = 0;
+	partcanon = NULL;
+	partstr = NULL;
 	for(c = 0; spindle_indices[c].uri; c++)
 	{
+		partcanon = quilt_canon_create(request->canonical);
+		if(!partcanon)
+		{
+			r = -1;
+			break;
+		}
+		quilt_canon_reset_path(partcanon);
+		quilt_canon_set_name(partcanon, NULL);
+		quilt_canon_add_path(partcanon, spindle_indices[c].uri);
+		partstr = quilt_canon_str(partcanon, QCO_ABSTRACT);
+		if(!partstr)
+		{
+			r = -1;
+			break;
+		}
 		if(spindle_indices[c].qclass)
 		{
-			st = quilt_st_create_uri(request->path, "http://rdfs.org/ns/void#classPartition", spindle_indices[c].uri);
+			st = quilt_st_create_uri(abstract, NS_VOID "classPartition", partstr);
 		}
 		else
 		{
-			st = quilt_st_create_uri(request->path, "http://rdfs.org/ns/void#rootResource", spindle_indices[c].uri);
+			st = quilt_st_create_uri(abstract, NS_VOID "rootResource", partstr);
 		}
-		if(!st) return -1;
+		if(!st)
+		{
+			r = -1;
+			break;
+		}
 		librdf_model_context_add_statement(request->model, request->basegraph, st);
 		librdf_free_statement(st);
 	
-		st = quilt_st_create_literal(spindle_indices[c].uri, "http://www.w3.org/2000/01/rdf-schema#label", spindle_indices[c].title, "en");
-		if(!st) return -1;
+		st = quilt_st_create_literal(partstr, NS_RDFS "label", spindle_indices[c].title, "en");
+		if(!st)
+		{
+			r = -1;
+			break;
+		}
 		librdf_model_context_add_statement(request->model, request->basegraph, st);
 		librdf_free_statement(st);
 
-		st = quilt_st_create_uri(spindle_indices[c].uri, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://rdfs.org/ns/void#Dataset");
-		if(!st) return -1;
+		st = quilt_st_create_uri(partstr, NS_RDF "type", NS_VOID "Dataset");
+		if(!st)
+		{
+			r = -1;
+			break;
+		}
 		librdf_model_context_add_statement(request->model, request->basegraph, st);
 		librdf_free_statement(st);
 
 		if(spindle_indices[c].qclass)
 		{
-			st = quilt_st_create_uri(spindle_indices[c].uri, "http://rdfs.org/ns/void#class", spindle_indices[c].qclass);
-			if(!st) return -1;
+			st = quilt_st_create_uri(partstr, NS_VOID "class", spindle_indices[c].qclass);
+			if(!st)
+			{
+				r = -1;
+				break;
+			}
 			librdf_model_context_add_statement(request->model, request->basegraph, st);
 			librdf_free_statement(st);
 		}
 	}
+	if(partcanon)
+	{
+		quilt_canon_destroy(partcanon);
+	}
+	free(partstr);
+	free(abstract);
+	if(r)
+	{
+		return -1;
+	}
+	spindle_add_concrete(request);
 	/* Return 200, rather than 0, to auto-serialise the model */
 	return 200;
 }

@@ -109,3 +109,56 @@ spindle_process(QUILTREQ *request)
 	return r;
 }
 
+int
+spindle_add_concrete(QUILTREQ *request)
+{
+	const char *s;
+	char *abstract, *concrete, *typebuf;
+	librdf_statement *st;
+
+	abstract = quilt_canon_str(request->canonical, QCO_ABSTRACT);
+	concrete = quilt_canon_str(request->canonical, QCO_CONCRETE);
+	
+	st = quilt_st_create_uri(abstract, NS_DCTERMS "hasFormat", concrete);
+	librdf_model_add_statement(request->model, st);
+	librdf_free_statement(st);
+
+	/* concrete rdf:type ... */
+	st = quilt_st_create_uri(concrete, NS_RDF "type", NS_DCMITYPE "Text");
+	librdf_model_add_statement(request->model, st);
+	librdf_free_statement(st);	
+	s = NULL;
+	if(!strcmp(request->type, "text/turtle"))
+	{
+		s = NS_FORMATS "Turtle";
+	}
+	else if(!strcmp(request->type, "application/rdf+xml"))
+	{
+		s = NS_FORMATS "RDF_XML";
+	}
+	else if(!strcmp(request->type, "text/rdf+n3"))
+	{
+		s = NS_FORMATS "N3";
+	}
+	if(s)
+	{
+		st = quilt_st_create_uri(concrete, NS_RDF "type", s);
+		librdf_model_add_statement(request->model, st);
+		librdf_free_statement(st);
+	}
+
+	typebuf = (char *) malloc(strlen(NS_MIME) + strlen(request->type) + 1);
+	if(typebuf)
+	{
+		strcpy(typebuf, NS_MIME);
+		strcat(typebuf, request->type);
+		st = quilt_st_create_uri(concrete, NS_DCTERMS "format", typebuf);
+		librdf_model_add_statement(request->model, st);
+		librdf_free_statement(st);
+		free(typebuf);
+	}
+
+	free(abstract);
+	free(concrete);
+	return 0;
+}

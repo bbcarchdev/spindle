@@ -94,7 +94,7 @@ spindle_lookup(QUILTREQ *request, const char *target)
 	res = sparql_queryf(sparql, "SELECT ?s\n"
 						"WHERE {\n"
 						" GRAPH %V {\n"
-						"  <%s> <http://www.w3.org/2002/07/owl#sameAs> ?s .\n"
+						"  <%s> <" NS_OWL "#sameAs> ?s .\n"
 						" }\n"
 						"}\n",
 						request->basegraph, target);
@@ -265,7 +265,7 @@ spindle_item_post_(QUILTREQ *request)
 	
 	if(sparql_queryf_model(sparql, request->model, "SELECT DISTINCT ?s ?p ?o ?g WHERE {\n"
 						   "  GRAPH ?g {\n"
-						   "    ?s <http://xmlns.com/foaf/0.1/topic> <%s#id>\n"
+						   "    ?s <" NS_FOAF "topic> <%s#id>\n"
 						   "  }"
 						   "  GRAPH ?g {\n"
 						   "    ?s ?p ?o\n"
@@ -277,7 +277,8 @@ spindle_item_post_(QUILTREQ *request)
 		quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": failed to retrieve related items\n");
 		return 500;
 	}
-	
+
+	spindle_add_concrete(request);
 	/* Return 200, rather than 0, to auto-serialise the model */
 	return 200;
 }
