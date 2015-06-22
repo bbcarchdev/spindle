@@ -28,7 +28,7 @@ static int spindle_index_metadata_sparqlres_(QUILTREQ *request, SPARQLRES *res);
 static int spindle_index_db_(QUILTREQ *request, const char *qclass);
 static int spindle_index_db_rs_(QUILTREQ *request, SQL_STATEMENT *rs);
 static int spindle_db_index_row_(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, const char *uri);
-static const char *spindle_checklang_(const char *lang);
+static const char *spindle_checklang_(QUILTREQ *request, const char *lang);
 static int spindle_add_langvector_(librdf_model *model, const char *vector, const char *subject, const char *predicate);
 static int spindle_add_array_(librdf_model *model, const char *array, const char *subject, const char *predicate);
 static int spindle_add_point_(librdf_model *model, const char *array, const char *subject);
@@ -43,7 +43,15 @@ spindle_index(QUILTREQ *request, const char *qclass)
 	char *uristr;
 	librdf_statement *st;
 	int r, i;
-	
+
+	if(request->offset)
+	{
+		quilt_canon_set_param_int(request->canonical, "offset", request->offset);
+	}
+	if(request->limit != request->deflimit)
+	{
+		quilt_canon_set_param_int(request->canonical, "limit", request->limit);
+	}
 	if(spindle_db)
 	{
 		return spindle_index_db_(request, qclass);
@@ -228,7 +236,7 @@ spindle_index_db_(QUILTREQ *request, const char *qclass)
 	t = qbuf;
 	n = 0;
 	search = quilt_request_getparam(request, "q");
-	lang = spindle_checklang_(quilt_request_getparam(request, "lang"));
+	lang = spindle_checklang_(request, quilt_request_getparam(request, "lang"));
 	if(!lang)
 	{
 		return 404;
@@ -815,7 +823,7 @@ appendf(char *buf, size_t *buflen, const char *fmt, ...)
 }
 
 static const char *
-spindle_checklang_(const char *lang)
+spindle_checklang_(QUILTREQ *req, const char *lang)
 {
 	if(!lang || !lang[0])
 	{
@@ -826,24 +834,28 @@ spindle_checklang_(const char *lang)
 	   !strcasecmp(lang, "en_gb") ||
 	   !strcasecmp(lang, "en-us"))
 	{
+		quilt_canon_set_param(req->canonical, "lang", "en_gb");
 		return "en_gb";
 	}
 	if(!strcasecmp(lang, "ga") ||
 	   !strcasecmp(lang, "ga-gb") ||
 	   !strcasecmp(lang, "ga_gb"))
 	{
+		quilt_canon_set_param(req->canonical, "lang", "ga_gb");
 		return "ga_gb";
 	}
 	if(!strcasecmp(lang, "cy") ||
 	   !strcasecmp(lang, "en-cy") ||
 	   !strcasecmp(lang, "en_cy"))
 	{
+		quilt_canon_set_param(req->canonical, "lang", "cy_gb");
 		return "cy_gb";
 	}
 	if(!strcasecmp(lang, "gd") ||
 	   !strcasecmp(lang, "gd-gb") ||
 	   !strcasecmp(lang, "gd_gb"))
 	{
+		quilt_canon_set_param(req->canonical, "lang", "gd_gb");
 		return "gd_gb";
 	}
 	return NULL;

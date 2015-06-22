@@ -51,6 +51,7 @@ spindle_home(QUILTREQ *request)
 	uri = quilt_request_getparam(request, "uri");
 	if(uri && uri[0])
 	{
+		quilt_canon_set_param(request->canonical, "uri", uri);
 		return spindle_lookup(request, uri);
 	}
 

@@ -36,6 +36,7 @@ spindle_process(QUILTREQ *request)
 	t = quilt_request_getparam(request, "q");
 	if(t && t[0])
 	{
+		quilt_canon_set_param(request->canonical, "q", t);
 		if(!request->indextitle)
 		{
 			request->indextitle = t;
@@ -46,6 +47,7 @@ spindle_process(QUILTREQ *request)
 	t = quilt_request_getparam(request, "class");
 	if(t && t[0])
 	{
+		quilt_canon_set_param(request->canonical, "class", t);
 		qclass = (char *) calloc(1, 32 + strlen(t));
 		if(spindle_db)
 		{
@@ -82,6 +84,7 @@ spindle_process(QUILTREQ *request)
 				}
 				request->indextitle = spindle_indices[c].title;
 				request->index = 1;
+				quilt_canon_add_path(request->canonical, spindle_indices[c].uri);			   
 				break;
 			}
 		}

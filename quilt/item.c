@@ -148,6 +148,15 @@ spindle_item(QUILTREQ *request)
 {
 	char *query;
 
+	if(request->path[0] != '/' ||
+	   strchr(request->path, '.') ||
+	   strchr(request->path, '%'))
+	{
+		return 404;
+	}
+	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": S3: request path is %s\n", request->path);
+	quilt_canon_add_path(request->canonical, request->path);
+	quilt_canon_set_fragment(request->canonical, "id");
 	query = (char *) malloc(strlen(request->subject) + 1024);
 	if(!query)
 	{
@@ -195,6 +204,8 @@ spindle_item_s3(QUILTREQ *request)
 		return 404;
 	}
 	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": S3: request path is %s\n", request->path);
+	quilt_canon_add_path(request->canonical, request->path);
+	quilt_canon_set_fragment(request->canonical, "id");
 	memset(&data, 0, sizeof(struct data_struct));
 	req = s3_request_create(spindle_bucket, request->path, "GET");
 	if(!req)
