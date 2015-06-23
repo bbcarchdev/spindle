@@ -939,6 +939,7 @@ spindle_db_proxy_locate(SPINDLE *spindle, const char *uri)
 		return NULL;
 	}
     /* root + '/' + uuid + '#id' + NUL */
+	/* XXX the fragment should be configurable */
 	buf = (char *) malloc(strlen(spindle->root) + 1 + 32 + 3 + 1);
 	if(!buf)
 	{

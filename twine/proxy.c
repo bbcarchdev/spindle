@@ -56,6 +56,7 @@ spindle_proxy_generate(SPINDLE *spindle, const char *uri)
 			t++;
 		}
 	}
+	/* XXX the fragment should be configurable */
 	*t = '#';
 	t++;
 	*t = 'i';

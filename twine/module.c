@@ -47,6 +47,7 @@ twine_plugin_init(void)
 	twine_logf(LOG_INFO, PLUGIN_NAME ": URI prefix is <%s>\n", spindle.root);
 	twine_preproc_register(PLUGIN_NAME, spindle_preproc, &spindle);
 	twine_postproc_register(PLUGIN_NAME, spindle_postproc, &spindle);
+	twine_update_register(PLUGIN_NAME, spindle_update, &spindle);
 	return 0;
 }
 

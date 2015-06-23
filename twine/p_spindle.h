@@ -293,6 +293,9 @@ int spindle_preproc(twine_graph *graph, void *data);
 /* Post-process an updated graph */
 int spindle_postproc(twine_graph *graph, void *data);
 
+/* Update cached data for an identifier */
+int spindle_update(const char *name, const char *identifier, void *data);
+
 /* Extract a list of co-references from a librdf model */
 struct spindle_corefset_struct *spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphuri);
 /* Add a single co-reference to a set */
