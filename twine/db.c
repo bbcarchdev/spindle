@@ -24,6 +24,7 @@
 #include "p_spindle.h"
 
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
+static int spindle_db_local_(SPINDLE *spindle, const char *localname);
 static char *spindle_db_id_(const char *localname);
 static char *spindle_db_literalset_(struct spindle_literalset_struct *set);
 static char *spindle_db_strset_(struct spindle_strset_struct *set);
@@ -38,6 +39,7 @@ static int spindle_db_add_(SQL *sql, const char *id, SPINDLECACHE *data);
 static int spindle_db_langindex_(SQL *sql, const char *id, const char *target, const char *specific, const char *generic);
 static int spindle_db_topics_(SQL *sql, const char *id, SPINDLECACHE *data);
 static int spindle_db_media_(SQL *sql, const char *id, SPINDLECACHE *data);
+static int spindle_db_media_refs_(SQL *sql, const char *id, SPINDLECACHE *data);
 static char *spindle_db_media_kind_(SPINDLECACHE *data);
 static char *spindle_db_media_type_(SPINDLECACHE *data);
 static char *spindle_db_media_license_(SPINDLECACHE *data);
@@ -172,6 +174,11 @@ spindle_db_remove_(SQL *sql, const char *id)
 	{
 		return -1;
 	}
+	if(sql_executef(sql, "DELETE FROM \"index_media\" WHERE \"id\" = %Q",
+					id))
+	{
+		return -1;
+	}
 	return 0;
 }
 
@@ -267,6 +274,79 @@ spindle_db_topics_(SQL *sql, const char *id, SPINDLECACHE *data)
 	return r;
 }
 
+/* Add information about references from this entity to related digital objects
+ */
+static int
+spindle_db_media_refs_(SQL *sql, const char *id, SPINDLECACHE *data)
+{
+	librdf_statement *query;
+	librdf_statement *st;
+	librdf_stream *stream;
+	librdf_node *node;
+	librdf_uri *uri;
+	const char *uristr;
+	char *tid, *localid;
+	int r;
+
+	if(!(query = librdf_new_statement(data->spindle->world)))
+	{
+		return -1;
+	}
+	if(!(node = librdf_new_node_from_node(data->self)))
+	{
+		librdf_free_statement(query);
+		return -1;
+	}
+	librdf_statement_set_subject(query, node);
+	r = 0;
+	for(stream = librdf_model_find_statements_in_context(data->proxydata, query, data->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
+	{
+		if(!(st = librdf_stream_get_object(stream))) continue;
+		if(!(node = librdf_statement_get_predicate(st))) continue;
+		if(!librdf_node_is_resource(node)) continue;
+		if(!(uri = librdf_node_get_uri(node))) continue;
+		if(!(uristr = (const char *) librdf_uri_as_string(uri))) continue;
+		/* XXX this should be controlled by the rulebase or config */
+		if(strcmp(uristr, NS_FOAF "page") &&
+		   strcmp(uristr, NS_MRSS "player") &&
+		   strcmp(uristr, NS_MRSS "content"))
+		{
+			continue;
+		}
+		if(!(node = librdf_statement_get_object(st))) continue;
+		if(!librdf_node_is_resource(node)) continue;
+		if(!(uri = librdf_node_get_uri(node))) continue;
+		if(!(uristr = (const char *) librdf_uri_as_string(uri))) continue;
+		localid = NULL;
+		if(!spindle_db_local_(data->spindle, uristr))
+		{
+			localid = spindle_proxy_locate(data->spindle, uristr);
+			if(!localid)
+			{
+				continue;
+			}
+			uristr = localid;
+		}
+		if(!(tid = spindle_db_id_(uristr)))
+		{
+			free(localid);
+			continue;
+		}
+		if(sql_executef(sql, "INSERT INTO \"index_media\" (\"id\", \"media\") VALUES (%Q, %Q)", id, tid))
+		{
+			free(tid);
+			free(localid);
+			r = -1;
+			break;
+		}
+		free(tid);
+		free(localid);
+	}
+	librdf_free_stream(stream);
+	librdf_free_statement(query);
+	return r;
+}
+
 /* If this entity is a digital object, store information about it the "media"
  * database table.
  */
@@ -281,7 +361,7 @@ spindle_db_media_(SQL *sql, const char *id, SPINDLECACHE *data)
 	if(!data->classname || strcmp(data->classname, NS_FOAF "Document"))
 	{
 		/* This isn't a digital asset */
-		return 0;
+		return spindle_db_media_refs_(sql, id, data);
 	}
 	/* Find the source URI (there can be only one) */
 	refs = spindle_proxy_refs(data->spindle, data->localname);
@@ -328,10 +408,14 @@ spindle_db_media_(SQL *sql, const char *id, SPINDLECACHE *data)
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": media object <%s> has no license\n", refs[0]);
 		audiences = NULL;
 	}
+	if(!audiences || audiences[0])
+	{
+		r = sql_executef(sql, "INSERT INTO \"index_media\" (\"id\", \"media\") VALUES (%Q, %Q)", id, id);
+	}
 	if(!audiences)
 	{		
-		r = sql_executef(sql, "INSERT INTO \"media\" (\"id\", \"uri\", \"class\", \"type\", \"audience\") VALUES (%Q, %Q, %Q, %Q, %Q)",
-						 id, refs[0], kind, type, NULL);
+		sql_executef(sql, "INSERT INTO \"media\" (\"id\", \"uri\", \"class\", \"type\", \"audience\") VALUES (%Q, %Q, %Q, %Q, %Q)",
+					 id, refs[0], kind, type, NULL);
 	}
 	else
 	{
@@ -1306,6 +1390,16 @@ spindle_db_escstr_lower_(char *dest, const char *src)
 		dest++;
 	}
 	return dest;
+}
+
+static int
+spindle_db_local_(SPINDLE *spindle, const char *localname)
+{
+	if(strcmp(localname, spindle->root))
+	{
+		return 0;
+	}
+	return 1;
 }
 
 static char *
