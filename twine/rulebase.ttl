@@ -59,6 +59,8 @@
 ## Wikipedia page URL predicates:
 ##
 ##   ex:predicate spindle:coref spindle:wikipediaMatch .
+##
+## Other resource-matching types may be added in the future.
 
 owl:sameAs spindle:coref spindle:resourceMatch .
 <http://www.bbc.co.uk/ontologies/coreconcepts/sameAs> spindle:coref spindle:resourceMatch .
@@ -453,6 +455,12 @@ dct:isPartOf spindle:property [
 	spindle:expressedAs dct:isPartOf
 ] .
 
+po:broadcast_on spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs dct:isPartOf ;
+	rdfs:domain event:Event
+] .
+
 ## dct:hasVersion
 
 dct:hasVersion
@@ -540,6 +548,27 @@ event:place spindle:property [
 <http://www.tate.org.uk/ontologies/collection#place> spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs event:place ;
+	rdfs:domain event:Event
+] .
+
+## event:factor
+
+event:factor
+    a spindle:Property ;
+	olo:index 12 ;
+	spindle:expect rdfs:Resource ;
+	spindle:prominence 1 ;
+	spindle:proxyOnly true .
+
+event:factor spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs event:factor ;
+	rdfs:domain event:Event
+] .
+
+po:broadcast_of spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs event:factor ;
 	rdfs:domain event:Event
 ] .
 
