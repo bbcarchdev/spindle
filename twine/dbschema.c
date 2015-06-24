@@ -157,7 +157,7 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 	{
 		if(sql_execute(sql, "CREATE TABLE \"about\" ("
 					   " \"id\" uuid NOT NULL,"
-					   " \"class\" text NOT NULL,"
+					   " \"about\" text NOT NULL,"
 					   " PRIMARY KEY(\"id\", \"about\")"
 					   ")"))
 		{
