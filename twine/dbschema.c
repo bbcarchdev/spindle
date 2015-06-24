@@ -171,6 +171,7 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 		{
 			return -1;
 		}
+		return 0;
 	}
 	if(newversion == 5)
 	{
