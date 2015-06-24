@@ -23,6 +23,10 @@
 
 #include "p_spindle.h"
 
+#if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
+static int spindle_update_all_(SPINDLE *spindle);
+#endif
+
 int
 spindle_update(const char *name, const char *identifier, void *data)
 {
@@ -35,7 +39,18 @@ spindle_update(const char *name, const char *identifier, void *data)
 	(void) name;
 
 	spindle = (SPINDLE *) data;
-	
+
+	if(!strcasecmp(identifier, "all"))
+	{
+#if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
+		if(spindle->db)
+		{			
+			return spindle_update_all_(spindle);
+		}
+#endif
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": can only update all items when using the a relational database index\n");
+		return -1;
+	}
 	/* If identifier is a string of 32 hex-digits, possibly including hyphens,
 	 * then we can prefix it with the root and suffix it with #id to form
 	 * a real identifer.
@@ -99,7 +114,7 @@ spindle_update(const char *name, const char *identifier, void *data)
 		*p = 0;
 		identifier = idbuf;
 	}
-	r = spindle_cache_update(spindle, identifier, NULL);	
+	r = spindle_cache_update(spindle, identifier, NULL);
 	if(r)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": update failed for <%s>\n", identifier);
@@ -111,3 +126,110 @@ spindle_update(const char *name, const char *identifier, void *data)
 	free(idbuf);
 	return r;
 }
+
+#if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
+static int
+spindle_update_all_(SPINDLE *spindle)
+{
+	SQL_STATEMENT *rs;
+	size_t l, c;
+	int r;
+	char *buf, *p;
+	const char *t;
+
+	l = strlen(spindle->root);
+	buf = (char *) malloc(l + 1 + 32 + 4);
+	if(!buf)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate buffer for URIs\n");
+		return -1;
+	}
+	strcpy(buf, spindle->root);
+	p = buf + l;
+	/* Ensure there's a trailing slash */
+	if(l)
+	{
+		p--;
+		if(*p == '/')
+		{
+			p++;
+		}
+		else
+		{
+			p++;
+			*p = '/';
+			p++;
+			l++;
+		}
+	}
+	else
+	{
+		*p = '/';
+		p++;
+		l++;
+	}
+#if SPINDLE_DB_PROXIES
+	rs = sql_query(spindle->db, "SELECT \"id\" FROM \"proxy\"");
+#else
+	twine_logf(LOG_WARN, PLUGIN_NAME ": only existing cached entries can be updated because database-based proxies are not available\n");
+	rs = sql_query(spindle->db, "SELECT \"id\" FROM \"index\"");
+#endif
+	if(!rs)
+	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to query for item UUIDs\n");
+		free(buf);
+		return -1;
+	}
+	r = 0;
+	for(; !sql_stmt_eof(rs); sql_stmt_next(rs))
+	{
+		p = buf + l;
+		t = sql_stmt_str(rs, 0);
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": will update {%s}\n", t);
+		if(!t)
+		{
+			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to obtain value from column\n");
+			r = -1;
+			break;
+		}
+		if(strlen(t) > 36)
+		{
+			twine_logf(LOG_CRIT, PLUGIN_NAME ": invalid UUID '%s' in database column\n", t);
+			r = -1;
+			break;
+		}
+		c = 0;
+		for(; *t && c < 32; t++)
+		{
+			if(isxdigit(*t))
+			{
+				*p = tolower(*t);
+				c++;
+				p++;
+			}
+		}
+		*p = '#';
+		p++;
+		*p = 'i';
+		p++;
+		*p = 'd';
+		p++;
+		*p = 0;
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": URI is <%s>\n", buf);
+		r = spindle_cache_update(spindle, buf, NULL);
+		if(r)
+		{
+			twine_logf(LOG_ERR, PLUGIN_NAME ": update failed for <%s>\n", buf);
+			break;
+		}
+		else
+		{
+			twine_logf(LOG_NOTICE, PLUGIN_NAME ": update complete for <%s>\n", buf);
+		}		
+	}
+	sql_stmt_destroy(rs);
+	free(buf);
+	return r;
+}
+
+#endif /* SPINDLE_DB_INDEX */
