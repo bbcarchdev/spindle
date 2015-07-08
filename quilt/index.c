@@ -196,57 +196,146 @@ spindle_index_metadata_sparqlres_(QUILTREQ *request, SPARQLRES *res)
 static int
 spindle_index_db_(QUILTREQ *request, const char *qclass)
 {
-	size_t qbuflen, n;
+	size_t qbuflen, n, c;
 	char *qbuf, *t;
 	SQL_STATEMENT *rs;
 	const void *args[8];
-	const char *search, *lang;
+	const char *search, *lang, *media, *audience, *mtype;
+
+	struct mediamatch {
+		const char *name;
+		const char *uri;
+	} mediamatch[] = {
+		{ "collection", "http://purl.org/dc/dcmitype/Collection" },
+		{ "dataset", "http://purl.org/dc/dcmitype/Dataset" },
+		{ "video", "http://purl.org/dc/dcmitype/MovingImage" },
+		{ "interactive", "http://purl.org/dc/dcmitype/InteractiveResource" },
+		{ "software", "http://purl.org/dc/dcmitype/Software" },
+		{ "audio", "http://purl.org/dc/dcmitype/Sound" },
+		{ "text", "http://purl.org/dc/dcmitype/Text" },
+		{ NULL, NULL }
+	};
 
 	memset(args, 0, sizeof(args));
 	qbuflen = 511;
-	qbuf = (char *) malloc(qbuflen + 1);
-	t = qbuf;
 	n = 0;
 	search = quilt_request_getparam(request, "q");
+	media = quilt_request_getparam(request, "media");
+	audience = quilt_request_getparam(request, "for");
+	mtype = quilt_request_getparam(request, "type");
+	if(!strcmp(search, "*"))
+	{
+		search = NULL;
+	}
 	lang = spindle_checklang_(request, quilt_request_getparam(request, "lang"));
 	if(!lang)
 	{
 		return 404;
-	}	
+	}
+	if(media)
+	{
+		quilt_canon_set_param(request->canonical, "media", media);
+		if(!audience)
+		{
+			audience = "any";
+		}
+		if(strcmp(audience, "any"))
+		{
+			quilt_canon_set_param(request->canonical, "for", audience);
+		}
+		if(!mtype)
+		{
+			mtype = "any";
+		}
+		if(strcmp(mtype, "any"))
+		{
+			quilt_canon_set_param(request->canonical, "type", mtype);
+		}
+	}
+	qbuf = (char *) malloc(qbuflen + 1);
+	t = qbuf;
 	if(!qbuf)
 	{
 		quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": failed to allocate SQL query buffer\n");
 		return 500;
 	}
 	/* SELECT */
-	t = appendf(t, &qbuflen, "SELECT \"id\", \"classes\", \"title\", \"description\", \"coordinates\"");
+	t = appendf(t, &qbuflen, "SELECT \"i\".\"id\", \"i\".\"classes\", \"i\".\"title\", \"i\".\"description\", \"i\".\"coordinates\"");
 	if(search)
 	{
 		/* 4 divides the rank by the mean harmonic distance between extents
 		 * 32 divides the rank by itself
 		 * See http://www.postgresql.org/docs/9.4/static/textsearch-controls.html
 		 */
-		t = appendf(t, &qbuflen, ", ts_rank_cd(\"index_%s\", \"query\", 4|32) AS \"rank\"", lang);
+		t = appendf(t, &qbuflen, ", ts_rank_cd(\"i\".\"index_%s\", \"query\", 4|32) AS \"rank\"", lang);
 	}
 	/* FROM */
-	t = appendf(t, &qbuflen, " FROM \"index\"");
+	t = appendf(t, &qbuflen, " FROM \"index\" \"i\"");
 	if(search)
 	{
 		t = appendf(t, &qbuflen, ", plainto_tsquery(%Q) \"query\"");
 		args[n] = search;
 		n++;
 	}
+	if(media)
+	{
+		t = appendf(t, &qbuflen, ", \"about\" \"a\", \"index_media\" \"im\", \"media\" \"m\"");
+	}
 	/* WHERE */
-	t = appendf(t, &qbuflen, " WHERE \"score\" < 40");
+	t = appendf(t, &qbuflen, " WHERE \"i\".\"score\" < 40");
 	if(search)
 	{
 		t = appendf(t, &qbuflen, " AND \"query\" @@ \"index_%s\"", lang);
 	}
 	if(qclass)
 	{
-		t = appendf(t, &qbuflen, " AND %%Q = ANY(\"classes\")");
+		t = appendf(t, &qbuflen, " AND %%Q = ANY(\"i\".\"classes\")");
 		args[n] = qclass;
 		n++;
+	}
+	if((audience || mtype) && !media)
+	{
+		media = "any";
+	}
+	if(media)
+	{
+		t = appendf(t, &qbuflen, " AND \"a\".\"id\" = \"im\".\"id\"");
+		t = appendf(t, &qbuflen, " AND \"im\".\"media\" = \"m\".\"id\"");
+		if(!strcmp(audience, "all"))
+		{
+			t = appendf(t, &qbuflen, " AND \"m\".\"audience\" IS NULL");
+		}
+		else if(strcmp(audience, "any"))
+		{
+			t = appendf(t, &qbuflen, " AND (\"m\".\"audience\" IS NULL OR \"m\".\"audience\" = %Q)");
+			args[n] = audience;
+			n++;
+		}
+		if(strcmp(media, "any"))
+		{
+			for(c = 0; mediamatch[c].name; c++)
+			{
+				if(!strcmp(mediamatch[c].name, media))
+				{
+					t = appendf(t, &qbuflen, " AND \"m\".\"class\" = %Q");
+					args[n] = mediamatch[c].uri;
+					n++;
+					break;
+				}
+			}
+			if(!mediamatch[c].name)
+			{
+				t = appendf(t, &qbuflen, " AND \"m\".\"class\" = %Q");
+				args[n] = media;
+				n++;
+			}
+		}
+		if(strcmp(mtype, "any"))
+		{
+			t = appendf(t, &qbuflen, " AND \"m\".\"type\" = %Q");
+			args[n] = mtype;
+			n++;
+		}
 	}
 	/* ORDER BY */
 	if(search)
