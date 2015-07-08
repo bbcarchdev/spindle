@@ -68,6 +68,7 @@
 # define NS_DCMITYPE                    "http://purl.org/dc/dcmitype/"
 # define NS_MIME                        "http://purl.org/NET/mediatypes/"
 # define NS_ODRL                        "http://www.w3.org/ns/odrl/2/"
+# define NS_EVENT                       "http://purl.org/NET/c4dm/event.owl#"
 
 typedef struct spindle_context_struct SPINDLE;
 typedef struct spindle_cache_struct SPINDLECACHE;
