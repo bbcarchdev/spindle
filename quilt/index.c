@@ -355,7 +355,7 @@ spindle_index_db_(QUILTREQ *request, const char *qclass)
 	{
 		t = appendf(t, &qbuflen, " LIMIT %d", request->limit + 1);
 	}
-	rs = sql_queryf(spindle_db, qbuf, args[0], args[1]);
+	rs = sql_queryf(spindle_db, qbuf, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
 	if(!rs)
 	{
 		quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": query execution failed\n");
