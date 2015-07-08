@@ -73,6 +73,10 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 		}
 		librdf_free_stream(stream);
 		librdf_free_statement(query);
+		if(!set)
+		{
+			return NULL;
+		}
 	}
 	/* Find all of the subjects */
 	query = librdf_new_statement(spindle->world);
@@ -105,7 +109,7 @@ spindle_coref_add(struct spindle_corefset_struct *set, const char *l, const char
 {
 	struct spindle_coref_struct *p;
 	size_t c;
-	
+
 	for(c = 0; c < set->refcount; c++)
 	{
 		if(!strcmp(l, set->refs[c].left) &&
