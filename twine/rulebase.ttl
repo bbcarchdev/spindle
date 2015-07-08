@@ -441,6 +441,11 @@ schema:about spindle:property [
 	spindle:expressedAs foaf:topic
 ] .
 
+dct:subject spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:topic
+] .
+
 ## dct:isPartOf
 
 dct:isPartOf
