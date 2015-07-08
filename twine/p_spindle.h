@@ -169,6 +169,7 @@ struct spindle_predicatemap_struct
 	int proxyonly;
 	int score;
 	int prominence;
+	int inverse;
 };
 
 /* A single predicate which should be matched; optionally matching is restricted

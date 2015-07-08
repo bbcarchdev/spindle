@@ -334,7 +334,7 @@ spindle_prop_apply_(struct propdata_struct *data)
 				twine_logf(LOG_ERR, PLUGIN_NAME ": failed to add statement to model\n");
 				r = -1;
 			}
-			if(!r && data->matches[c].map->indexed && data->spindle->multigraph)
+			if(!r && data->matches[c].map->indexed && !data->matches[c].map->inverse && data->spindle->multigraph)
 			{
 				if(twine_rdf_model_add_st(data->rootmodel, pst, data->spindle->rootgraph))
 				{
@@ -364,7 +364,7 @@ spindle_prop_apply_(struct propdata_struct *data)
 					twine_logf(LOG_ERR, PLUGIN_NAME ": failed to add statement to model\n");
 					r = -1;
 				}
-				if(!r && data->matches[c].map->indexed && data->spindle->multigraph)
+				if(!r && data->matches[c].map->indexed && !data->matches[c].map->inverse && data->spindle->multigraph)
 				{
 					if(twine_rdf_model_add_st(data->rootmodel, lpst, data->spindle->rootgraph))
 					{
