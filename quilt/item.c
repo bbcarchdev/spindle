@@ -79,10 +79,9 @@ spindle_lookup(QUILTREQ *request, const char *target)
 		}
 		strcpy(p, "#id");
 		sql_stmt_destroy(rs);
-		quilt_request_printf(request, "Status: 303 See other\n"
-							 "Server: Quilt/" PACKAGE_VERSION "\n"
-							 "Location: %s\n"
-							 "\n", buf);
+		quilt_request_headers(request, "Status: 303 See other\n");
+		quilt_request_headers(request, "Server: Quilt/" PACKAGE_VERSION "\n");
+		quilt_request_headerf(request, "Location: %s\n", buf);
 		free(buf);
 		return 0;
 	}
