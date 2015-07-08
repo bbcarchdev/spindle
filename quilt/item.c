@@ -82,6 +82,7 @@ spindle_lookup(QUILTREQ *request, const char *target)
 		quilt_request_headers(request, "Status: 303 See other\n");
 		quilt_request_headers(request, "Server: Quilt/" PACKAGE_VERSION "\n");
 		quilt_request_headerf(request, "Location: %s\n", buf);
+		quilt_request_puts(request, "");
 		free(buf);
 		return 0;
 	}
