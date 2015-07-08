@@ -229,7 +229,15 @@ spindle_db_topics_(SQL *sql, const char *id, SPINDLECACHE *data)
 	const char *uristr;
 	char *tid;
 	int r;
+	size_t c;
 
+	const char *predlist[] = 
+	{
+		NS_FOAF "topic",
+		NS_EVENT "factor",
+		NULL
+	};
+	
 	if(!(query = librdf_new_statement(data->spindle->world)))
 	{
 		return -1;
@@ -250,6 +258,24 @@ spindle_db_topics_(SQL *sql, const char *id, SPINDLECACHE *data)
 	for(stream = librdf_model_find_statements_in_context(data->proxydata, query, data->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
 	{
 		st = librdf_stream_get_object(stream);
+		if(!(node = librdf_statement_get_predicate(st)) ||
+		   !(uri = librdf_node_get_uri(node)) ||
+		   !(uristr = (const char *) librdf_uri_as_string(uri)))
+		{
+			continue;
+		}
+		/* XXX use rulebase */
+		for(c = 0; predlist[c]; c++)
+		{
+			if(!strcmp(predlist[c], uristr))
+			{
+				break;
+			}
+		}
+		if(!predlist[c])
+		{
+			continue;
+		}			 
 		if((node = librdf_statement_get_object(st)) &&
 		   librdf_node_is_resource(node) &&
 		   (uri = librdf_node_get_uri(node)) &&
