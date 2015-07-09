@@ -75,11 +75,37 @@ spindle_index(QUILTREQ *request, const char *qclass)
 int
 spindle_query(QUILTREQ *request, struct query_struct *query)
 {
+	int r;
+	size_t l;
+
+	if(query->related)
+	{
+		query->rcanon = quilt_canon_create(NULL);
+		l = strlen(request->base);
+		if(!strncmp(query->related, request->base, l))
+		{
+			quilt_canon_set_base(query->rcanon, request->base);
+			quilt_canon_add_path(query->rcanon, query->related + l);
+		}
+		else
+		{
+			quilt_canon_set_base(query->rcanon, query->related);
+		}
+		quilt_canon_set_fragment(query->rcanon, "id");	
+	}
 	if(spindle_db)
 	{
-	    return spindle_query_db(request, query);
+	    r = spindle_query_db(request, query);
 	}
-	return spindle_query_sparql(request, query);
+	else
+	{
+		r = spindle_query_sparql(request, query);
+	}
+	if(query->rcanon)
+	{
+		quilt_canon_destroy(query->rcanon);
+	}
+	return r;
 }
 
 static int

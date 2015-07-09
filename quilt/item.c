@@ -24,8 +24,6 @@
 
 #include "p_spindle.h"
 
-static int spindle_item_post_(QUILTREQ *request);
-
 /* Given an item's URI, attempt to redirect to it */
 int
 spindle_lookup(QUILTREQ *request, const char *target)
@@ -55,34 +53,28 @@ spindle_item(QUILTREQ *request)
 	{
 		return r;
 	}
-	return spindle_item_post_(request);
-}
-
-/* Fetch additional information about an item */
-static int
-spindle_item_post_(QUILTREQ *request)
-{
-	SPARQL *sparql;
-	
-	sparql = quilt_sparql();
-	
-	if(sparql_queryf_model(sparql, request->model, "SELECT DISTINCT ?s ?p ?o ?g WHERE {\n"
-						   "  GRAPH ?g {\n"
-						   "    ?s <" NS_FOAF "topic> <%s#id>\n"
-						   "  }"
-						   "  GRAPH ?g {\n"
-						   "    ?s ?p ?o\n"
-						   "  }\n"
-						   "  FILTER regex(str(?g), \"^%s\", \"i\")\n"
-						   "}",
-						   request->subject, request->base))
+	r = spindle_item_related(request);
+	if(r != 200)
 	{
-		quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": failed to retrieve related items\n");
+		return r;
+	}
+	if(spindle_add_concrete(request))
+	{
 		return 500;
 	}
-
-	spindle_add_concrete(request);
-	/* Return 200, rather than 0, to auto-serialise the model */
+	/* Return 200 to auto-serialise */
 	return 200;
 }
 
+/* Fetch additional metdata about an item
+ * (invoked automatically by spindle_item())
+ */
+int
+spindle_item_related(QUILTREQ *request)
+{
+	struct query_struct query;
+
+	memset(&query, 0, sizeof(struct query_struct));
+	query.related = request->subject;
+	return spindle_query(request, &query);
+}

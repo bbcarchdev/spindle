@@ -99,7 +99,7 @@ spindle_item_s3(QUILTREQ *request)
 	}
 	free(data.buf);
 	s3_request_destroy(req);
-	return 0;
+	return 200;
 }
 
 static size_t

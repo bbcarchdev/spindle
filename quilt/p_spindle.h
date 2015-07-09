@@ -69,6 +69,7 @@ struct query_struct
 {
 	/* Find things related to... */
 	const char *related;
+	QUILTCANON *rcanon;
 	/* Item class query */
 	const char *qclass;
 	/* Item text query */
@@ -95,6 +96,7 @@ int spindle_process(QUILTREQ *request);
 int spindle_index(QUILTREQ *req, const char *qclass);
 int spindle_home(QUILTREQ *req);
 int spindle_item(QUILTREQ *req);
+int spindle_item_related(QUILTREQ *request);
 int spindle_lookup(QUILTREQ *req, const char *uri);
 int spindle_query(QUILTREQ *request, struct query_struct *query);
 

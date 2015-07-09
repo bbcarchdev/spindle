@@ -39,8 +39,28 @@ spindle_query_sparql(QUILTREQ *request, struct query_struct *query)
 	 * by this back-end.
 	 */
 	if(query->text || query->lang || query->media || query->audience ||
-	   query->type || query->related)
+	   query->type)
 	{
+		return 200;
+	}
+	if(query->related)
+	{
+		sparql = quilt_sparql();
+	
+		if(sparql_queryf_model(sparql, request->model, "SELECT DISTINCT ?s ?p ?o ?g WHERE {\n"
+							   "  GRAPH ?g {\n"
+							   "    ?s <" NS_FOAF "topic> <%s#id>\n"
+							   "  }"
+							   "  GRAPH ?g {\n"
+							   "    ?s ?p ?o\n"
+							   "  }\n"
+							   "  FILTER regex(str(?g), \"^%s\", \"i\")\n"
+							   "}",
+							   request->subject, request->base))
+		{
+			quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": failed to retrieve related items\n");
+			return 500;
+		}
 		return 200;
 	}
 	if(query->offset)
@@ -150,7 +170,6 @@ spindle_lookup_sparql(QUILTREQ *request, const char *target)
 	quilt_request_headers(request, "Status: 303 See other\n");
 	quilt_request_headers(request, "Server: Quilt/" PACKAGE_VERSION "\n");
 	quilt_request_headerf(request, "Location: %s\n", buf);
-	quilt_request_puts(request, "");
 	free(buf);
 	/* Return 0 to supress output */
 	return 0;

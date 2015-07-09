@@ -30,7 +30,7 @@ struct mediamatch_struct {
 };
 
 static int process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs);
-static int process_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item);
+static int process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item);
 static const char *checklang(QUILTREQ *request, const char *lang);
 static int add_langvector(librdf_model *model, const char *vector, const char *subject, const char *predicate);
 static int add_array(librdf_model *model, const char *array, const char *subject, const char *predicate);
@@ -57,15 +57,38 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	char *qbuf, *t;
 	SQL_STATEMENT *rs;
 	const void *args[8];
+	const char *related;
 
 	memset(args, 0, sizeof(args));
 	qbuflen = 511;
 	n = 0;
-
-	if(!strcmp(query->text, "*"))
+	related = NULL;
+	if(query->related)
+	{
+		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": DB: related: <%s> (base is <%s>)\n", query->related, request->base);
+		c = strlen(request->base);
+		if(!strncmp(query->related, request->base, c))
+		{
+			related = query->related + c;
+			while(related[0] == '/')
+			{
+				related++;
+			}
+			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": DB: related: '%s'\n", related);
+			if(strlen(related) != 32)
+			{
+				return 404;
+			}
+		}
+		else
+		{
+			return 404;
+		}
+	}
+	if(query->text && !strcmp(query->text, "*"))
 	{
 		query->text = NULL;
-	}
+	}	
 	query->lang = checklang(request, query->lang);
 	if(!query->lang)
 	{
@@ -122,13 +145,13 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		args[n] = query->text;
 		n++;
 	}
-	if(query->media || query->related)
+	if(query->media || related)
 	{
 		t = appendf(t, &qbuflen, ", \"about\" \"a\"");
 	}
 	if(query->media)
 	{
-		if(query->related)
+		if(related)
 		{
 			t = appendf(t, &qbuflen, ", \"media\" \"m\"");
 		}
@@ -149,15 +172,15 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		args[n] = query->qclass;
 		n++;
 	}
-	if(query->related)
-	{
-		t = appendf(t, &qbuflen, " AND \"a\".\"about\" = %Q");
-		args[n] = query->related;
+	if(related)
+	{		
+		t = appendf(t, &qbuflen, " AND \"a\".\"about\" = %Q AND \"a\".\"id\" = \"i\".\"id\"");
+		args[n] = related;
 		n++;
 	}
 	if(query->media)
 	{
-		if(query->related)
+		if(related)
 		{
 			t = appendf(t, &qbuflen, " AND \"m\".\"id\" = \"i\".\"id\"");
 		}
@@ -256,7 +279,6 @@ spindle_lookup_db(QUILTREQ *request, const char *target)
 	quilt_request_headers(request, "Status: 303 See other\n");
 	quilt_request_headers(request, "Server: Quilt/" PACKAGE_VERSION "\n");
 	quilt_request_headerf(request, "Location: %s\n", buf);
-	quilt_request_puts(request, "");
 	free(buf);
 	return 0;
 }
@@ -276,7 +298,7 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 		item = quilt_canon_create(request->canonical);
 		quilt_canon_reset_path(item);
 		quilt_canon_reset_params(item);
-		quilt_canon_set_fragment(item, "id");		
+		quilt_canon_set_fragment(item, "id");
 		t = sql_stmt_str(rs, 0);
 		for(p = idbuf; p - idbuf < 32; t++)
 		{
@@ -288,7 +310,7 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 		}
 		*p = 0;
 		quilt_canon_add_path(item, idbuf);
-		process_row(request, rs, idbuf, abstract, item);
+		process_row(request, query, rs, idbuf, abstract, item);
 		quilt_canon_destroy(item);
 	}
 	if(!sql_stmt_eof(rs))
@@ -301,11 +323,11 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 }
 
 static int
-process_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item)
+process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item)
 {
 	librdf_statement *st;
 	const char *s;
-	char *uri;
+	char *uri, *related;
 
 	(void) id;
 
@@ -313,6 +335,16 @@ process_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, const char *se
 	st = quilt_st_create_uri(self, NS_RDFS "seeAlso", uri);
 	librdf_model_add_statement(request->model, st);
 	librdf_free_statement(st);
+
+	if(query->rcanon)
+	{
+		related = quilt_canon_str(query->rcanon, QCO_SUBJECT);
+		/* foaf:topic */
+		st = quilt_st_create_uri(uri, NS_FOAF "topic", related);
+		librdf_model_add_statement(request->model, st);
+		librdf_free_statement(st);
+		free(related);
+	}
 
 	/* rdfs:label */
 	s = sql_stmt_str(rs, 2);
