@@ -97,10 +97,6 @@ spindle_process(QUILTREQ *request)
 	{
 		r = spindle_index(request, qclass);
 	}
-	else if(spindle_bucket)
-	{
-		r = spindle_item_s3(request);
-	}
 	else
 	{
 		r = spindle_item(request);

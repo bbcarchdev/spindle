@@ -22,7 +22,7 @@ AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBQUILT_CPPFLAGS@ @LIBSQL_CPPFLAGS@ \
 quiltmodule_LTLIBRARIES = spindle.la
 
 spindle_la_SOURCES = p_spindle.h \
-	module.c request.c home.c index.c item.c
+	module.c request.c home.c index.c item.c sparql.c db.c s3.c
 
 spindle_la_LDFLAGS = -no-undefined -module -avoid-version
 

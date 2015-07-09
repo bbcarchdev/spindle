@@ -65,18 +65,51 @@ struct index_struct
 	const char *qclass;
 };
 
+struct query_struct
+{
+	/* Find things related to... */
+	const char *related;
+	/* Item class query */
+	const char *qclass;
+	/* Item text query */
+	const char *text;
+	const char *lang;
+	/* Related media query */
+	const char *media;
+	const char *audience;
+	const char *type;
+	/* Query bounds */
+	int limit;
+	int offset;
+	/* Set after a query has been processed if there are more results */
+	int more;
+};
+
 extern SQL *spindle_db;
 extern S3BUCKET *spindle_bucket;
 extern int spindle_s3_verbose;
 extern struct index_struct spindle_indices[];
 
 int spindle_process(QUILTREQ *request);
+
 int spindle_index(QUILTREQ *req, const char *qclass);
 int spindle_home(QUILTREQ *req);
 int spindle_item(QUILTREQ *req);
-int spindle_item_s3(QUILTREQ *req);
 int spindle_lookup(QUILTREQ *req, const char *uri);
+int spindle_query(QUILTREQ *request, struct query_struct *query);
 
 int spindle_add_concrete(QUILTREQ *request);
+
+/* SQL back-end */
+int spindle_query_db(QUILTREQ *request, struct query_struct *query);
+int spindle_lookup_db(QUILTREQ *request, const char *target);
+
+/* SPARQL back-end */
+int spindle_query_sparql(QUILTREQ *request, struct query_struct *query);
+int spindle_lookup_sparql(QUILTREQ *request, const char *target);
+int spindle_item_sparql(QUILTREQ *req);
+
+/* S3 back-end */
+int spindle_item_s3(QUILTREQ *req);
 
 #endif /*!P_SPINDLE_H_*/
