@@ -316,6 +316,9 @@ spindle_graph_description_node(SPINDLE *spindle, librdf_model *target, librdf_no
 	size_t c;
 	librdf_stream *stream;
 	librdf_uri *uri;
+	librdf_model *temp;
+	librdf_statement *query;
+	librdf_node *node;
 	const char *uristr;
 
 	uri = librdf_node_get_uri(graph);
@@ -353,6 +356,19 @@ spindle_graph_description_node(SPINDLE *spindle, librdf_model *target, librdf_no
 	}
 	spindle->graphcache[c].model = twine_rdf_model_create();
 	spindle->graphcache[c].uri = strdup(uristr);
+	temp = twine_rdf_model_create();
+	if(sparql_queryf_model(spindle->sparql, temp,
+						   "SELECT DISTINCT ?s ?p ?o\n"
+						   " WHERE {\n"
+						   "  GRAPH %V {\n"
+						   "   ?s ?p ?o .\n"
+						   "  }\n"
+						   " }", graph))
+	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to fetch a graph description\n");
+		return -1;
+	}	
+/*
 	if(sparql_queryf_model(spindle->sparql, spindle->graphcache[c].model,
 						   "SELECT DISTINCT ?s ?p ?o ?g\n"
 						   " WHERE {\n"
@@ -365,10 +381,22 @@ spindle_graph_description_node(SPINDLE *spindle, librdf_model *target, librdf_no
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to fetch a graph description\n");
 		return -1;
-	}
+		} */
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": added graph <%s> to cache\n", uristr);
-	stream = librdf_model_context_as_stream(spindle->graphcache[c].model, graph);
+	query = librdf_new_statement(spindle->world);
+	node = librdf_new_node_from_node(graph);
+	librdf_statement_set_subject(query, node);
+
+	stream = librdf_model_find_statements(temp, query);
+	librdf_model_context_add_statements(spindle->graphcache[c].model, graph, stream);
+	librdf_free_stream(stream);
+
+	stream = librdf_model_find_statements(temp, query);
 	librdf_model_context_add_statements(target, graph, stream);
 	librdf_free_stream(stream);
+
+	librdf_free_statement(query);
+	librdf_free_model(temp);
+
 	return 0;
 }
