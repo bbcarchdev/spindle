@@ -187,6 +187,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		else
 		{
 			t = appendf(t, &qbuflen, " AND \"a\".\"id\" = \"im\".\"id\"");
+			t = appendf(t, &qbuflen, " AND \"a\".\"about\" = \"i\".\"id\"");
 			t = appendf(t, &qbuflen, " AND \"im\".\"media\" = \"m\".\"id\"");
 		}
 		if(!strcmp(query->audience, "all"))
@@ -230,6 +231,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	{
 		t = appendf(t, &qbuflen, " LIMIT %d", request->limit + 1);
 	}
+	quilt_logf(LOG_DEBUG, "query: [[%s]]\n", qbuf);
 	rs = sql_queryf(spindle_db, qbuf, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
 	if(!rs)
 	{
@@ -300,6 +302,7 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 		quilt_canon_reset_params(item);
 		quilt_canon_set_fragment(item, "id");
 		t = sql_stmt_str(rs, 0);
+		quilt_logf(LOG_DEBUG, "t=<%s>\n", t);
 		for(p = idbuf; p - idbuf < 32; t++)
 		{
 			if(isalnum(*t))
@@ -309,6 +312,7 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 			}
 		}
 		*p = 0;
+		quilt_logf(LOG_DEBUG, "idbuf=<%s>\n", idbuf);
 		quilt_canon_add_path(item, idbuf);
 		process_row(request, query, rs, idbuf, abstract, item);
 		quilt_canon_destroy(item);
@@ -332,6 +336,7 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	(void) id;
 
 	uri = quilt_canon_str(item, QCO_SUBJECT);
+	quilt_logf(LOG_DEBUG, "adding row <%s>\n", uri);
 	st = quilt_st_create_uri(self, NS_RDFS "seeAlso", uri);
 	librdf_model_add_statement(request->model, st);
 	librdf_free_statement(st);
