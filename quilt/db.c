@@ -55,7 +55,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	const char *related;
 
 	memset(args, 0, sizeof(args));
-	qbuflen = 511;
+	qbuflen = 560;
 	n = 0;
 	related = NULL;
 	if(query->related)
