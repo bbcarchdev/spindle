@@ -191,6 +191,7 @@ spindle_index_title_(QUILTREQ *request, const char *abstract, struct query_struc
 	librdf_statement *st;
 	size_t len, c;
 	char *buf, *p;
+	int sing;
 
 	if(request->indextitle)
 	{
@@ -237,10 +238,16 @@ spindle_index_title_(QUILTREQ *request, const char *abstract, struct query_struc
 		return -1;
 	}
 	p = buf;
+	sing = 0;
 	if(request->indextitle)
 	{
 		strcpy(p, request->indextitle);
 		p = strchr(p, 0);
+		/* We should have a flag indicating collective/singular form */
+		if(!strcasecmp(request->indextitle, "everything"))
+		{
+			sing = 1;
+		}
 	}
 	else if(query->qclass)
 	{
@@ -255,6 +262,7 @@ spindle_index_title_(QUILTREQ *request, const char *abstract, struct query_struc
 	{
 		strcpy(p, "Everything");
 		p = strchr(p, 0);
+		sing = 1;
 	}
 	if(query->text)
 	{
@@ -268,7 +276,14 @@ spindle_index_title_(QUILTREQ *request, const char *abstract, struct query_struc
 	if(query->media || query->type || query->audience)
 	{
 		/* which have */
-		strcpy(p, " which has related");
+		if(sing)
+		{
+			strcpy(p, " which has related");
+		}
+		else
+		{
+			strcpy(p, " which have related");
+		}
 		p = strchr(p, 0);
 		for(c = 0; spindle_mediamatch[c].name; c++)
 		{
