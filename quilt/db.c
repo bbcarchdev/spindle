@@ -128,7 +128,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		return 500;
 	}
 	/* SELECT */
-	t = appendf(t, &qbuflen, "SELECT \"i\".\"id\", \"i\".\"classes\", \"i\".\"title\", \"i\".\"description\", \"i\".\"coordinates\"");
+	t = appendf(t, &qbuflen, "SELECT \"i\".\"id\", \"i\".\"classes\", \"i\".\"title\", \"i\".\"description\", \"i\".\"coordinates\", \"i\".\"modified\"");
 	if(query->text)
 	{
 		/* 4 divides the rank by the mean harmonic distance between extents
@@ -145,20 +145,14 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		args[n] = query->text;
 		n++;
 	}
-	if(query->media || related)
+	if(related)
 	{
+		/* IS related and MAY have media query (no subquery) */
 		t = appendf(t, &qbuflen, ", \"about\" \"a\"");
-	}
-	if(query->media)
-	{
-		if(related)
+		if(query->media)
 		{
 			t = appendf(t, &qbuflen, ", \"media\" \"m\"");
-		}
-		else
-		{
-			t = appendf(t, &qbuflen, ", \"index_media\" \"im\", \"media\" \"m\"");
-		}
+		}	
 	}
 	/* WHERE */
 	t = appendf(t, &qbuflen, " WHERE \"i\".\"score\" < 40");
@@ -173,23 +167,31 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		n++;
 	}
 	if(related)
-	{		
+	{	
+		/* IS related and MAY have media query (no subquery) */
 		t = appendf(t, &qbuflen, " AND \"a\".\"about\" = %Q AND \"a\".\"id\" = \"i\".\"id\"");
 		args[n] = related;
 		n++;
-	}
-	if(query->media)
-	{
-		if(related)
+		if(query->media)
 		{
 			t = appendf(t, &qbuflen, " AND \"m\".\"id\" = \"i\".\"id\"");
 		}
-		else
-		{
-			t = appendf(t, &qbuflen, " AND \"a\".\"id\" = \"im\".\"id\"");
-			t = appendf(t, &qbuflen, " AND \"a\".\"about\" = \"i\".\"id\"");
-			t = appendf(t, &qbuflen, " AND \"im\".\"media\" = \"m\".\"id\"");
-		}
+	}
+	else if(query->media)
+	{
+		/* NOT related but HAS media query (subquery) */
+		t = appendf(t, &qbuflen, " AND \"i\".\"id\" IN ( "
+					"SELECT \"a\".\"about\" FROM "
+					" \"about\" \"a\", "
+					" \"index_media\" \"im\", "
+					" \"media\" \"m\" "
+					"WHERE "
+					" \"im\".\"id\" = \"a\".\"id\" AND "
+					" \"m\".\"id\" = \"im\".\"media\" ");
+	}
+	if(query->media)
+	{
+		/* Any media query */
 		if(!strcmp(query->audience, "all"))
 		{
 			t = appendf(t, &qbuflen, " AND \"m\".\"audience\" IS NULL");
@@ -212,6 +214,11 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 			args[n] = query->type;
 			n++;
 		}
+	}
+	if(!related && query->media)
+	{
+		/* NOT related and HAS media query (subquery) */
+		t = appendf(t, &qbuflen, ") ");
 	}
 	/* ORDER BY */
 	if(query->text)
