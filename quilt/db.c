@@ -111,9 +111,23 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 			}
 		}
 	}
-	else if(query->audience || query->type)
+	/* If we're performing any kind of media query, ensure the parameters
+	 * have defaults
+	 */
+	if(query->media || query->audience || query->type)
 	{
-		query->media = "any";
+		if(!query->media)
+		{
+			query->media = "any";
+		}
+		if(!query->audience)
+		{
+			query->audience = "any";
+		}
+		if(!query->type)
+		{
+			query->type = "any";
+		}
 	}
 	qbuf = (char *) malloc(qbuflen + 1);
 	t = qbuf;
