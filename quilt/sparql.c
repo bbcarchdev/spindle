@@ -209,7 +209,7 @@ spindle_item_sparql(QUILTREQ *request)
 		return 404;
 	}
 	free(query);
-	return 0;
+	return 200;
 }
 
 /* For all of the things matching a particular query, add the metadata from
