@@ -86,10 +86,16 @@ struct query_struct
 	int more;
 };
 
+struct mediamatch_struct {
+		const char *name;
+		const char *uri;
+};
+
 extern SQL *spindle_db;
 extern S3BUCKET *spindle_bucket;
 extern int spindle_s3_verbose;
 extern struct index_struct spindle_indices[];
+extern struct mediamatch_struct spindle_mediamatch[];
 
 int spindle_process(QUILTREQ *request);
 

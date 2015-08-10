@@ -37,10 +37,6 @@ spindle_process(QUILTREQ *request)
 	if(t && t[0])
 	{
 		quilt_canon_set_param(request->canonical, "q", t);
-		if(!request->indextitle)
-		{
-			request->indextitle = t;
-		}
 		request->index = 1;
 		request->home = 0;
 	}

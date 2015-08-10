@@ -24,11 +24,6 @@
 
 #include "p_spindle.h"
 
-struct mediamatch_struct {
-		const char *name;
-		const char *uri;
-};
-
 static int process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs);
 static int process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item);
 static const char *checklang(QUILTREQ *request, const char *lang);
@@ -38,7 +33,7 @@ static int add_point(librdf_model *model, const char *array, const char *subject
 static char *appendf(char *buf, size_t *buflen, const char *fmt, ...);
 
 /* Short names for media classes which can be used for convenience */
-static struct mediamatch_struct mediamatch[] = {
+struct mediamatch_struct spindle_mediamatch[] = {
 	{ "collection", "http://purl.org/dc/dcmitype/Collection" },
 	{ "dataset", "http://purl.org/dc/dcmitype/Dataset" },
 	{ "video", "http://purl.org/dc/dcmitype/MovingImage" },
@@ -106,11 +101,11 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		}
 		if(strcmp(query->media, "any"))
 		{
-			for(c = 0; mediamatch[c].name; c++)
+			for(c = 0; spindle_mediamatch[c].name; c++)
 			{
-				if(!strcmp(mediamatch[c].name, query->media))
+				if(!strcmp(spindle_mediamatch[c].name, query->media))
 				{
-					query->media = mediamatch[c].uri;
+					query->media = spindle_mediamatch[c].uri;
 					break;
 				}
 			}

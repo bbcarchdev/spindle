@@ -24,7 +24,8 @@
 
 #include "p_spindle.h"
 
-static int spindle_index_meta_(QUILTREQ *request, const char *abstract, int more);
+static int spindle_index_meta_(QUILTREQ *request, const char *abstract, struct query_struct *query);
+static int spindle_index_title_(QUILTREQ *request, const char *abstract, struct query_struct *query);
 
 int
 spindle_index(QUILTREQ *request, const char *qclass)
@@ -66,7 +67,7 @@ spindle_index(QUILTREQ *request, const char *qclass)
 	if(r == 200)
 	{
 		abstract = quilt_canon_str(request->canonical, QCO_ABSTRACT);
-		spindle_index_meta_(request, abstract, query.more);
+		spindle_index_meta_(request, abstract, &query);
 		free(abstract);
 	}
 	return r;
@@ -109,7 +110,7 @@ spindle_query(QUILTREQ *request, struct query_struct *query)
 }
 
 static int
-spindle_index_meta_(QUILTREQ *request, const char *abstract, int more)
+spindle_index_meta_(QUILTREQ *request, const char *abstract, struct query_struct *query)
 {
 	QUILTCANON *link;
 	char *root, *linkstr;
@@ -141,7 +142,7 @@ spindle_index_meta_(QUILTREQ *request, const char *abstract, int more)
 		free(linkstr);
 		quilt_canon_destroy(link);
 	}
-	if(more)
+	if(query->more)
 	{
 		/* ... xhv:next </?offset=...> */
 		link = quilt_canon_create(request->canonical);
@@ -176,15 +177,157 @@ spindle_index_meta_(QUILTREQ *request, const char *abstract, int more)
 	librdf_free_statement(st);
 
 	/* ... rdf:label */
-	if(request->indextitle)
-	{
-		st = quilt_st_create_literal(abstract, NS_RDFS "label", request->indextitle, "en-gb");
-		librdf_model_add_statement(request->model, st);
-		librdf_free_statement(st);
-	}
+	spindle_index_title_(request, abstract, query);
 
 	spindle_add_concrete(request); 
 
 	free(root);
+	return 0;
+}
+
+static int
+spindle_index_title_(QUILTREQ *request, const char *abstract, struct query_struct *query)
+{
+	librdf_statement *st;
+	size_t len, c;
+	char *buf, *p;
+
+	if(request->indextitle)
+	{
+		len = strlen(request->indextitle) + 1;
+	}
+	else if(query->qclass)
+	{
+		/* Items with class <...> */
+		len = strlen(query->qclass) + 22;
+	}
+	else
+	{
+		/* "Everything" */
+		len = 11;
+	}
+	if(query->text)
+	{
+		/* containing "..." */
+		len += strlen(query->text) + 16;
+	}
+	if(query->media || query->type || query->audience)
+	{
+		/* which have related ... media */
+		len += 25;
+		if(query->media)
+		{			
+			len += strlen(query->media) + 2;
+		}
+		if(query->type)
+		{
+			/* which is ... */
+			len += strlen(query->type) + 10;
+		}
+		if(query->audience)
+		{
+			/* available to [everyone | <audience>] */
+			len += strlen(query->audience) + 22;
+		}
+	}
+	buf = (char *) malloc(len + 1);
+	if(!buf)
+	{
+		quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": failed to allocate %lu bytes for index title buffer\n", (unsigned long) len + 1);
+		return -1;
+	}
+	p = buf;
+	if(request->indextitle)
+	{
+		strcpy(p, request->indextitle);
+		p = strchr(p, 0);
+	}
+	else if(query->qclass)
+	{
+		strcpy(p, "Items with class <");
+		p = strchr(p, 0);
+		strcpy(p, query->qclass);
+		p = strchr(p, 0);
+		*p = '>';
+		p++;
+	}
+	else
+	{
+		strcpy(p, "Everything");
+		p = strchr(p, 0);
+	}
+	if(query->text)
+	{
+		strcpy(p, " containing \"");
+		p = strchr(p, 0);
+		strcpy(p, query->text);
+		p = strchr(p, 0);
+		*p = '"';
+		p++;
+	}
+	if(query->media || query->type || query->audience)
+	{
+		/* which have */
+		strcpy(p, " which has related");
+		p = strchr(p, 0);
+		for(c = 0; spindle_mediamatch[c].name; c++)
+		{
+			if(!strcmp(spindle_mediamatch[c].uri, query->media))
+			{
+				*p = ' ';
+				p++;
+				strcpy(p, spindle_mediamatch[c].name);
+				p = strchr(p, 0);
+				break;
+			}
+		}
+		if(!spindle_mediamatch[c].name)
+		{
+			if(query->media && strcmp(query->media, "any"))
+			{
+				*p = ' ';
+				p++;
+				*p = '<';
+				p++;
+				strcpy(p, query->media);
+				p = strchr(p, 0);
+				*p = '>';
+				p++;
+			}
+			strcpy(p, " media");
+			p = strchr(p, 0);
+		}
+		if(query->type && strcmp(query->type, "any"))
+		{
+			strcpy(p, " which is ");
+			p = strchr(p, 0);
+			strcpy(p, query->type);
+			p = strchr(p, 0);
+		}
+		if(query->audience && strcmp(query->audience, "any"))
+		{
+			if(!strcmp(query->audience, "all"))
+			{
+				strcpy(p, " available to everyone");
+				p = strchr(p, 0);
+			}
+			else
+			{
+				strcpy(p, " available to <");
+				p = strchr(p, 0);
+				strcpy(p, query->audience);
+				p = strchr(p, 0);
+				*p = '>';
+				p++;
+			}
+		}
+	}
+	*p = 0;
+	
+	st = quilt_st_create_literal(abstract, NS_RDFS "label", buf, "en-gb");
+	librdf_model_add_statement(request->model, st);
+	librdf_free_statement(st);
+	free(buf);
+
 	return 0;
 }
