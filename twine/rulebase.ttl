@@ -176,6 +176,7 @@ dcmitype:Collection
 		rdfs:label "Collection"@en .
 
 void:Dataset spindle:expressedAs dcmitype:Collection .
+dcmitype:Dataset spindle:expressedAs dcmitype:Collection .
 schema:Dataset spindle:expressedAs dcmitype:Collection .
 
 ## Creative works
@@ -216,6 +217,8 @@ foaf:Document
 foaf:Image spindle:expressedAs foaf:Document .
 dcmitype:Image spindle:expressedAs foaf:Document .
 dcmitype:Text spindle:expressedAs foaf:Document .
+dcmitype:Sound spindle:expressedAs foaf:Document .
+dcmitype:InteractiveResource spindle:expressedAs foaf:Document .
 schema:Article spindle:expressedAs foaf:Document .
 
 #### Property rules
