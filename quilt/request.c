@@ -89,6 +89,23 @@ spindle_process(QUILTREQ *request)
 			}
 		}
 	}
+	if(request->home &&
+	   (quilt_request_getparam(request, "media") ||
+		quilt_request_getparam(request, "type") ||
+		quilt_request_getparam(request, "for")))
+	{
+		request->index = 1;
+		request->home = 0;
+		request->indextitle = "Everything";
+		for(c = 0; spindle_indices[c].uri; c++)
+		{
+			if(!spindle_indices[c].qclass)
+			{
+				request->indextitle = spindle_indices[c].title;
+				break;
+			}
+		}
+	}
 	if(request->home)
 	{
 		r = spindle_home(request);
