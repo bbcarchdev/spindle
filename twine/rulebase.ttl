@@ -241,7 +241,7 @@ skos08:prefLabel spindle:property [
 	spindle:expressedAs rdfs:label
 ] .
 
-skos:prefLabel spindle:property [
+foaf:name spindle:property [
 	olo:index 30 ;
 	rdfs:domain foaf:Person, foaf:Group, foaf:Agent ;
 	spindle:expressedAs rdfs:label
