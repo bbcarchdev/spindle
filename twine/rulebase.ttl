@@ -293,6 +293,26 @@ dct:description
 	spindle:prominence 15 ;
 	spindle:expect rdfs:Literal .
 
+po:synopsis spindle:property [
+	olo:index 30 ;
+	spindle:expressedAs dct:description
+] .
+
+po:medium_synopsis spindle:property [
+	olo:index 31 ;
+	spindle:expressedAs dct:description
+] .
+
+po:long_synopsis spindle:property [
+	olo:index 32 ;
+	spindle:expressedAs dct:description
+] .
+
+po:short_synopsis spindle:property [
+	olo:index 33 ;
+	spindle:expressedAs dct:description
+] .
+
 dct:description spindle:property [
 	olo:index 40 ;
 	spindle:expressedAs dct:description
