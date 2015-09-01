@@ -43,6 +43,7 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate memory for new coreference set\n");
 		return NULL;
 	}
+	/* Loop through each of the co-referencing predicates */
 	for(c = 0; c < spindle->corefcount; c++)
 	{
 		query = librdf_new_statement(spindle->world);
@@ -62,6 +63,7 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 				l = librdf_uri_as_string(uri);
 				uri = librdf_node_get_uri(obj);
 				r = librdf_uri_as_string(uri);
+/*				twine_logf(LOG_DEBUG, PLUGIN_NAME ": found coref (<%s>, <%s>) with <%s>\n", (const char *) l, (const char *) r, spindle->coref[c].predicate); */
 				if(spindle->coref[c].callback(set, (const char *) l, (const char *) r))
 				{
 					spindle_coref_destroy(set);
@@ -78,7 +80,10 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 			return NULL;
 		}
 	}
-	/* Find all of the subjects */
+	/* Now, find all of the subjects in the graph and add them as dangling
+	 * references if they don't already exist: this ensures that they'll
+	 * still get processed even there aren't actually any co-references
+	 */
 	query = librdf_new_statement(spindle->world);
 	stream = librdf_model_find_statements(model, query);
 	while(!librdf_stream_end(stream))
@@ -89,6 +94,7 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 		   (uri = librdf_node_get_uri(subj)) &&
 		   (l = librdf_uri_as_string(uri)))
 		{
+/*			twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding subject <%s>\n", (const char *) l); */
 			if(spindle_coref_add(set, (const char *) l, NULL))
 			{
 				spindle_coref_destroy(set);
@@ -115,6 +121,7 @@ spindle_coref_add(struct spindle_corefset_struct *set, const char *l, const char
 		if(!strcmp(l, set->refs[c].left) &&
 		   (!r || !strcmp(r, set->refs[c].right)))
 		{
+/*			twine_logf(LOG_DEBUG, "(reference already exists)\n"); */
 			return 0;
 		}
 	}
@@ -144,6 +151,7 @@ spindle_coref_add(struct spindle_corefset_struct *set, const char *l, const char
 		return -1;
 	}
 	set->refcount++;
+/*	twine_logf(LOG_DEBUG, "refcount=%d, (added %s = %s)\n", (int) set->refcount, p->left, p->right); */
 	return 0;
 }
 

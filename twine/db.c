@@ -1112,6 +1112,7 @@ spindle_db_proxy_relate(SPINDLE *spindle, const char *remote, const char *local)
 		free(id);
 		return -1;
 	}
+
 	free(id);
 	return 0;
 }

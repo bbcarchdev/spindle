@@ -27,6 +27,54 @@
 static int spindle_update_all_(SPINDLE *spindle);
 #endif
 
+/* Process a message containing Spindle proxy URIs by passing them to the
+ * update handler.
+ */
+int
+spindle_process_uri(const char *mime, const unsigned char *buf, size_t buflen, void *data)
+{
+	SPINDLE *spindle;
+	char *str, *t;
+	int r;
+
+	(void) mime;
+
+	spindle = (SPINDLE *) data;
+
+	/* Impose a hard limit on URL lengths */
+	if(buflen > 1024)
+	{
+		buflen = 1024;
+	}
+	str = (char *) calloc(1, buflen + 1);
+	if(!str)
+	{
+		return -1;
+	}
+	memcpy((void *) str, (void *) buf, buflen);
+	str[buflen] = 0;
+	t = strchr(str, '\n');
+	if(t)
+	{
+		*t = 0;
+	}
+	if(!strcasecmp(str, "all"))
+	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": special value 'all' is not valid as part of an update message\n");
+		free(str);
+		return -1;
+	}
+	r = spindle_update(PLUGIN_NAME, str, data);
+	free(str);
+	return r;
+}
+
+/* Update handler: re-build the cached contents of the item with the supplied
+ * identifier (which may be a UUID or a complete URI)
+ *
+ * When invoked using twine -u SPINDLE <ID>, and using an RDBMS index, the
+ * special value 'all' is valid to trigger a re-build of all known proxies.
+ */
 int
 spindle_update(const char *name, const char *identifier, void *data)
 {
@@ -39,6 +87,7 @@ spindle_update(const char *name, const char *identifier, void *data)
 	(void) name;
 
 	spindle = (SPINDLE *) data;
+	idbuf = NULL;
 
 	if(!strcasecmp(identifier, "all"))
 	{

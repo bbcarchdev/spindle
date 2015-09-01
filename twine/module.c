@@ -48,6 +48,7 @@ twine_plugin_init(void)
 	twine_preproc_register(PLUGIN_NAME, spindle_preproc, &spindle);
 	twine_postproc_register(PLUGIN_NAME, spindle_postproc, &spindle);
 	twine_update_register(PLUGIN_NAME, spindle_update, &spindle);
+	twine_plugin_register(SPINDLE_URI_MIME, "Spindle proxy URI", spindle_process_uri, &spindle);
 	return 0;
 }
 

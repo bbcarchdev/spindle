@@ -23,7 +23,14 @@
 
 #include "p_spindle.h"
 
-/* Post-processing hook, invoked by Twine operations */
+/* Post-processing hook, invoked by Twine operations
+ *
+ * This hook is invoked once (preprocessed) RDF has been pushed into the
+ * quad-store and is responsible for:
+ *
+ * - correlating references against each other and generating proxy URIs
+ * - caching and transforming source data and storing it with the proxies
+ */
 int
 spindle_postproc(twine_graph *graph, void *data)
 {
@@ -42,12 +49,14 @@ spindle_postproc(twine_graph *graph, void *data)
 		return -1;
 	}
 	/* find all owl:sameAs refs where either side is same-origin as graph */
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": extracting references from existing graph\n");
 	oldset = spindle_coref_extract(spindle, graph->old, graph->uri);
 	if(!oldset)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to extract co-references from previous graph state\n");
 		return -1;
 	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": extracting references from new graph\n");
 	newset = spindle_coref_extract(spindle, graph->store ? graph->store : graph->pristine, graph->uri);
 	if(!newset)
 	{

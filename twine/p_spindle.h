@@ -53,6 +53,8 @@
 # define SF_UPDATED                     (1<<1)
 # define SF_REFRESHED                   (1<<2)
 
+# define SPINDLE_URI_MIME               "application/x-spindle-uri"
+
 /* Namespaces */
 # define NS_RDF                         "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 # define NS_XSD                         "http://www.w3.org/2001/XMLSchema#"
@@ -294,6 +296,9 @@ int spindle_preproc(twine_graph *graph, void *data);
 
 /* Post-process an updated graph */
 int spindle_postproc(twine_graph *graph, void *data);
+
+/* Process an application/x-spindle-uri message */
+int spindle_process_uri(const char *mime, const unsigned char *buf, size_t buflen, void *data);
 
 /* Update cached data for an identifier */
 int spindle_update(const char *name, const char *identifier, void *data);
