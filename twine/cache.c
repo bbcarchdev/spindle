@@ -350,10 +350,10 @@ spindle_cache_source_(SPINDLECACHE *data)
 		{
 			return -1;
 		}
-	}
-	if(spindle_cache_source_sameas_(data))
-	{
-		return -1;
+		if(spindle_cache_source_sameas_(data))
+		{
+			return -1;
+		}
 	}
 	if(spindle_cache_source_clean_(data))
 	{
@@ -372,6 +372,7 @@ spindle_cache_source_sameas_(SPINDLECACHE *data)
 	librdf_node *node;
 	librdf_stream *stream;
 	
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": **** caching sameAs triples ****\n");
 	query = twine_rdf_st_create();
 	if(!query)
 	{
@@ -405,6 +406,7 @@ spindle_cache_source_sameas_(SPINDLECACHE *data)
 	{
 		st = librdf_stream_get_object(stream);
 		/* Add the statement to the proxy graph */
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": *** adding sameAs statement to proxy graph\n");
 		if(twine_rdf_model_add_st(data->proxydata, st, data->graph))
 		{
 			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to add statement to proxy model\n");
