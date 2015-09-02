@@ -52,6 +52,7 @@
 # define SF_MOVED                       (1<<0)
 # define SF_UPDATED                     (1<<1)
 # define SF_REFRESHED                   (1<<2)
+# define SF_DONE                        (1<<3)
 
 /* Trigger kinds */
 # define TK_PROXY                       (1<<0)

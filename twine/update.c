@@ -37,12 +37,13 @@ spindle_process_uri(const char *mime, const unsigned char *buf, size_t buflen, v
 {
 	SPINDLE *spindle;
 	char *str, *t, *idbuf;
-	int r;
+	int r, mode;
+	struct spindle_strset_struct *set;
 
 	(void) mime;
 
 	spindle = (SPINDLE *) data;
-
+	mode = 0;
 	/* Impose a hard limit on URL lengths */
 	if(buflen > 1024)
 	{
@@ -60,6 +61,28 @@ spindle_process_uri(const char *mime, const unsigned char *buf, size_t buflen, v
 	{
 		*t = 0;
 	}
+	t = strchr(str, ' ');
+	if(t)
+	{
+		*t = 0;
+		t++;
+		if(!strcmp(t, "moved"))
+		{
+			mode = SF_MOVED;
+		}
+		else if(!strcmp(t, "updated"))
+		{
+			mode = SF_UPDATED;
+		}
+		else if(!strcmp(t, "refreshed"))
+		{
+			mode = SF_REFRESHED;
+		}
+		else
+		{
+			twine_logf(LOG_WARNING, PLUGIN_NAME ": update-mode flag '%s' for <%s> is not recognised\n", t, str);
+		}
+	}
 	idbuf = spindle_parse_identifier_(spindle, str);
 	if(!idbuf)
 	{
@@ -67,7 +90,28 @@ spindle_process_uri(const char *mime, const unsigned char *buf, size_t buflen, v
 		free(str);
 		return -1;
 	}
-	r = spindle_cache_update(spindle, idbuf, NULL);
+	if(mode == SF_MOVED)
+	{
+		/* If this item was moved, create a refset for recursive updates */
+		set = spindle_strset_create();
+		spindle_strset_add_flags(set, idbuf, mode);
+	}
+	else
+	{
+		set = NULL;
+	}
+	r = spindle_cache_update(spindle, idbuf, set);
+	if(!r && set && set->count > 1)
+	{
+		/* Update the recursed-to items in-place, or push them into the
+		 * message queue
+		 */
+		r = spindle_cache_update_set(spindle, set);
+	}
+	if(set)
+	{
+		spindle_strset_destroy(set);
+	}
 	if(r)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": update failed for <%s>\n", idbuf);
