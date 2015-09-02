@@ -52,6 +52,7 @@
 # define SF_MOVED                       (1<<0)
 # define SF_UPDATED                     (1<<1)
 # define SF_REFRESHED                   (1<<2)
+# define SF_DONE                        (1<<3)
 
 # define SPINDLE_URI_MIME               "application/x-spindle-uri"
 
