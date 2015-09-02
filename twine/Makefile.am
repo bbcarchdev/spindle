@@ -20,11 +20,12 @@ EXTRA_DIST = README.md
 
 AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@
 
-twinemodule_LTLIBRARIES = spindle.la spindle-strip.la
+twinemodule_LTLIBRARIES = spindle.la spindle-strip.la spindle-correlate.la
 
 spindle_la_SOURCES = p_spindle.h \
 	module.c preproc.c postproc.c proxy.c refset.c cache.c classes.c props.c \
-	strset.c rulebase.c doc.c licenses.c db.c dbschema.c update.c precomposed.c
+	strset.c rulebase.c doc.c licenses.c db-common.c db-correlate.c \
+	db-cache.c dbschema.c update.c precomposed.c
 
 spindle_la_LDFLAGS = -no-undefined -module -avoid-version
 
@@ -44,4 +45,18 @@ spindle_strip_la_SOURCES = p_spindle.h \
 spindle_strip_la_LDFLAGS = -no-undefined -module -avoid-version
 
 spindle_strip_la_LIBADD = @LIBTWINE_LOCAL_LIBS@ @LIBTWINE_LIBS@ \
+	@LIBURI_LOCAL_LIBS@ @LIBURI_LIBS@
+
+# The spindle-correlate module is a post-processor which evaluates updated
+# graphs to determine co-references, and obtains a local identifier for each
+# known subject.
+
+spindle_correlate_la_SOURCES = p_spindle.h \
+	correlate-module.c postproc.c rulebase.c refset.c strset.c proxy.c \
+	db-common.c db-correlate.c dbschema.c
+
+spindle_correlate_la_LDFLAGS = -no-undefined -module -avoid-version
+
+spindle_correlate_la_LIBADD = @LIBTWINE_LOCAL_LIBS@ @LIBTWINE_LIBS@ \
+	@LIBSQL_LOCAL_LIBS@ @LIBSQL_LIBS@ \
 	@LIBURI_LOCAL_LIBS@ @LIBURI_LIBS@

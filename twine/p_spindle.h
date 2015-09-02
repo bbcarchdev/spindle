@@ -396,6 +396,18 @@ int spindle_doc_apply(SPINDLECACHE *cache);
 int spindle_license_init(SPINDLE *spindle);
 int spindle_license_apply(SPINDLECACHE *spindle);
 
+/* Utility functions used by SQL interaction code */
+#if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
+int spindle_db_local_(SPINDLE *spindle, const char *localname);
+char *spindle_db_id_(const char *localname);
+char *spindle_db_literalset_(struct spindle_literalset_struct *set);
+char *spindle_db_strset_(struct spindle_strset_struct *set);
+size_t spindle_db_esclen_(const char *src);
+char *spindle_db_escstr_(char *dest, const char *src);
+char *spindle_db_escstr_lower_(char *dest, const char *src);
+#endif
+
+
 /* SQL index */
 # if SPINDLE_DB_INDEX
 int spindle_db_schema_update(SPINDLE *spindle);
