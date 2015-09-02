@@ -21,7 +21,7 @@ EXTRA_DIST = README.md
 AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ \
 	-I$(top_builddir)/libs3client -I$(top_srcdir)/libs3client
 
-twinemodule_LTLIBRARIES = spindle.la
+twinemodule_LTLIBRARIES = spindle.la spindle-strip.la
 
 spindle_la_SOURCES = p_spindle.h \
 	module.c preproc.c postproc.c proxy.c refset.c cache.c classes.c props.c \
@@ -35,3 +35,14 @@ spindle_la_LIBADD = $(top_builddir)/libs3client/libs3client.la \
 	@LIBURI_LOCAL_LIBS@ @LIBURI_LIBS@
 
 dist_twinemodule_DATA = rulebase.ttl
+
+# The spindle-strip module is a pre-processor which removes triples that the
+# rulebase does not indicate should be retained.
+
+spindle_strip_la_SOURCES = p_spindle.h \
+	strip-module.c preproc.c rulebase.c
+
+spindle_strip_la_LDFLAGS = -no-undefined -module -avoid-version
+
+spindle_strip_la_LIBADD = @LIBTWINE_LOCAL_LIBS@ @LIBTWINE_LIBS@ \
+	@LIBURI_LOCAL_LIBS@ @LIBURI_LIBS@
