@@ -27,6 +27,8 @@
 static int spindle_update_all_(SPINDLE *spindle);
 #endif
 
+static char *spindle_parse_identifier_(SPINDLE *spindle, const char *identifier);
+
 /* Process a message containing Spindle proxy URIs by passing them to the
  * update handler.
  */
@@ -34,7 +36,7 @@ int
 spindle_process_uri(const char *mime, const unsigned char *buf, size_t buflen, void *data)
 {
 	SPINDLE *spindle;
-	char *str, *t;
+	char *str, *t, *idbuf;
 	int r;
 
 	(void) mime;
@@ -58,13 +60,23 @@ spindle_process_uri(const char *mime, const unsigned char *buf, size_t buflen, v
 	{
 		*t = 0;
 	}
-	if(!strcasecmp(str, "all"))
+	idbuf = spindle_parse_identifier_(spindle, str);
+	if(!idbuf)
 	{
-		twine_logf(LOG_ERR, PLUGIN_NAME ": special value 'all' is not valid as part of an update message\n");
+		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to obtain Spindle identifier from <%s>\n", str);
 		free(str);
 		return -1;
 	}
-	r = spindle_update(PLUGIN_NAME, str, data);
+	r = spindle_cache_update(spindle, idbuf, NULL);
+	if(r)
+	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": update failed for <%s>\n", idbuf);
+	}
+	else
+	{
+		twine_logf(LOG_NOTICE, PLUGIN_NAME ": update complete for <%s>\n", idbuf);
+	}
+	free(idbuf);
 	free(str);
 	return r;
 }
@@ -79,10 +91,8 @@ int
 spindle_update(const char *name, const char *identifier, void *data)
 {
 	SPINDLE *spindle;
-	char uuid[40];
-	char *idbuf, *p;
-	int c, r;
-	const char *t;
+	int r;
+	char *idbuf;
 
 	(void) name;
 
@@ -100,77 +110,15 @@ spindle_update(const char *name, const char *identifier, void *data)
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": can only update all items when using the a relational database index\n");
 		return -1;
 	}
-	/* If identifier is a string of 32 hex-digits, possibly including hyphens,
-	 * then we can prefix it with the root and suffix it with #id to form
-	 * a real identifer.
-	 */
-	c = 0;
-	for(t = identifier; *t && c < 32; t++)
-	{
-		if(isxdigit(*t))
-		{
-			uuid[c] = tolower(*t);
-			c++;
-		}
-		else if(*t == '-')
-		{
-			continue;
-		}
-		else
-		{
-			break;
-		}
-	}
-	uuid[c] = 0;
-	if(!*t && c == 32)
-	{
-		/* XXX the fragment should be configurable */
-		idbuf = (char *) malloc(strlen(spindle->root) + 1 + 32 + 3 + 1);
-		if(!idbuf)
-		{
-			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate buffer for local identifier\n");
-			return -1;
-		}
-		strcpy(idbuf, spindle->root);
-		p = strchr(idbuf, 0);
-		if(p > idbuf)
-		{
-			p--;
-			if(*p == '/')
-			{
-				p++;
-			}
-			else
-			{
-				p++;
-				*p = '/';
-				p++;
-			}
-		}
-		else
-		{
-			*p = '/';
-			p++;
-		}
-		strcpy(p, uuid);
-		p += 32;
-		*p = '#';
-		p++;
-		*p = 'i';
-		p++;
-		*p = 'd';
-		p++;
-		*p = 0;
-		identifier = idbuf;
-	}
-	r = spindle_cache_update(spindle, identifier, NULL);
+	idbuf = spindle_parse_identifier_(spindle, identifier);
+	r = spindle_cache_update(spindle, idbuf, NULL);
 	if(r)
 	{
-		twine_logf(LOG_ERR, PLUGIN_NAME ": update failed for <%s>\n", identifier);
+		twine_logf(LOG_ERR, PLUGIN_NAME ": update failed for <%s>\n", idbuf);
 	}
 	else
 	{
-		twine_logf(LOG_NOTICE, PLUGIN_NAME ": update complete for <%s>\n", identifier);
+		twine_logf(LOG_NOTICE, PLUGIN_NAME ": update complete for <%s>\n", idbuf);
 	}
 	free(idbuf);
 	return r;
@@ -282,3 +230,85 @@ spindle_update_all_(SPINDLE *spindle)
 }
 
 #endif /* SPINDLE_DB_INDEX */
+
+static char *
+spindle_parse_identifier_(SPINDLE *spindle, const char *identifier)
+{
+	size_t c;
+	const char *t;
+	char uuid[40];
+	char *idbuf, *p;
+
+	/* If identifier is a string of 32 hex-digits, possibly including hyphens,
+	 * then we can prefix it with the root and suffix it with #id to form
+	 * a real identifer.
+	 */
+	idbuf = NULL;
+	c = 0;
+	for(t = identifier; *t && c < 32; t++)
+	{
+		if(isxdigit(*t))
+		{
+			uuid[c] = tolower(*t);
+			c++;
+		}
+		else if(*t == '-')
+		{
+			continue;
+		}
+		else
+		{
+			break;
+		}
+	}
+	uuid[c] = 0;
+	if(!*t && c == 32)
+	{
+		/* It was a UUID, transform it into a URI */
+		/* XXX the fragment should be configurable */
+		idbuf = (char *) malloc(strlen(spindle->root) + 1 + 32 + 3 + 1);
+		if(!idbuf)
+		{
+			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate buffer for local identifier\n");
+			return NULL;
+		}
+		strcpy(idbuf, spindle->root);
+		p = strchr(idbuf, 0);
+		if(p > idbuf)
+		{
+			p--;
+			if(*p == '/')
+			{
+				p++;
+			}
+			else
+			{
+				p++;
+				*p = '/';
+				p++;
+			}
+		}
+		else
+		{
+			*p = '/';
+			p++;
+		}
+		strcpy(p, uuid);
+		p += 32;
+		*p = '#';
+		p++;
+		*p = 'i';
+		p++;
+		*p = 'd';
+		p++;
+		*p = 0;
+		return idbuf;
+	}
+	idbuf = strdup(identifier);
+	if(!idbuf)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate buffer for local identifier\n");
+		return NULL;
+	}
+	return idbuf;
+}
