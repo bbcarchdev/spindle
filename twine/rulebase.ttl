@@ -729,6 +729,11 @@ mrss:content spindle:property [
 	spindle:expressedAs mrss:content
 ] .
 
+<http://etree.linkedmusic.org/vocab/audio> spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs mrss:content
+] .
+
 ## dct:format
 
 dct:format
