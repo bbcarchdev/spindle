@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               10
+#define DB_SCHEMA_VERSION               11
 
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
@@ -270,6 +270,14 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 	if(newversion == 10)
 	{
 		if(sql_execute(sql, "ALTER TABLE \"about\" ALTER COLUMN \"about\" TYPE uuid USING (\"about\"::uuid)"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 11)
+	{
+		if(sql_execute(sql, "DROP TABLE \"index_about\""))
 		{
 			return -1;
 		}
