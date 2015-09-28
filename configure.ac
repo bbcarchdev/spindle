@@ -48,6 +48,20 @@ BT_DEFINE_PATH([QUILTMODULEDIR], [quiltmoduledir], [Quilt module path])
 use_docbook_html5=yes
 BT_BUILD_DOCS
 
+XML2HTMLFLAGS="--param \"html.linksfile\" \"'file://\$(abs_top_srcdir)/docbook-html5/res-links.xml'\" \
+  --param \"html.navfile\" \"'file://\$(abs_top_srcdir)/docbook-html5/res-nav.xml'\" \
+  --param \"html.ie78css\" \"'//bbcarchdev.github.io/painting-by-numbers/ie78.css'\""
+AC_SUBST([XML2HTMLFLAGS])
+
+LINKS='${top_srcdir}/docbook-html5/res-links.xml'
+AC_SUBST([LINKS])
+
+NAV='${top_srcdir}/docbook-html5/res-nav.xml'
+AC_SUBST([NAV])
+
+spindlehtdocdir='${docdir}'
+AC_SUBST([spindlehtdocdir])
+
 BT_DEFINE_PREFIX
 
 AC_CONFIG_FILES([Makefile
@@ -55,6 +69,8 @@ m4/Makefile
 libs3client/Makefile
 twine/Makefile
 quilt/Makefile
+docbook-html5/Makefile
+docs/Makefile
 ])
 
 AC_OUTPUT
