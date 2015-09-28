@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<refentry xml:id="acropolis" xmlns="http://docbook.org/ns" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:lang="en">
+	<info>
+		<productname>Spindle</productname>
+		<author>
+			<personname>
+				<firstname>Mo</firstname>
+				<surname>McRoberts</surname>
+			</personname>
+			<affiliation>
+				<org>
+					<orgname>BBC</orgname>
+					<orgdiv>Archive Development</orgdiv>
+					<uri>http://www.bbc.co.uk/archive/</uri>
+				</org>
+			</affiliation>
+		</author>
+		<copyright>
+			<year>2015</year>
+			<holder>BBC</holder>
+		</copyright>
+	</info>
+	
+	<refmeta>
+		<refentrytitle>Spindle</refentrytitle>
+		<manvolnum>7</manvolnum>
+		<refmiscinfo class="source">Research &amp; Education Space</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>Spindle</refname>
+		<refpurpose>Research &amp; Education Space modules for Twine and Quilt</refpurpose>
+	</refnamediv>
+
+	<refsect1>
+		<title>Introduction</title>
+		<para>
+			Spindle is open source software, released under the terms of the
+			<cite><citetitle><link xlink:href="http://www.apache.org/licenses/LICENSE-2.0">Apache License, 2.0</link></citetitle></cite>.
+			The public Git repository for Spindle is hosted at <link xlink:href="https://github.com/bbcarchdev/spindle">Github</link>.
+		</para>
+	</refsect1>
+</refentry>
