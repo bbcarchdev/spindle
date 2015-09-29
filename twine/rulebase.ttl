@@ -469,6 +469,11 @@ dct:subject spindle:property [
 	spindle:expressedAs foaf:topic
 ] .
 
+po:subject spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:topic
+] .
+
 ## dct:isPartOf
 
 dct:isPartOf
@@ -501,6 +506,7 @@ dct:hasVersion spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs dct:hasVersion
 ] .
+
 po:version spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs dct:hasVersion ;
@@ -781,4 +787,4 @@ odrl:assignee
 
 odrl:assignee
 	olo:index 0 ;
-	spindle:expressedAs odrl:assginee .
+	spindle:expressedAs odrl:assignee .
