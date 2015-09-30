@@ -30,9 +30,52 @@ struct s3_upload_struct
 	size_t pos;
 };
 
+static int spindle_precompose_init_s3_(SPINDLE *spindle, const char *bucketname);
 static int spindle_precompose_s3_(SPINDLECACHE *data, char *quadbuf, size_t bufsize);
 static size_t spindle_precompose_s3_read_(char *buffer, size_t size, size_t nitems, void *userdata);
 
+int
+spindle_precompose_init(SPINDLE *spindle)
+{
+	char *t;
+	URI *base, *uri;
+	URI_INFO *info;
+	int r;
+	
+	t = twine_config_geta("spindle:cache", NULL);
+	if(t)
+	{
+		base = uri_create_cwd();
+		uri = uri_create_str(t, NULL);
+		free(t);
+		info = uri_info(uri);
+		if(!strcmp(info->scheme, "s3"))
+		{
+			r = spindle_precompose_init_s3_(spindle, info->host);
+		}
+		else
+		{
+			twine_logf(LOG_CRIT, PLUGIN_NAME ": cache type '%s' is not supported\n", info->scheme);
+			r = -1;
+		}
+		uri_info_destroy(info);
+		uri_destroy(uri);
+		uri_destroy(base);
+		return r;
+	}
+	/* For compatibility, specifying spindle:bucket=NAME is equivalent to
+	 * spindle:cache=s3://NAME
+	 */
+	t = twine_config_geta("spindle:bucket", NULL);
+	if(t)
+	{
+		r = spindle_precompose_init_s3_(spindle, t);
+		free(t);
+		return r;
+	}
+	/* No cache configured */
+	return 0;
+}
 
 /* Generate a set of pre-composed N-Quads representing an entity we have
  * indexed and write it to a location for the Quilt module to be able to
@@ -120,6 +163,38 @@ spindle_precompose(SPINDLECACHE *data)
 
 	free(buf);
 	return r;
+}
+
+/* Initialise an S3-based cache for pre-composed N-Quads */
+static int
+spindle_precompose_init_s3_(SPINDLE *spindle, const char *bucketname)
+{
+	char *t;
+	
+	spindle->bucket = s3_create(bucketname);
+	if(!spindle->bucket)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create S3 bucket object for <s3://%s>\n", bucketname);
+		return -1;
+	}
+	s3_set_logger(spindle->bucket, twine_vlogf);
+	if((t = twine_config_geta("s3:endpoint", NULL)))
+	{
+		s3_set_endpoint(spindle->bucket, t);
+		free(t);
+	}
+	if((t = twine_config_geta("s3:access", NULL)))
+	{
+		s3_set_access(spindle->bucket, t);
+		free(t);
+	}
+	if((t = twine_config_geta("s3:secret", NULL)))
+	{
+		s3_set_secret(spindle->bucket, t);
+		free(t);
+	}
+	spindle->s3_verbose = twine_config_get_bool("s3:verbose", 0);
+	return 0;
 }
 
 /* Store pre-composed N-Quads in an S3 (or RADOS) bucket */

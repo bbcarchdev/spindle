@@ -339,6 +339,7 @@ int spindle_cache_update_set(SPINDLE *spindle, struct spindle_strset_struct *set
 int spindle_cache_update(SPINDLE *spindle, const char *localname, struct spindle_strset_struct *set);
 
 /* Generate and store pre-composed N-Quads */
+int spindle_precompose_init(SPINDLE *spindle);
 int spindle_precompose(SPINDLECACHE *data);
 
 /* Load the Spindle rulebase */

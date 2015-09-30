@@ -26,7 +26,6 @@
 static SPINDLE spindle;
 
 static int spindle_init_(SPINDLE *spindle);
-static int spindle_s3_init_(SPINDLE *spindle);
 static int spindle_db_init_(SPINDLE *spindle);
 static int spindle_cleanup_(SPINDLE *spindle);
 static int spindle_db_querylog_(SQL *restrict sql, const char *query);
@@ -122,7 +121,7 @@ spindle_init_(SPINDLE *spindle)
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to load rulebase\n");
 		return -1;
 	}
-	if(spindle_s3_init_(spindle))
+	if(spindle_precompose_init(spindle))
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to initialise S3 bucket\n");
 		return -1;
@@ -139,44 +138,6 @@ spindle_init_(SPINDLE *spindle)
 	{
 		return -1;
 	}
-	return 0;
-}
-
-static int
-spindle_s3_init_(SPINDLE *spindle)
-{
-	char *t;
-
-	t = twine_config_geta("spindle:bucket", NULL);
-	if(!t)
-	{
-		return 0;
-	}
-	spindle->bucket = s3_create(t);
-	if(!spindle->bucket)
-	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create S3 bucket object for <s3://%s>\n", t);
-		free(t);		
-		return -1;
-	}
-	s3_set_logger(spindle->bucket, twine_vlogf);
-	free(t);
-	if((t = twine_config_geta("s3:endpoint", NULL)))
-	{
-		s3_set_endpoint(spindle->bucket, t);
-		free(t);
-	}
-	if((t = twine_config_geta("s3:access", NULL)))
-	{
-		s3_set_access(spindle->bucket, t);
-		free(t);
-	}
-	if((t = twine_config_geta("s3:secret", NULL)))
-	{
-		s3_set_secret(spindle->bucket, t);
-		free(t);
-	}
-	spindle->s3_verbose = twine_config_get_bool("s3:verbose", 0);
 	return 0;
 }
 
