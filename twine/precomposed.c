@@ -31,6 +31,8 @@ struct s3_upload_struct
 };
 
 static int spindle_precompose_init_s3_(SPINDLE *spindle, const char *bucketname);
+static int spindle_precompose_init_file_(SPINDLE *spindle, const char *path);
+static int spindle_precompose_file_(SPINDLECACHE *data, char *quadbuf, size_t bufsize);
 static int spindle_precompose_s3_(SPINDLECACHE *data, char *quadbuf, size_t bufsize);
 static size_t spindle_precompose_s3_read_(char *buffer, size_t size, size_t nitems, void *userdata);
 
@@ -49,12 +51,15 @@ spindle_precompose_init(SPINDLE *spindle)
 		uri = uri_create_str(t, base);
 		free(t);
 		info = uri_info(uri);
-		uri_destroy(p);
 		uri_destroy(uri);
 		uri_destroy(base);
 		if(!strcmp(info->scheme, "s3"))
 		{
 			r = spindle_precompose_init_s3_(spindle, info->host);
+		}
+		else if(!strcmp(info->scheme, "file"))
+		{
+			r = spindle_precompose_init_file_(spindle, info->path);
 		}
 		else
 		{
@@ -90,8 +95,9 @@ spindle_precompose(SPINDLECACHE *data)
 	size_t bufsize, proxylen, sourcelen, extralen, l;
 	int r;
 	
-	/* If there's no S3 bucket, this is a no-op */
-	if(!data->spindle->bucket)
+	/* If there's no S3 bucket nor cache-path, this is a no-op */
+	if(!data->spindle->bucket &&
+		!data->spindle->cachepath)
 	{
 		return 0;
 	}
@@ -160,8 +166,18 @@ spindle_precompose(SPINDLECACHE *data)
 	librdf_free_memory(source);
 	librdf_free_memory(extra);
 	
-	r = spindle_precompose_s3_(data, buf, bufsize);
-
+	if(data->spindle->bucket)
+	{
+		r = spindle_precompose_s3_(data, buf, bufsize);
+	}
+	else if(data->spindle->cachepath)
+	{
+		r = spindle_precompose_file_(data, buf, bufsize);
+	}
+	else
+	{
+		r = 0;
+	}
 	free(buf);
 	return r;
 }
@@ -195,6 +211,42 @@ spindle_precompose_init_s3_(SPINDLE *spindle, const char *bucketname)
 		free(t);
 	}
 	spindle->s3_verbose = twine_config_get_bool("s3:verbose", 0);
+	return 0;
+}
+
+/* Initialise a filesystem-based cache for pre-composed N-Quads */
+static int
+spindle_precompose_init_file_(SPINDLE *spindle, const char *path)
+{
+	char *t;
+	
+	if(mkdir(path, 0777))
+	{
+		if(errno != EEXIST)
+		{
+			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create cache directory: %s: %s\n", path, strerror(errno));
+			return -1;
+		}
+	}
+	spindle->cachepath = (char *) calloc(1, strlen(path) + 2);
+	if(!spindle->cachepath)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate memory for path buffer\n");
+		return -1;
+	}
+	strcpy(spindle->cachepath, path);
+	if(path[0])
+	{
+		t = strchr(spindle->cachepath, 0);
+		t--;
+		if(*t != '/')
+		{
+			t++;
+			*t = '/';
+			t++;
+			*t = 0;
+		}
+	}
 	return 0;
 }
 
@@ -282,4 +334,76 @@ spindle_precompose_s3_read_(char *buffer, size_t size, size_t nitems, void *user
 	memcpy(buffer, &(data->buf[data->pos]), size);
 	data->pos += size;
 	return size;
+}
+
+/* Store pre-composed N-Quads in a file */
+static int
+spindle_precompose_file_(SPINDLECACHE *data, char *quadbuf, size_t bufsize)
+{
+	const char *s;
+	char *path, *t;
+	FILE *f;
+	int r;
+	
+	path = (char *) calloc(1, strlen(data->spindle->cachepath) + strlen(data->localname) + 8);
+	if(!path)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate memory for local path buffer\n");
+		return -1;
+	}
+	strcpy(path, data->spindle->cachepath);
+	if((s = strrchr(data->localname, '/')))
+	{
+		s++;
+	}
+	else
+	{
+		s = (char *) data->localname;
+	}
+	strcat(path, s);
+	t = strchr(path, '#');
+	if(t)
+	{
+		*t = 0;
+	}
+	f = fopen(path, "wb");
+	if(!f)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to open cache file for writing: %s: %s\n", path, strerror(errno));
+		free(path);
+		return -1;
+	}
+	r = 0;
+	while(bufsize)
+	{
+		if(bufsize > 1024)
+		{
+			if(fwrite(quadbuf, 1024, 1, f) != 1)
+			{
+				r = -1;
+				break;
+			}
+			quadbuf += 1024;
+			bufsize -= 1024;
+		}
+		else
+		{
+			if(fwrite(quadbuf, bufsize, 1, f) != 1)
+			{
+				r = -1;
+				break;
+			}
+			bufsize = 0;
+		}
+	}
+	if(r)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to write to cache file: %s: %s\n", path, strerror(errno));
+		fclose(f);
+		free(path);
+		return -1;
+	}
+	fclose(f);
+	free(path);
+	return 0;
 }

@@ -23,6 +23,8 @@
 # include <stdio.h>
 # include <stdlib.h>
 # include <string.h>
+# include <unistd.h>
+# include <sys/stat.h>
 # include <ctype.h>
 # include <errno.h>
 # include <uuid/uuid.h>
@@ -111,9 +113,11 @@ struct spindle_context_struct
 	struct coref_match_struct *coref;
 	size_t corefcount;
 	size_t corefsize;
-	/* The bucket that cached nquads should be stored in */
+	/* The bucket that precomposed N-Quads should be stored in */
 	S3BUCKET *bucket;
 	int s3_verbose;
+	/* The filesystem paths that precomposed N-Quads should be stored in */
+	char *cachepath;
 	/* Cached information about graphs */
 	struct spindle_graphcache_struct *graphcache;
 	/* Names of specific predicates */
