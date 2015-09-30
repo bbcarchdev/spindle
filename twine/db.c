@@ -1431,7 +1431,7 @@ spindle_db_escstr_lower_(char *dest, const char *src)
 static int
 spindle_db_local_(SPINDLE *spindle, const char *localname)
 {
-	if(strcmp(localname, spindle->root))
+	if(strncmp(localname, spindle->root, strlen(spindle->root)))
 	{
 		return 0;
 	}
