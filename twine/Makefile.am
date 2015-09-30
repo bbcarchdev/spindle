@@ -25,7 +25,7 @@ twinemodule_LTLIBRARIES = spindle.la
 
 spindle_la_SOURCES = p_spindle.h \
 	module.c preproc.c postproc.c proxy.c refset.c cache.c classes.c props.c \
-	strset.c rulebase.c doc.c licenses.c db.c dbschema.c update.c
+	strset.c rulebase.c doc.c licenses.c db.c dbschema.c update.c precomposed.c
 
 spindle_la_LDFLAGS = -no-undefined -module -avoid-version
 
