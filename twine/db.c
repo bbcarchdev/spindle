@@ -48,6 +48,7 @@ static int spindle_db_audiences_interp_(SPINDLE *spindle, librdf_model *model, l
 static int spindle_db_audiences_permission_(SPINDLE *spindle, librdf_model *model, librdf_node *subject, char ***audiences);
 static int spindle_db_audiences_action_(SPINDLE *spindle, librdf_model *model, librdf_node *subject);
 static int spindle_db_audiences_assignee_(SPINDLE *spindle, librdf_model *model, librdf_node *subject, char ***audiences);
+static int spindle_db_membership_(SQL *sql, const char *id, SPINDLECACHE *data);
 #endif
 
 #if SPINDLE_DB_PROXIES
@@ -148,6 +149,11 @@ spindle_db_cache_store(SPINDLECACHE *data)
 		return -1;
 	}
 	if(spindle_db_media_(sql, id, data))
+	{
+		free(id);
+		return -1;
+	}
+	if(spindle_db_membership_(sql, id, data))
 	{
 		free(id);
 		return -1;
@@ -1003,6 +1009,82 @@ spindle_db_audiences_assignee_(SPINDLE *spindle, librdf_model *model, librdf_nod
 	twine_rdf_st_destroy(query);	
 	return r;
 }
+
+/* Add information to the database about this entities membership in
+ * collections.
+ *
+ * - <collection> rdfs:seeAlso <this>
+ * - <this> void:inDataset <collection>
+ * - <this> dct:isPartOf <collection>
+ */
+static int
+spindle_db_membership_(SQL *sql, const char *id, SPINDLECACHE *data)
+{
+	SPARQLRES *rs;
+	SPARQLROW *row;
+	SQL_STATEMENT *sqlres;
+	char *cid;
+	librdf_node *node;
+	librdf_uri *uri;
+	const char *uristr;
+	
+	/* XXX The list of membership predicates (and directionality) should be
+	 * defined by the rulebase.
+	 */
+	rs = sparql_queryf(data->sparql, "SELECT DISTINCT ?collection "
+		"WHERE { "
+		" { ?collection <http://www.w3.org/2000/01/rdf-schema#seeAlso> %V } UNION "
+		" { %V <http://purl.org/dc/terms/isPartOf> ?collection } UNION "
+		" { %V <http://rdfs.org/ns/void#inDataset> ?collection } "
+		"}", data->self, data->self, data->self);
+	if(!rs)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to perform SPARQL query for collection membership\n");
+		return -1;
+	}
+	while((row = sparqlres_next(rs)))
+	{
+		node = sparqlrow_binding(row, 0);
+		if(node && librdf_node_is_resource(node) &&
+			(uri = librdf_node_get_uri(node)) &&
+			(uristr = (const char *) librdf_uri_as_string(uri)))
+		{
+			if(!spindle_db_local_(data->spindle, uristr))
+			{
+				continue;
+			}
+			cid = spindle_db_id_(uristr);
+			sqlres = sql_queryf(sql, "SELECT \"id\" FROM \"index\" WHERE \"id\" = %Q AND %Q = ANY(\"classes\")", cid, "http://purl.org/dc/dcmitype/Collection");
+			if(!sqlres)
+			{
+				free(cid);
+				sparqlres_destroy(rs);
+				return -1;
+			}
+			if(sql_stmt_eof(sqlres))
+			{
+				sql_stmt_destroy(sqlres);
+				free(cid);
+				return -1;
+			}
+			/* A future version of this may make use of information about the
+			 * collection returned by the above query. We currently don't do
+			 * that.
+			 */
+			sql_stmt_destroy(sqlres);
+			if(sql_executef(sql, "INSERT INTO \"membership\" (\"id\", \"collection\") VALUES (%Q, %Q)", id, cid))
+			{
+				free(cid);
+				sparqlres_destroy(rs);
+				return -1;
+			}
+			free(cid);
+		}
+	}
+	sparqlres_destroy(rs);
+	return 0;
+}
+
 
 /* Update the language-specific index "index_<target>" using (in order of
  * preference), <specific>, <generic>, (none).
