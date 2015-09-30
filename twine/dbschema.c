@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               11
+#define DB_SCHEMA_VERSION               12
 
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
@@ -278,6 +278,31 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 	if(newversion == 11)
 	{
 		if(sql_execute(sql, "DROP TABLE \"index_about\""))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 12)
+	{
+		if(sql_execute(sql, "CREATE TABLE \"membership\" ("
+					   "  \"id\" uuid NOT NULL, "
+					   "  \"collection\" uuid NOT NULL, "
+					   "  \"depth\" integer NOT NULL DEFAULT 0, "
+					   "  PRIMARY KEY(\"id\", \"collection\")"
+					   ")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"membership_id\" ON \"membership\" (\"id\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"membership_collection\" ON \"membership\" (\"collection\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"membership_depth\" ON \"membership\" (\"depth\")"))
 		{
 			return -1;
 		}
