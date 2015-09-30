@@ -46,9 +46,12 @@ spindle_precompose_init(SPINDLE *spindle)
 	if(t)
 	{
 		base = uri_create_cwd();
-		uri = uri_create_str(t, NULL);
+		uri = uri_create_str(t, base);
 		free(t);
 		info = uri_info(uri);
+		uri_destroy(p);
+		uri_destroy(uri);
+		uri_destroy(base);
 		if(!strcmp(info->scheme, "s3"))
 		{
 			r = spindle_precompose_init_s3_(spindle, info->host);
@@ -59,8 +62,6 @@ spindle_precompose_init(SPINDLE *spindle)
 			r = -1;
 		}
 		uri_info_destroy(info);
-		uri_destroy(uri);
-		uri_destroy(base);
 		return r;
 	}
 	/* For compatibility, specifying spindle:bucket=NAME is equivalent to
