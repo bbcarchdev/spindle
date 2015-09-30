@@ -20,8 +20,6 @@
 #ifndef P_SPINDLE_H_
 # define P_SPINDLE_H_                   1
 
-# define _BSD_SOURCE
-
 # include <stdio.h>
 # include <stdlib.h>
 # include <string.h>
