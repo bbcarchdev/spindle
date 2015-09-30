@@ -179,6 +179,11 @@ spindle_db_remove_(SQL *sql, const char *id)
 	{
 		return -1;
 	}
+	if(sql_executef(sql, "DELETE FROM \"membership\" WHERE \"id\" = %Q",
+					id))
+	{
+		return -1;
+	}
 	return 0;
 }
 
