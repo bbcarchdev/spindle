@@ -266,6 +266,7 @@ spindle_precompose_s3_(SPINDLECACHE *data, char *quadbuf, size_t bufsize)
 	
 	s3data.buf = quadbuf;
 	s3data.bufsize = bufsize;
+	s3data.pos = 0;
 	urlbuf = (char *) malloc(1 + strlen(data->localname) + 4 + 1);
 	if(!urlbuf)
 	{
