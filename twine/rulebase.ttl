@@ -474,7 +474,31 @@ po:subject spindle:property [
 	spindle:expressedAs foaf:topic
 ] .
 
+## void:inDataset
+
+void:inDataset
+	a spindle:Property ;
+	olo:index 9 ;
+	spindle:expect rdfs:Resource ;
+	spindle:proxyOnly true .
+
+void:inDataset spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs void:inDataset
+] .
+
+## We don't current support range restrictions in the rule-base, which would
+## only make sense when spindle:proxyOnly is true, so we can't use this rule
+## at the moment.
+##
+# dct:isPartOf spindle:property [
+#	olo:index 0 ;
+#	rdfs:range void:Dataset ;
+#	spindle:expressedAs void:inDataset
+#] .
+
 ## dct:isPartOf
+
 
 dct:isPartOf
 	a spindle:Property ;
