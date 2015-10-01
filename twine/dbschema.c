@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               12
+#define DB_SCHEMA_VERSION               13
 
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
@@ -303,6 +303,26 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 			return -1;
 		}
 		if(sql_execute(sql, "CREATE INDEX \"membership_depth\" ON \"membership\" (\"depth\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 13)
+	{
+		if(sql_execute(sql, "CREATE TABLE \"moved\" ("
+			"  \"from\" uuid NOT NULL, "
+			"  \"to\" uuid NOT NULL, "
+			"  PRIMARY KEY(\"from\")"
+			")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"moved_from\" ON \"moved\" (\"from\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"moved_to\" ON \"moved\" (\"to\")"))
 		{
 			return -1;
 		}
