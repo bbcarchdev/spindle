@@ -29,7 +29,7 @@
 # include <errno.h>
 # include <uuid/uuid.h>
 # include <liburi.h>
-# include <libs3client.h>
+# include <libawsclient.h>
 # include <libsql.h>
 
 # include "libtwine.h"
@@ -114,7 +114,7 @@ struct spindle_context_struct
 	size_t corefcount;
 	size_t corefsize;
 	/* The bucket that precomposed N-Quads should be stored in */
-	S3BUCKET *bucket;
+	AWSS3BUCKET *bucket;
 	int s3_verbose;
 	/* The filesystem paths that precomposed N-Quads should be stored in */
 	char *cachepath;

@@ -188,26 +188,26 @@ spindle_precompose_init_s3_(SPINDLE *spindle, const char *bucketname)
 {
 	char *t;
 	
-	spindle->bucket = s3_create(bucketname);
+	spindle->bucket = aws_s3_create(bucketname);
 	if(!spindle->bucket)
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create S3 bucket object for <s3://%s>\n", bucketname);
 		return -1;
 	}
-	s3_set_logger(spindle->bucket, twine_vlogf);
+	aws_s3_set_logger(spindle->bucket, twine_vlogf);
 	if((t = twine_config_geta("s3:endpoint", NULL)))
 	{
-		s3_set_endpoint(spindle->bucket, t);
+		aws_s3_set_endpoint(spindle->bucket, t);
 		free(t);
 	}
 	if((t = twine_config_geta("s3:access", NULL)))
 	{
-		s3_set_access(spindle->bucket, t);
+		aws_s3_set_access(spindle->bucket, t);
 		free(t);
 	}
 	if((t = twine_config_geta("s3:secret", NULL)))
 	{
-		s3_set_secret(spindle->bucket, t);
+		aws_s3_set_secret(spindle->bucket, t);
 		free(t);
 	}
 	spindle->s3_verbose = twine_config_get_bool("s3:verbose", 0);
@@ -257,7 +257,7 @@ spindle_precompose_s3_(SPINDLECACHE *data, char *quadbuf, size_t bufsize)
 	char *t;
 	char *urlbuf;
 	char nqlenstr[256];
-	S3REQUEST *req;
+	AWSREQUEST *req;
 	CURL *ch;
 	struct curl_slist *headers;
 	struct s3_upload_struct s3data;
@@ -287,22 +287,22 @@ spindle_precompose_s3_(SPINDLECACHE *data, char *quadbuf, size_t bufsize)
 	{
 		*t = 0;
 	}
-	req = s3_request_create(data->spindle->bucket, urlbuf, "PUT");
-	ch = s3_request_curl(req);
+	req = aws_s3_request_create(data->spindle->bucket, urlbuf, "PUT");
+	ch = aws_request_curl(req);
 	curl_easy_setopt(ch, CURLOPT_NOSIGNAL, 1);
 	curl_easy_setopt(ch, CURLOPT_VERBOSE, data->spindle->s3_verbose);
 	curl_easy_setopt(ch, CURLOPT_READFUNCTION, spindle_precompose_s3_read_);
 	curl_easy_setopt(ch, CURLOPT_READDATA, &s3data);
 	curl_easy_setopt(ch, CURLOPT_INFILESIZE, (long) s3data.bufsize);
 	curl_easy_setopt(ch, CURLOPT_UPLOAD, 1);
-	headers = curl_slist_append(s3_request_headers(req), "Expect: 100-continue");
+	headers = curl_slist_append(aws_request_headers(req), "Expect: 100-continue");
 	headers = curl_slist_append(headers, "Content-Type: application/nquads");
 	headers = curl_slist_append(headers, "x-amz-acl: public-read");
 	sprintf(nqlenstr, "Content-Length: %u", (unsigned) s3data.bufsize);
 	headers = curl_slist_append(headers, nqlenstr);
-	s3_request_set_headers(req, headers);
+	aws_request_set_headers(req, headers);
 	r = 0;
-	if((e = s3_request_perform(req)))
+	if((e = aws_request_perform(req)))
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to upload N-Quads to bucket at <%s>: %s\n", urlbuf, curl_easy_strerror(e));
 		r = -1;
@@ -316,7 +316,7 @@ spindle_precompose_s3_(SPINDLECACHE *data, char *quadbuf, size_t bufsize)
 			r = -1;
 		}
 	}
-	s3_request_destroy(req);
+	aws_request_destroy(req);
 	free(urlbuf);
 	return r;
 }
