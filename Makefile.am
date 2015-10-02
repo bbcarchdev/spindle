@@ -18,16 +18,16 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-DIST_SUBDIRS = m4 libs3client twine quilt docbook-html5 docs
+DIST_SUBDIRS = m4 twine quilt docbook-html5 docs
 
-SUBDIRS = libs3client twine quilt docs
+SUBDIRS = twine quilt docs
 
 EXTRA_DIST = LICENSE-2.0
 
 BRANCH ?= develop
 DOCS_BRANCH ?= gh-pages
 
-DEVELOP_SUBMODULES = m4 libs3client
+DEVELOP_SUBMODULES = m4
 DOCS_SUBMODULES = docbook-html5 docs
 
 checkout:
