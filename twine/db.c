@@ -1541,6 +1541,10 @@ spindle_db_id_(const char *localname)
 	{
 		t = id;
 	}
+	else
+	{
+		t++;
+	}
 	for(p = id; *t; t++)
 	{
 		if(isxdigit(*t))
