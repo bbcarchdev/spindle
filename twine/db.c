@@ -1543,17 +1543,29 @@ spindle_db_id_(const char *localname)
 	}
 	for(p = id; *t; t++)
 	{
-		if(isalnum(*t))
+		if(isxdigit(*t))
 		{
-			*p = *t;
+			*p = tolower(*t);
 			p++;
 		}
 		else if(*t == '#')
 		{
 			break;
 		}
+		else
+		{
+			/* invalid character - this can't be a local UUID */
+			free(id);
+			return NULL;
+		}
 	}
 	*p = 0;
+	if(strlen(id) != 32)
+	{
+		/* the extracted UUID is the wrong length to be valid */
+		free(id);
+		return NULL;
+	}
 	return id;
 }
 
