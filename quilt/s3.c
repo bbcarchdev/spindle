@@ -37,7 +37,7 @@ static size_t spindle_s3_write_(char *ptr, size_t size, size_t nemb, void *userd
 int
 spindle_item_s3(QUILTREQ *request)
 {
-	S3REQUEST *req;
+	AWSREQUEST *req;
 	CURL *ch;
 	struct data_struct data;
 	long status;
@@ -54,23 +54,23 @@ spindle_item_s3(QUILTREQ *request)
 	quilt_canon_add_path(request->canonical, request->path);
 	quilt_canon_set_fragment(request->canonical, "id");
 	memset(&data, 0, sizeof(struct data_struct));
-	req = s3_request_create(spindle_bucket, request->path, "GET");
+	req = aws_s3_request_create(spindle_bucket, request->path, "GET");
 	if(!req)
 	{
 		quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": S3: failed to create S3 request\n");
 		return 500;
 	}
-	ch = s3_request_curl(req);
+	ch = aws_request_curl(req);
 	curl_easy_setopt(ch, CURLOPT_HEADER, 0);
 	curl_easy_setopt(ch, CURLOPT_NOSIGNAL, 1);
 	curl_easy_setopt(ch, CURLOPT_VERBOSE, spindle_s3_verbose);
 	curl_easy_setopt(ch, CURLOPT_WRITEDATA, (void *) &data);
 	curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, spindle_s3_write_);
-	if(s3_request_perform(req))
+	if(aws_request_perform(req))
 	{
 		quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": S3: request failed\n");
 		free(data.buf);
-		s3_request_destroy(req);
+		aws_request_destroy(req);
 		return 500;
 	}
 	curl_easy_getinfo(ch, CURLINFO_RESPONSE_CODE, &status);
@@ -78,7 +78,7 @@ spindle_item_s3(QUILTREQ *request)
 	{
 		quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": S3: request failed with HTTP status %d\n", (int) status);
 		free(data.buf);
-		s3_request_destroy(req);
+		aws_request_destroy(req);
 		return (int) status;
 	}
 	mime = NULL;
@@ -87,18 +87,18 @@ spindle_item_s3(QUILTREQ *request)
 	{
 		quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": S3: server did not send a Content-Type\n");
 		free(data.buf);
-		s3_request_destroy(req);
+		aws_request_destroy(req);
 		return 500;
 	}	
 	if(quilt_model_parse(request->model, mime, data.buf, data.pos))
 	{
 		quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": S3: failed to parse buffer as '%s'\n", mime);
 		free(data.buf);
-		s3_request_destroy(req);
+		aws_request_destroy(req);
 		return 500;
 	}
 	free(data.buf);
-	s3_request_destroy(req);
+	aws_request_destroy(req);
 	return 200;
 }
 
