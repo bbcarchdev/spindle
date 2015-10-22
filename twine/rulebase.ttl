@@ -382,6 +382,11 @@ foaf:thumbnail spindle:property [
 	spindle:expressedAs foaf:depiction
 ] .
 
+<http://www.wikidata.org/prop/direct/P18> spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:depiction
+] .
+
 ## skos:inScheme
 
 skos:inScheme
@@ -469,10 +474,27 @@ dct:subject spindle:property [
 	spindle:expressedAs foaf:topic
 ] .
 
+# (for shakespeare data)
 po:subject spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs foaf:topic
 ] .
+
+po:credit spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:topic
+] .
+
+foaf:depicts spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:topic
+] .
+
+<http://shakespeare.acropolis.org.uk/ontologies/work#genre> spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:topic
+] .
+# --
 
 ## void:inDataset
 
