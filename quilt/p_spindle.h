@@ -27,7 +27,7 @@
 # include <string.h>
 # include <ctype.h>
 # include <libsparqlclient.h>
-# include <libs3client.h>
+# include <libawsclient.h>
 # include <libsql.h>
 
 # include "libquilt.h"
@@ -92,7 +92,7 @@ struct mediamatch_struct {
 };
 
 extern SQL *spindle_db;
-extern S3BUCKET *spindle_bucket;
+extern AWSS3BUCKET *spindle_bucket;
 extern int spindle_s3_verbose;
 extern struct index_struct spindle_indices[];
 extern struct mediamatch_struct spindle_mediamatch[];

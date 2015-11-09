@@ -18,20 +18,19 @@
 
 EXTRA_DIST = README.md
 
-AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ \
-	-I$(top_builddir)/libs3client -I$(top_srcdir)/libs3client
+AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@
 
 twinemodule_LTLIBRARIES = spindle.la spindle-strip.la spindle-correlate.la
 
 spindle_la_SOURCES = p_spindle.h \
 	module.c preproc.c postproc.c proxy.c refset.c cache.c classes.c props.c \
 	strset.c rulebase.c doc.c licenses.c db-common.c db-correlate.c \
-	db-cache.c dbschema.c update.c
+	db-cache.c dbschema.c update.c precomposed.c
 
 spindle_la_LDFLAGS = -no-undefined -module -avoid-version
 
-spindle_la_LIBADD = $(top_builddir)/libs3client/libs3client.la \
-	@LIBTWINE_LOCAL_LIBS@ @LIBTWINE_LIBS@ \
+spindle_la_LIBADD = @LIBTWINE_LOCAL_LIBS@ @LIBTWINE_LIBS@ \
+	@LIBAWSCLIENT_LOCAL_LIBS@ @LIBAWSCLIENT_LIBS@ \
 	@LIBSQL_LOCAL_LIBS@ @LIBSQL_LIBS@ \
 	@LIBURI_LOCAL_LIBS@ @LIBURI_LIBS@
 

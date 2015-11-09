@@ -382,6 +382,11 @@ foaf:thumbnail spindle:property [
 	spindle:expressedAs foaf:depiction
 ] .
 
+<http://www.wikidata.org/prop/direct/P18> spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:depiction
+] .
+
 ## skos:inScheme
 
 skos:inScheme
@@ -469,7 +474,53 @@ dct:subject spindle:property [
 	spindle:expressedAs foaf:topic
 ] .
 
+# (for shakespeare data)
+po:subject spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:topic
+] .
+
+po:credit spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:topic
+] .
+
+foaf:depicts spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:topic
+] .
+
+<http://shakespeare.acropolis.org.uk/ontologies/work#genre> spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:topic
+] .
+# --
+
+## void:inDataset
+
+void:inDataset
+	a spindle:Property ;
+	olo:index 9 ;
+	spindle:expect rdfs:Resource ;
+	spindle:proxyOnly true .
+
+void:inDataset spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs void:inDataset
+] .
+
+## We don't current support range restrictions in the rule-base, which would
+## only make sense when spindle:proxyOnly is true, so we can't use this rule
+## at the moment.
+##
+# dct:isPartOf spindle:property [
+#	olo:index 0 ;
+#	rdfs:range void:Dataset ;
+#	spindle:expressedAs void:inDataset
+#] .
+
 ## dct:isPartOf
+
 
 dct:isPartOf
 	a spindle:Property ;
@@ -501,6 +552,7 @@ dct:hasVersion spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs dct:hasVersion
 ] .
+
 po:version spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs dct:hasVersion ;
@@ -729,6 +781,11 @@ mrss:content spindle:property [
 	spindle:expressedAs mrss:content
 ] .
 
+<http://etree.linkedmusic.org/vocab/audio> spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs mrss:content
+] .
+
 ## dct:format
 
 dct:format
@@ -776,4 +833,4 @@ odrl:assignee
 
 odrl:assignee
 	olo:index 0 ;
-	spindle:expressedAs odrl:assginee .
+	spindle:expressedAs odrl:assignee .

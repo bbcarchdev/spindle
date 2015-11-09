@@ -31,16 +31,18 @@ AC_PROG_CC_C99
 
 LT_INIT
 
-BT_ENABLE_POSIX
-BT_ENABLE_XSI
-BT_REQUIRE_OPENSSL
-BT_REQUIRE_LIBTWINE
-BT_REQUIRE_LIBQUILT
+BT_ENABLE_POSIX_FULL
+AC_SYS_LARGEFILE
+
+BT_REQUIRE_LIBUUID
 BT_REQUIRE_LIBCURL
 BT_REQUIRE_LIBRDF
-BT_REQUIRE_LIBUUID
+
+BT_REQUIRE_LIBTWINE
+BT_REQUIRE_LIBQUILT
 BT_REQUIRE_LIBURI
 BT_REQUIRE_LIBSQL
+BT_REQUIRE_LIBAWSCLIENT
 
 BT_DEFINE_PATH([TWINEMODULEDIR], [twinemoduledir], [Twine module path])
 BT_DEFINE_PATH([QUILTMODULEDIR], [quiltmoduledir], [Quilt module path])
@@ -48,13 +50,28 @@ BT_DEFINE_PATH([QUILTMODULEDIR], [quiltmoduledir], [Quilt module path])
 use_docbook_html5=yes
 BT_BUILD_DOCS
 
+XML2HTMLFLAGS="--param \"html.linksfile\" \"'file://\$(abs_top_srcdir)/docbook-html5/res-links.xml'\" \
+  --param \"html.navfile\" \"'file://\$(abs_top_srcdir)/docbook-html5/res-nav.xml'\" \
+  --param \"html.ie78css\" \"'//bbcarchdev.github.io/painting-by-numbers/ie78.css'\""
+AC_SUBST([XML2HTMLFLAGS])
+
+LINKS='${top_srcdir}/docbook-html5/res-links.xml'
+AC_SUBST([LINKS])
+
+NAV='${top_srcdir}/docbook-html5/res-nav.xml'
+AC_SUBST([NAV])
+
+spindlehtdocdir='${docdir}'
+AC_SUBST([spindlehtdocdir])
+
 BT_DEFINE_PREFIX
 
 AC_CONFIG_FILES([Makefile
 m4/Makefile
-libs3client/Makefile
 twine/Makefile
 quilt/Makefile
+docbook-html5/Makefile
+docs/Makefile
 ])
 
 AC_OUTPUT

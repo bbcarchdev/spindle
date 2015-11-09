@@ -34,12 +34,10 @@ static int spindle_cache_init_(SPINDLECACHE *data, SPINDLE *spindle, const char 
 static int spindle_cache_cleanup_(SPINDLECACHE *data);
 static int spindle_cache_cleanup_literalset_(struct spindle_literalset_struct *set);
 static int spindle_cache_store_(SPINDLECACHE *data);
-static int spindle_cache_store_s3_(SPINDLECACHE *data);
 static int spindle_cache_source_(SPINDLECACHE *data);
 static int spindle_cache_source_sameas_(SPINDLECACHE *data);
 static int spindle_cache_source_clean_(SPINDLECACHE *data);
 static int spindle_cache_strset_refs_(SPINDLECACHE *data, struct spindle_strset_struct *set);
-static size_t spindle_cache_s3_read_(char *buffer, size_t size, size_t nitems, void *userdata);
 static int spindle_cache_describedby_(SPINDLECACHE *data);
 static int spindle_cache_extra_(SPINDLECACHE *data);
 
@@ -179,7 +177,7 @@ spindle_cache_update(SPINDLE *spindle, const char *localname, struct spindle_str
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] fetch extra data\n", gettimediffms(&start));
 	/* Store consolidated graphs in an S3 bucket */
-	if(spindle_cache_store_s3_(&data) < 0)
+	if(spindle_precompose(&data) < 0)
 	{
 		spindle_cache_cleanup_(&data);
 		return -1;
@@ -355,10 +353,10 @@ spindle_cache_source_(SPINDLECACHE *data)
 		{
 			return -1;
 		}
-	}
-	if(spindle_cache_source_sameas_(data))
-	{
-		return -1;
+		if(spindle_cache_source_sameas_(data))
+		{
+			return -1;
+		}
 	}
 	if(spindle_cache_source_clean_(data))
 	{
@@ -377,6 +375,7 @@ spindle_cache_source_sameas_(SPINDLECACHE *data)
 	librdf_node *node;
 	librdf_stream *stream;
 	
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": **** caching sameAs triples ****\n");
 	query = twine_rdf_st_create();
 	if(!query)
 	{
@@ -410,6 +409,7 @@ spindle_cache_source_sameas_(SPINDLECACHE *data)
 	{
 		st = librdf_stream_get_object(stream);
 		/* Add the statement to the proxy graph */
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": *** adding sameAs statement to proxy graph\n");
 		if(twine_rdf_model_add_st(data->proxydata, st, data->graph))
 		{
 			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to add statement to proxy model\n");
@@ -668,159 +668,6 @@ spindle_cache_store_(SPINDLECACHE *data)
 		}
 	}
 	return 0;
-}
-
-static int
-spindle_cache_store_s3_(SPINDLECACHE *data)
-{
-	char *proxy, *source, *extra, *urlbuf, *t;
-	size_t proxylen, sourcelen, extralen, l;
-	char nqlenstr[256];
-	S3REQUEST *req;
-	CURL *ch;
-	struct curl_slist *headers;
-	struct s3_upload_struct s3data;
-	int r, e;
-	long status;
-
-	if(!data->spindle->bucket)
-	{
-		return 0;
-	}
-	if(data->spindle->multigraph)
-	{
-		/* Remove the root graph from the proxy data model, if it's present */
-		librdf_model_context_remove_statements(data->proxydata, data->spindle->rootgraph);
-	}
-	proxy = twine_rdf_model_nquads(data->proxydata, &proxylen);
-	if(!proxy)
-	{
-		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to serialise proxy model as N-Quads\n");
-		return -1;
-	}
-	source = twine_rdf_model_nquads(data->sourcedata, &sourcelen);
-	if(!source)
-	{
-		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to serialise source model as N-Quads\n");
-		librdf_free_memory(proxy);
-		return -1;
-	}
-
-	extra = twine_rdf_model_nquads(data->extradata, &extralen);
-	if(!extra)
-	{
-		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to serialise extra model as N-Quads\n");
-		librdf_free_memory(proxy);
-		librdf_free_memory(source);
-		return -1;
-	}
-	memset(&s3data, 0, sizeof(struct s3_upload_struct));
-	s3data.bufsize = proxylen + sourcelen + extralen + 3 + 128;
-	s3data.buf = (char *) calloc(1, s3data.bufsize + 1);
-	if(!s3data.buf)
-	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate buffer for consolidated N-Quads\n");
-		librdf_free_memory(proxy);
-		librdf_free_memory(source);
-		librdf_free_memory(extra);
-		return -1;
-	}
-	strcpy(s3data.buf, "## Proxy:\n");
-	l = strlen(s3data.buf);
-
-	if(proxylen)
-	{
-		memcpy(&(s3data.buf[l]), proxy, proxylen);
-	}
-	strcpy(&(s3data.buf[l + proxylen]), "\n## Source:\n");
-	l = strlen(s3data.buf);
-
-	if(sourcelen)
-	{
-		memcpy(&(s3data.buf[l]), source, sourcelen);
-	}
-	strcpy(&(s3data.buf[l + sourcelen]), "\n## Extra:\n");
-	l = strlen(s3data.buf);
-	
-	if(extralen)
-	{
-		memcpy(&(s3data.buf[l]), extra, extralen);
-	}
-	strcpy(&(s3data.buf[l + extralen]), "\n## End\n");
-	s3data.bufsize = strlen(s3data.buf);
-
-	librdf_free_memory(proxy);
-	librdf_free_memory(source);
-	librdf_free_memory(extra);
-	urlbuf = (char *) malloc(1 + strlen(data->localname) + 4 + 1);
-	if(!urlbuf)
-	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate memory for URL\n");
-		return -1;
-	}
-	urlbuf[0] = '/';
-	if((t = strrchr(data->localname, '/')))
-	{
-		t++;
-	}
-	else
-	{
-		t = (char *) data->localname;
-	}
-	strcpy(&(urlbuf[1]), t);
-	if((t = strchr(urlbuf, '#')))
-	{
-		*t = 0;
-	}
-	req = s3_request_create(data->spindle->bucket, urlbuf, "PUT");
-	ch = s3_request_curl(req);
-	curl_easy_setopt(ch, CURLOPT_NOSIGNAL, 1);
-	curl_easy_setopt(ch, CURLOPT_VERBOSE, data->spindle->s3_verbose);
-	curl_easy_setopt(ch, CURLOPT_READFUNCTION, spindle_cache_s3_read_);
-	curl_easy_setopt(ch, CURLOPT_READDATA, &s3data);
-	curl_easy_setopt(ch, CURLOPT_INFILESIZE, (long) s3data.bufsize);
-	curl_easy_setopt(ch, CURLOPT_UPLOAD, 1);
-	headers = curl_slist_append(s3_request_headers(req), "Expect: 100-continue");
-	headers = curl_slist_append(headers, "Content-Type: application/nquads");
-	headers = curl_slist_append(headers, "x-amz-acl: public-read");
-	sprintf(nqlenstr, "Content-Length: %u", (unsigned) s3data.bufsize);
-	headers = curl_slist_append(headers, nqlenstr);
-	s3_request_set_headers(req, headers);
-	r = 0;
-	if((e = s3_request_perform(req)))
-	{
-		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to upload N-Quads to bucket at <%s>: %s\n", urlbuf, curl_easy_strerror(e));
-		r = -1;
-	}
-	else
-	{
-		curl_easy_getinfo(ch, CURLINFO_RESPONSE_CODE, &status);
-		if(status != 200)
-		{
-			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to upload N-Quads to bucket at <%s> (HTTP status %ld)\n", urlbuf, status);
-			r = -1;
-		}
-	}
-	s3_request_destroy(req);
-	free(urlbuf);
-	free(s3data.buf);
-	return r;
-}
-
-static size_t
-spindle_cache_s3_read_(char *buffer, size_t size, size_t nitems, void *userdata)
-{
-	struct s3_upload_struct *data;
-
-	data = (struct s3_upload_struct *) userdata;
-	size *= nitems;
-	if(size > data->bufsize - data->pos)
-	{
-		size = data->bufsize - data->pos;
-	}
-	memcpy(buffer, &(data->buf[data->pos]), size);
-	data->pos += size;
-	return size;
 }
 
 /* For anything which is the subject of one of the triples in the source

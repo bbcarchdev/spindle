@@ -24,7 +24,7 @@
 
 #include "p_spindle.h"
 
-S3BUCKET *spindle_bucket;
+AWSS3BUCKET *spindle_bucket;
 SQL *spindle_db;
 int spindle_s3_verbose;
 
@@ -60,7 +60,7 @@ quilt_plugin_init(void)
 	}
 	if((t = quilt_config_geta(QUILT_PLUGIN_NAME ":bucket", NULL)))
 	{
-		spindle_bucket = s3_create(t);
+		spindle_bucket = aws_s3_create(t);
 		if(!spindle_bucket)
 		{
 			quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": failed to initialise S3 bucket '%s'\n", t);
@@ -70,17 +70,17 @@ quilt_plugin_init(void)
 		free(t);
 		if((t = quilt_config_geta("s3:endpoint", NULL)))
 		{
-			s3_set_endpoint(spindle_bucket, t);
+			aws_s3_set_endpoint(spindle_bucket, t);
 			free(t);
 		}
 		if((t = quilt_config_geta("s3:access", NULL)))
 		{
-			s3_set_access(spindle_bucket, t);
+			aws_s3_set_access(spindle_bucket, t);
 			free(t);
 		}
 		if((t = quilt_config_geta("s3:secret", NULL)))
 		{
-			s3_set_secret(spindle_bucket, t);
+			aws_s3_set_secret(spindle_bucket, t);
 			free(t);
 		}
 		spindle_s3_verbose = quilt_config_get_bool("s3:verbose", 0);

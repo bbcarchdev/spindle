@@ -20,16 +20,16 @@
 #ifndef P_SPINDLE_H_
 # define P_SPINDLE_H_                   1
 
-# define _BSD_SOURCE
-
 # include <stdio.h>
 # include <stdlib.h>
 # include <string.h>
+# include <unistd.h>
+# include <sys/stat.h>
 # include <ctype.h>
 # include <errno.h>
 # include <uuid/uuid.h>
 # include <liburi.h>
-# include <libs3client.h>
+# include <libawsclient.h>
 # include <libsql.h>
 
 # include "libtwine.h"
@@ -114,9 +114,11 @@ struct spindle_context_struct
 	struct coref_match_struct *coref;
 	size_t corefcount;
 	size_t corefsize;
-	/* The bucket that cached nquads should be stored in */
-	S3BUCKET *bucket;
+	/* The bucket that precomposed N-Quads should be stored in */
+	AWSS3BUCKET *bucket;
 	int s3_verbose;
+	/* The filesystem paths that precomposed N-Quads should be stored in */
+	char *cachepath;
 	/* Cached information about graphs */
 	struct spindle_graphcache_struct *graphcache;
 	/* Names of specific predicates */
@@ -340,6 +342,10 @@ int spindle_cache_update_set(SPINDLE *spindle, struct spindle_strset_struct *set
  * if no references exist any more, the cached data will be removed.
  */
 int spindle_cache_update(SPINDLE *spindle, const char *localname, struct spindle_strset_struct *set);
+
+/* Generate and store pre-composed N-Quads */
+int spindle_precompose_init(SPINDLE *spindle);
+int spindle_precompose(SPINDLECACHE *data);
 
 /* Load the Spindle rulebase */
 int spindle_rulebase_init(SPINDLE *spindle);

@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               9
+#define DB_SCHEMA_VERSION               13
 
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
@@ -262,6 +262,67 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 			return -1;
 		}
 		if(sql_execute(sql, "CREATE INDEX \"index_about_about\" ON \"index_about\" (\"about\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 10)
+	{
+		if(sql_execute(sql, "ALTER TABLE \"about\" ALTER COLUMN \"about\" TYPE uuid USING (\"about\"::uuid)"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 11)
+	{
+		if(sql_execute(sql, "DROP TABLE \"index_about\""))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 12)
+	{
+		if(sql_execute(sql, "CREATE TABLE \"membership\" ("
+					   "  \"id\" uuid NOT NULL, "
+					   "  \"collection\" uuid NOT NULL, "
+					   "  \"depth\" integer NOT NULL DEFAULT 0, "
+					   "  PRIMARY KEY(\"id\", \"collection\")"
+					   ")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"membership_id\" ON \"membership\" (\"id\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"membership_collection\" ON \"membership\" (\"collection\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"membership_depth\" ON \"membership\" (\"depth\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 13)
+	{
+		if(sql_execute(sql, "CREATE TABLE \"moved\" ("
+			"  \"from\" uuid NOT NULL, "
+			"  \"to\" uuid NOT NULL, "
+			"  PRIMARY KEY(\"from\")"
+			")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"moved_from\" ON \"moved\" (\"from\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"moved_to\" ON \"moved\" (\"to\")"))
 		{
 			return -1;
 		}

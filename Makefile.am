@@ -18,8 +18,31 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-DIST_SUBDIRS = m4 libs3client
+DIST_SUBDIRS = m4 twine quilt docbook-html5 docs
 
-SUBDIRS = libs3client twine quilt
+SUBDIRS = twine quilt docs
 
 EXTRA_DIST = LICENSE-2.0
+
+BRANCH ?= develop
+DOCS_BRANCH ?= gh-pages
+
+DEVELOP_SUBMODULES = m4
+DOCS_SUBMODULES = docbook-html5 docs
+
+checkout:
+	@for submod in $(DEVELOP_SUBMODULES) ; do \
+		echo "+++ Checking out the latest version of $$submod on $(BRANCH)" >&2 ; \
+		cd $$submod && \
+		git checkout $(BRANCH) && \
+		git pull && \
+		$(MAKE) checkout BRANCH=$(BRANCH) || exit $? && \
+		cd .. ; \
+	done
+	@for submod in $(DOCS_SUBMODULES) ; do \
+		echo "+++ Checking out the latest version of $$submod on $(DOCS_BRANCH)" >&2 ; \
+		cd $$submod && \
+		git checkout $(DOCS_BRANCH) && \
+		git pull && \
+		cd .. ; \
+	done
