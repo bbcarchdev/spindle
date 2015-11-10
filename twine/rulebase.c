@@ -252,6 +252,8 @@ spindle_loadfile_(const char *filename)
 			if(!p)
 			{
 				twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to reallocate buffer from %u bytes to %u bytes\n", (unsigned) bufsize, (unsigned) bufsize + 1024);
+				fclose(f);
+				free(buffer);
 				return NULL;
 			}
 			buffer = p;

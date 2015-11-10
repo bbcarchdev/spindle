@@ -214,11 +214,16 @@ spindle_doc_label_(SPINDLECACHE *cache)
 	}
 	sprintf(strbuf, "Information about '%s'", s);
 	st = twine_rdf_st_create();
-	if(!st) return -1;
+	if(!st)
+	{
+		free(strbuf);
+		return -1;
+	}
 	obj = twine_rdf_node_clone(cache->doc);
 	if(!obj)
 	{
 		twine_rdf_st_destroy(st);
+		free(strbuf);
 		return -1;
 	}
 	librdf_statement_set_subject(st, obj);

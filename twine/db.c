@@ -395,6 +395,7 @@ spindle_db_media_(SQL *sql, const char *id, SPINDLECACHE *data)
 	char *kind, *type, *license;   
 	int r;
 
+	r = 0;
 	if(!data->classname || strcmp(data->classname, NS_FOAF "Document"))
 	{
 		/* This isn't a digital asset */
@@ -435,6 +436,7 @@ spindle_db_media_(SQL *sql, const char *id, SPINDLECACHE *data)
 		{
 			free(license);
 			free(type);
+			free(kind);
 			free(refs[0]);
 			free(refs);
 			return -1;

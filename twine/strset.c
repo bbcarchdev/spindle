@@ -68,7 +68,7 @@ spindle_strset_add_flags(struct spindle_strset_struct *set, const char *str, uns
 			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to expand string-set\n");
 			return -1;
 		}
-		q = (unsigned *) realloc(set->flags, sizeof(char *) * (set->size + SET_BLOCKSIZE));
+		q = (unsigned *) realloc(set->flags, sizeof(unsigned) * (set->size + SET_BLOCKSIZE));
 		if(!p)
 		{
 			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to expand flag-set\n");

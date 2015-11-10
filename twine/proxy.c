@@ -89,11 +89,11 @@ spindle_proxy_locate(SPINDLE *spindle, const char *uri)
 	errno = 0;
 	localname = NULL;
 	l = strlen(uri) + strlen(spindle->root) + 127;
-	qbuf = (char *) calloc(1, l + 1);
 	if(!l)
 	{
 		return NULL;
-	}   
+	}
+	qbuf = (char *) calloc(1, l + 1);
 	snprintf(qbuf, l, "SELECT DISTINCT ?o FROM <%s> WHERE { <%s> <" NS_OWL "sameAs> ?o . }", spindle->root, uri);
 	res = sparql_query(spindle->sparql, qbuf, strlen(qbuf));
 	if(!res)

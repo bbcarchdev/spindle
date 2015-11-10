@@ -61,11 +61,11 @@ spindle_preproc(twine_graph *graph, void *data)
 					break;
 				}				
 			}
-		}
-		if(!match)
-		{
-			twine_logf(LOG_DEBUG, PLUGIN_NAME ": preprocessor: removing triple with predicate <%s>\n", preduri);
-			librdf_model_remove_statement(graph->store, statement);
+			if(!match)
+			{
+				twine_logf(LOG_DEBUG, PLUGIN_NAME ": preprocessor: removing triple with predicate <%s>\n", preduri);
+				librdf_model_remove_statement(graph->store, statement);
+			}
 		}
 		librdf_stream_next(st);
 	}

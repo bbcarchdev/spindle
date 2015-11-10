@@ -143,7 +143,7 @@ spindle_prop_update(SPINDLECACHE *cache)
 			cache->title = strdup(s);
 			if(cache->title)
 			{
-				if(!(t = strchr(cache->title, '#')))
+				if((t = strchr(cache->title, '#')))
 				{
 					*t = 0;
 				}
@@ -228,6 +228,7 @@ spindle_prop_loop_(struct propdata_struct *data)
 	const char *pstr;
 	int r;
 
+	r = 0;
 	query = librdf_new_statement(data->spindle->world);
 	stream = librdf_model_find_statements(data->source, query);
 	while(!librdf_stream_end(stream))

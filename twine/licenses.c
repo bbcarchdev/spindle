@@ -378,11 +378,16 @@ spindle_license_label_(SPINDLECACHE *cache, librdf_node *subject)
 	}
 	sprintf(strbuf, "Rights information for '%s'", s);
 	st = twine_rdf_st_create();
-	if(!st) return -1;
+	if(!st)
+	{
+		free(strbuf);
+		return -1;
+	}
 	obj = twine_rdf_node_clone(cache->doc);
 	if(!obj)
 	{
 		twine_rdf_st_destroy(st);
+		free(strbuf);
 		return -1;
 	}
 	librdf_statement_set_subject(st, librdf_new_node_from_node(subject));
@@ -443,6 +448,10 @@ spindle_license_apply_st_(SPINDLECACHE *cache, librdf_node *graph, const char *g
 			info = NULL;
 			uri = NULL;
 		}
+	}
+	else
+	{
+		info = NULL;
 	}
 	object = librdf_statement_get_object(statement);
 	obj = librdf_node_get_uri(object);
