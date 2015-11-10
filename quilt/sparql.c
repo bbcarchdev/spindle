@@ -254,13 +254,20 @@ spindle_index_metadata_sparqlres_(QUILTREQ *request, struct query_struct *query,
 		   (uristr = (const char *) librdf_uri_as_string(uri)))
 		{
 			st = quilt_st_create_uri(abstract, NS_RDFS "seeAlso", uristr);
-			if(!st) return -1;
+			if(!st)
+			{
+				free(querystr);
+				free(abstract);
+				return -1;
+			}
 			librdf_model_context_add_statement(request->model, request->basegraph, st);
 			buflen += 8 + (strlen(uristr) * 3);
 			p = (char *) realloc(querystr, buflen);
 			if(!p)
 			{
 				quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": failed to reallocate buffer to %lu bytes\n", (unsigned long) buflen);
+				free(querystr);
+				free(abstract);
 				return 500;
 			}
 			querystr = p;
