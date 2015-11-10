@@ -396,6 +396,10 @@ spindle_prop_test_(struct propdata_struct *data, librdf_statement *st, const cha
 		}
 		for(d = 0; data->maps[c].matches[d].predicate; d++)
 		{
+			if(data->maps[c].matches[d].inverse)
+			{
+				continue;
+			}
 			if(data->maps[c].matches[d].onlyfor &&
 			   (!data->classname || strcmp(data->maps[c].matches[d].onlyfor, data->classname)))
 			{

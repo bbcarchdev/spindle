@@ -187,6 +187,7 @@ struct spindle_predicatematch_struct
 	char *predicate;
 	char *onlyfor;
 	int prominence;
+	int inverse;
 };
 
 /* A set of literal strings */

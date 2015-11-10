@@ -34,10 +34,10 @@ static int spindle_class_set_score_(struct spindle_classmap_struct *entry, librd
 static int spindle_class_dump_(SPINDLE *spindle);
 
 static int spindle_pred_add_node_(SPINDLE *spindle, librdf_model *model, const char *uri, librdf_node *node);
-static int spindle_pred_add_matchnode_(SPINDLE *spindle, librdf_model *model, const char *preduri, librdf_node *matchnode);
+static int spindle_pred_add_matchnode_(SPINDLE *spindle, librdf_model *model, const char *preduri, librdf_node *matchnode, int inverse);
 static int spindle_pred_compare_(const void *ptra, const void *ptrb);
 static struct spindle_predicatemap_struct *spindle_pred_add_(SPINDLE *spindle, const char *preduri);
-static int spindle_pred_add_match_(struct spindle_predicatemap_struct *map, const char *matchuri, const char *classuri, int score, int prominence);
+static int spindle_pred_add_match_(struct spindle_predicatemap_struct *map, const char *matchuri, const char *classuri, int score, int prominence, int inverse);
 static int spindle_pred_set_score_(struct spindle_predicatemap_struct *map, librdf_statement *statement);
 static int spindle_pred_set_prominence_(struct spindle_predicatemap_struct *map, librdf_statement *statement);
 static int spindle_pred_set_expect_(struct spindle_predicatemap_struct *entry, librdf_statement *statement);
@@ -513,7 +513,16 @@ spindle_rulebase_add_statement_(SPINDLE *spindle, librdf_model *model, librdf_st
 		{
 			return 0;
 		}
-		return spindle_pred_add_matchnode_(spindle, model, subjuri, object);
+		return spindle_pred_add_matchnode_(spindle, model, subjuri, object, 0);
+	}
+	/* ex:predicate spindle:inverseProperty [ ... ] */
+	if(!strcmp(preduri, NS_SPINDLE "inverseProperty"))
+	{
+		if(librdf_node_is_literal(object))
+		{
+			return 0;
+		}
+		return spindle_pred_add_matchnode_(spindle, model, subjuri, object, 1);
 	}
 	/* ex:predicate spindle:coref spindle:foo */
 	if(!strcmp(preduri, NS_SPINDLE "coref"))
@@ -906,7 +915,7 @@ spindle_pred_set_inverse_(struct spindle_predicatemap_struct *entry, librdf_stat
 }
 
 static int
-spindle_pred_add_matchnode_(SPINDLE *spindle, librdf_model *model, const char *matchuri, librdf_node *matchnode)
+spindle_pred_add_matchnode_(SPINDLE *spindle, librdf_model *model, const char *matchuri, librdf_node *matchnode, int inverse)
 {
 	librdf_node *s, *predicate, *p, *object;
 	librdf_uri *pred, *obj;
@@ -998,7 +1007,7 @@ spindle_pred_add_matchnode_(SPINDLE *spindle, librdf_model *model, const char *m
 		/* This isn't a domain-specific mapping; just add the target
 		 * predicate <matchuri> to entry's match list.
 		 */
-		spindle_pred_add_match_(entry, matchuri, NULL, score, prominence);
+		spindle_pred_add_match_(entry, matchuri, NULL, score, prominence, inverse);
 		return 0;
 	}
 	/* For each rdfs:domain, add the target predicate <matchuri> along with
@@ -1019,7 +1028,7 @@ spindle_pred_add_matchnode_(SPINDLE *spindle, librdf_model *model, const char *m
 		}
 		obj = librdf_node_get_uri(object);
 		objuri = (const char *) librdf_uri_as_string(obj);
-		spindle_pred_add_match_(entry, matchuri, objuri, score, prominence);
+		spindle_pred_add_match_(entry, matchuri, objuri, score, prominence, inverse);
 		librdf_stream_next(stream);
 	}
 	librdf_free_stream(stream);
@@ -1071,7 +1080,7 @@ spindle_pred_add_(SPINDLE *spindle, const char *preduri)
 }
 
 static int
-spindle_pred_add_match_(struct spindle_predicatemap_struct *map, const char *matchuri, const char *classuri, int score, int prominence)
+spindle_pred_add_match_(struct spindle_predicatemap_struct *map, const char *matchuri, const char *classuri, int score, int prominence, int inverse)
 {
 	size_t c;
 	struct spindle_predicatematch_struct *p;
@@ -1084,6 +1093,10 @@ spindle_pred_add_match_(struct spindle_predicatemap_struct *map, const char *mat
 		}
 		if((classuri && !map->matches[c].onlyfor) ||
 		   (!classuri && map->matches[c].onlyfor))
+		{
+			continue;
+		}
+		if(inverse != map->matches[c].inverse)
 		{
 			continue;
 		}
@@ -1127,6 +1140,7 @@ spindle_pred_add_match_(struct spindle_predicatemap_struct *map, const char *mat
 	}
 	p->priority = score;
 	p->prominence = prominence;
+	p->inverse = inverse;
 	map->matchcount++;
 	return 1;
 }
