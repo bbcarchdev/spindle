@@ -66,17 +66,38 @@ spindle_item_s3(QUILTREQ *request)
 	curl_easy_setopt(ch, CURLOPT_VERBOSE, spindle_s3_verbose);
 	curl_easy_setopt(ch, CURLOPT_WRITEDATA, (void *) &data);
 	curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, spindle_s3_write_);
-	if(aws_request_perform(req))
+	if(aws_request_perform(req) != CURLE_OK)
 	{
 		quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": S3: request failed\n");
 		free(data.buf);
 		aws_request_destroy(req);
 		return 500;
 	}
-	curl_easy_getinfo(ch, CURLINFO_RESPONSE_CODE, &status);
+	if(curl_easy_getinfo(ch, CURLINFO_RESPONSE_CODE, &status) != CURLE_OK)
+	{
+		quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": S3: failed to obtain HTTP status code\n");
+		free(data.buf);
+		aws_request_destroy(req);
+		abort();
+		return (int) status;
+	}		
 	if(status != 200)
 	{
-		quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": S3: request failed with HTTP status %d\n", (int) status);
+		if(!status)
+		{
+			if(curl_easy_getinfo(ch, CURLINFO_OS_ERRNO, &status) != CURLE_OK)
+			{		
+				quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": S3: failed to obtain OS-level error code for request\n");
+			}
+			else
+			{
+				quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": S3: request failed: %s\n", strerror(status));
+			}
+		}
+		else
+		{
+			quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": S3: request failed with HTTP status %d\n", (int) status);
+		}
 		free(data.buf);
 		aws_request_destroy(req);
 		abort();
