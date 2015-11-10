@@ -79,6 +79,7 @@ spindle_item_s3(QUILTREQ *request)
 		quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": S3: request failed with HTTP status %d\n", (int) status);
 		free(data.buf);
 		aws_request_destroy(req);
+		abort();
 		return (int) status;
 	}
 	mime = NULL;

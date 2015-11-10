@@ -8,7 +8,7 @@ configure config.sub config.guess aclocal.m4 ltmain.sh Makefile.in: configure.ac
 	autoreconf -i
 
 override_dh_auto_configure: configure
-	dh_auto_configure
+	dh_auto_configure -- --enable-debug
 
 override_dh_auto_install:
 	dh_auto_install
