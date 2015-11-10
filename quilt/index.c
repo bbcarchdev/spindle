@@ -287,7 +287,7 @@ spindle_index_title_(QUILTREQ *request, const char *abstract, struct query_struc
 		p = strchr(p, 0);
 		for(c = 0; spindle_mediamatch[c].name; c++)
 		{
-			if(!strcmp(spindle_mediamatch[c].uri, query->media))
+			if(query->media && !strcmp(spindle_mediamatch[c].uri, query->media))
 			{
 				*p = ' ';
 				p++;
