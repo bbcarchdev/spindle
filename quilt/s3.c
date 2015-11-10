@@ -126,5 +126,6 @@ spindle_s3_write_(char *ptr, size_t size, size_t nemb, void *userdata)
 	memcpy(&(data->buf[data->pos]), ptr, size);
 	data->pos += size;
 	data->buf[data->pos] = 0;
+	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": S3: written %lu bytes\n", (unsigned long) size);
 	return size;
 }
