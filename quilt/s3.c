@@ -78,8 +78,7 @@ spindle_item_s3(QUILTREQ *request)
 		quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": S3: failed to obtain HTTP status code\n");
 		free(data.buf);
 		aws_request_destroy(req);
-		abort();
-		return (int) status;
+		return -1;
 	}		
 	if(status != 200)
 	{
@@ -93,6 +92,7 @@ spindle_item_s3(QUILTREQ *request)
 			{
 				quilt_logf(LOG_ERR, QUILT_PLUGIN_NAME ": S3: request failed: %s\n", strerror(status));
 			}
+			status = -1;
 		}
 		else
 		{
@@ -100,7 +100,6 @@ spindle_item_s3(QUILTREQ *request)
 		}
 		free(data.buf);
 		aws_request_destroy(req);
-		abort();
 		return (int) status;
 	}
 	mime = NULL;
