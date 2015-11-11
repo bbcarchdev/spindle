@@ -259,9 +259,19 @@ spindle_cache_init_(SPINDLECACHE *data, SPINDLE *spindle, const char *localname)
 static int
 spindle_cache_cleanup_(SPINDLECACHE *data)
 {
+	size_t c;
+
 	twine_logf(LOG_DEBUG, PLUGIN_NAME " ---------------------------------------\n");
 	spindle_cache_cleanup_literalset_(&(data->titleset));
 	spindle_cache_cleanup_literalset_(&(data->descset));
+	if(data->refs)
+	{
+		for(c = 0; data->refs[c]; c++)
+		{
+			free(data->refs[c]);
+		}
+		free(data->refs);
+	}
 	if(data->doc)
 	{
 		librdf_free_node(data->doc);
