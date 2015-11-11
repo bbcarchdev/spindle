@@ -1015,76 +1015,74 @@ spindle_db_audiences_assignee_(SPINDLE *spindle, librdf_model *model, librdf_nod
 /* Add information to the database about this entities membership in
  * collections.
  *
- * - <collection> rdfs:seeAlso <this>
- * - <this> void:inDataset <collection>
  * - <this> dct:isPartOf <collection>
+ *
+ * The actual predicates evaluated here should be configurable via the
+ * rulebase.
  */
 static int
 spindle_db_membership_(SQL *sql, const char *id, SPINDLECACHE *data)
 {
-	SPARQLRES *rs;
-	SPARQLROW *row;
-	SQL_STATEMENT *sqlres;
-	char *cid;
+	librdf_statement *query, *st;
 	librdf_node *node;
+	librdf_stream *stream;
 	librdf_uri *uri;
 	const char *uristr;
-	
-	/* XXX The list of membership predicates (and directionality) should be
-	 * defined by the rulebase.
-	 */
-	rs = sparql_queryf(data->sparql, "SELECT DISTINCT ?collection "
-		"WHERE { "
-		" { ?collection <http://www.w3.org/2000/01/rdf-schema#seeAlso> %V } UNION "
-		" { %V <http://purl.org/dc/terms/isPartOf> ?collection } UNION "
-		" { %V <http://rdfs.org/ns/void#inDataset> ?collection } "
-		"}", data->self, data->self, data->self);
-	if(!rs)
+	char *collid;
+	int r;
+
+	if(!(query = librdf_new_statement(data->spindle->world)))
 	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to perform SPARQL query for collection membership\n");
 		return -1;
 	}
-	while((row = sparqlres_next(rs)))
+	if(!(node = librdf_new_node_from_node(data->self)))
 	{
-		node = sparqlrow_binding(row, 0);
-		if(node && librdf_node_is_resource(node) &&
-			(uri = librdf_node_get_uri(node)) &&
-			(uristr = (const char *) librdf_uri_as_string(uri)))
+		librdf_free_statement(query);
+		return -1;
+	}
+	librdf_statement_set_subject(query, node);
+	/* 'node' is now owned by 'query' */
+	if(!(node = librdf_new_node_from_uri_string(data->spindle->world, (const unsigned char *) NS_DCTERMS "isPartOf")))
+	{
+		librdf_free_statement(query);
+		return -1;
+	}
+	librdf_statement_set_predicate(query, node);
+	/* 'node' is now owned by 'query' */
+	r = 0;
+	for(stream = librdf_model_find_statements_in_context(data->proxydata, query, data->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
+	{
+		st = librdf_stream_get_object(stream);
+		if((node = librdf_statement_get_object(st)) &&
+		   librdf_node_is_resource(node) &&
+		   (uri = librdf_node_get_uri(node)) &&
+		   (uristr = (const char *) librdf_uri_as_string(uri)))
 		{
 			if(!spindle_db_local_(data->spindle, uristr))
 			{
 				continue;
 			}
-			cid = spindle_db_id_(uristr);
-			sqlres = sql_queryf(sql, "SELECT \"id\" FROM \"index\" WHERE \"id\" = %Q AND %Q = ANY(\"classes\")", cid, "http://purl.org/dc/dcmitype/Collection");
-			if(!sqlres)
+			collid = spindle_db_id_(uristr);
+			if(!collid)
 			{
-				free(cid);
-				sparqlres_destroy(rs);
-				return -1;
+				r = -1;
+				break;
 			}
-			if(sql_stmt_eof(sqlres))
+			twine_logf(LOG_DEBUG, PLUGIN_NAME ": %s is a member of <%s>\n",
+					   id, collid);
+			if(sql_executef(sql, "INSERT INTO \"membership\" (\"id\", \"collection\") VALUES (%Q, %Q)", id, collid))
 			{
-				sql_stmt_destroy(sqlres);
-				free(cid);
-				return -1;
+				free(collid);
+				r = -1;
+				break;
 			}
-			/* A future version of this may make use of information about the
-			 * collection returned by the above query. We currently don't do
-			 * that.
-			 */
-			sql_stmt_destroy(sqlres);
-			if(sql_executef(sql, "INSERT INTO \"membership\" (\"id\", \"collection\") VALUES (%Q, %Q)", id, cid))
-			{
-				free(cid);
-				sparqlres_destroy(rs);
-				return -1;
-			}
-			free(cid);
+			free(collid);
 		}
 	}
-	sparqlres_destroy(rs);
-	return 0;
+	librdf_free_stream(stream);
+	librdf_free_statement(query);
+	
+	return r;
 }
 
 
