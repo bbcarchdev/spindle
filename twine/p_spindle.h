@@ -241,6 +241,7 @@ struct spindle_cache_struct
 	char *title_en;
 	const char *localname;
 	const char *classname;
+	char **refs;
 	/* Data which will be inserted into the root graph, always in the form
 	 * <proxy> pred obj
 	 */
