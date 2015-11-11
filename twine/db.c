@@ -1348,10 +1348,10 @@ spindle_db_cache_source(SPINDLECACHE *data)
 							   " WHERE {\n"
 							   "  GRAPH ?g {\n"
 							   "   ?s ?p ?o .\n"
-							   "   FILTER(?s = <%s>)\n"
+							   "   FILTER(?s = <%s> || ?o = <%s>)\n"
 							   "  }\n"
 							   "}",
-							   refs[c]))
+							   refs[c], refs[c]))
 		{
 			r = -1;
 			break;
