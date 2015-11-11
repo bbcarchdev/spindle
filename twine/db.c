@@ -1321,28 +1321,30 @@ spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict userdata)
 int
 spindle_db_cache_source(SPINDLECACHE *data)
 {
-	char **refs;
 	int r;
 	size_t c;
 	librdf_statement *st;
 
-	refs = spindle_db_proxy_refs(data->spindle, data->localname);
-	if(!refs)
+	if(!data->refs)
 	{
-		return -1;
+		data->refs = spindle_db_proxy_refs(data->spindle, data->localname);
+		if(!data->refs)
+		{
+			return -1;
+		}
 	}
 	r = 0;
-	for(c = 0; refs[c]; c++)
+	for(c = 0; data->refs[c]; c++)
 	{
 		/* Add <ref> owl:sameAs <localname> triples to the proxy model */
 		st = twine_rdf_st_create();
-		librdf_statement_set_subject(st, twine_rdf_node_createuri(refs[c]));
+		librdf_statement_set_subject(st, twine_rdf_node_createuri(data->refs[c]));
 		librdf_statement_set_predicate(st, twine_rdf_node_clone(data->spindle->sameas));
 		librdf_statement_set_object(st, twine_rdf_node_createuri(data->localname));
 		librdf_model_context_add_statement(data->proxydata, data->graph, st);
 		twine_rdf_st_destroy(st);
 		/* Fetch the source data into the source model */
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": DB: fetching data for <%s>\n", refs[c]);
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": DB: fetching data for <%s>\n", data->refs[c]);
 		if(sparql_queryf_model(data->spindle->sparql, data->sourcedata,
 							   "SELECT DISTINCT ?s ?p ?o ?g\n"
 							   " WHERE {\n"
@@ -1351,18 +1353,12 @@ spindle_db_cache_source(SPINDLECACHE *data)
 							   "   FILTER(?s = <%s> || ?o = <%s>)\n"
 							   "  }\n"
 							   "}",
-							   refs[c], refs[c]))
+							   data->refs[c], data->refs[c]))
 		{
 			r = -1;
 			break;
 		}
 	}
-	
-	for(c = 0; refs[c]; c++)
-	{
-		free(refs[c]);
-	}
-	free(refs);
 	return r;
 }
 
