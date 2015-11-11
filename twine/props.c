@@ -264,13 +264,11 @@ spindle_prop_loop_(struct propdata_struct *data)
 		{
 			ostr = (const char *) librdf_uri_as_string(ouri);
 		}
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": spindle_prop_loop_(): subject is <%s>, object is <%s>\n", sstr, ostr);
 		r = 0;
 		for(c = 0; data->cache->refs[c]; c++)
 		{
 			if(sstr && !strcmp(sstr, data->cache->refs[c]))
 			{
-				twine_logf(LOG_DEBUG, PLUGIN_NAME ": spindle_prop_loop_(): subject match\n");
 				r = spindle_prop_test_(data, st, pstr, 0);
 				break;
 			}

@@ -1068,8 +1068,6 @@ spindle_db_membership_(SQL *sql, const char *id, SPINDLECACHE *data)
 				r = -1;
 				break;
 			}
-			twine_logf(LOG_DEBUG, PLUGIN_NAME ": %s is a member of <%s>\n",
-					   id, collid);
 			if(sql_executef(sql, "INSERT INTO \"membership\" (\"id\", \"collection\") VALUES (%Q, %Q)", id, collid))
 			{
 				free(collid);
