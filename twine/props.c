@@ -76,7 +76,7 @@ struct propdata_struct
 static int spindle_prop_init_(struct propdata_struct *data, SPINDLECACHE *cache);
 static int spindle_prop_cleanup_(struct propdata_struct *data);
 static int spindle_prop_loop_(struct propdata_struct *data);
-static int spindle_prop_test_(struct propdata_struct *data, librdf_statement *st, const char *predicate);
+static int spindle_prop_test_(struct propdata_struct *data, librdf_statement *st, const char *predicate, int inverse);
 static int spindle_prop_candidate_(struct propdata_struct *data, struct propmatch_struct *match, struct spindle_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj);
 static int spindle_prop_candidate_uri_(struct propdata_struct *data, struct propmatch_struct *match, struct spindle_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj);
 static int spindle_prop_candidate_literal_(struct propdata_struct *data, struct propmatch_struct *match, struct spindle_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj);
@@ -223,29 +223,68 @@ spindle_prop_loop_(struct propdata_struct *data)
 {
 	librdf_statement *query, *st;
 	librdf_stream *stream;
-	librdf_node *pred;
-	librdf_uri *puri;
-	const char *pstr;
+	librdf_node *pred, *subj, *obj;
+	librdf_uri *puri, *suri, *ouri;
+	const char *pstr, *sstr, *ostr;
 	int r;
+	size_t c;
 
 	r = 0;
 	query = librdf_new_statement(data->spindle->world);
-	stream = librdf_model_find_statements(data->source, query);
-	while(!librdf_stream_end(stream))
+	for(stream = librdf_model_find_statements(data->source, query);
+		!librdf_stream_end(stream);
+		librdf_stream_next(stream))
 	{
-		st = librdf_stream_get_object(stream);	
+		st = librdf_stream_get_object(stream);
+		subj = librdf_statement_get_subject(st);
 		pred = librdf_statement_get_predicate(st);
+		obj = librdf_statement_get_object(st);
+		sstr = NULL;
+		pstr = NULL;
+		ostr = NULL;
 		if(librdf_node_is_resource(pred) &&
-		   (puri = librdf_node_get_uri(pred)) &&
-		   (pstr = (const char *) librdf_uri_as_string(puri)))
+		   (puri = librdf_node_get_uri(pred)))
 		{
-			r = spindle_prop_test_(data, st, pstr);
-			if(r < 0)
+			pstr = (const char *) librdf_uri_as_string(puri);
+		}
+		if(!pstr)
+		{
+			/* No point in processing if (somehow) the predicate doesn't
+			 * have a URI
+			 */
+			continue;
+		}
+		if(librdf_node_is_resource(subj) &&
+		   (suri = librdf_node_get_uri(subj)))
+		{
+			sstr = (const char *) librdf_uri_as_string(suri);
+		}
+		if(librdf_node_is_resource(obj) &&
+		   (ouri = librdf_node_get_uri(obj)))
+		{
+			ostr = (const char *) librdf_uri_as_string(ouri);
+		}
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": spindle_prop_loop_(): subject is <%s>, object is <%s>\n", sstr, ostr);
+		r = 0;
+		for(c = 0; data->cache->refs[c]; c++)
+		{
+			if(sstr && !strcmp(sstr, data->cache->refs[c]))
 			{
+				twine_logf(LOG_DEBUG, PLUGIN_NAME ": spindle_prop_loop_(): subject match\n");
+				r = spindle_prop_test_(data, st, pstr, 0);
+				break;
+			}
+			if(ostr && !strcmp(ostr, data->cache->refs[c]))
+			{
+				twine_logf(LOG_DEBUG, PLUGIN_NAME ": spindle_prop_loop_(): object match\n");
+				r = spindle_prop_test_(data, st, pstr, 1);
 				break;
 			}
 		}
-		librdf_stream_next(stream);
+		if(r < 0)
+		{
+			break;
+		}
 	}
 	librdf_free_stream(stream);
 	librdf_free_statement(query);
@@ -384,7 +423,7 @@ spindle_prop_apply_(struct propdata_struct *data)
 
 /* Determine whether a given statement should be processed, and do so if so */
 static int
-spindle_prop_test_(struct propdata_struct *data, librdf_statement *st, const char *predicate)
+spindle_prop_test_(struct propdata_struct *data, librdf_statement *st, const char *predicate, int inverse)
 {
 	size_t c, d;
 	librdf_node *obj;
@@ -397,7 +436,7 @@ spindle_prop_test_(struct propdata_struct *data, librdf_statement *st, const cha
 		}
 		for(d = 0; data->maps[c].matches[d].predicate; d++)
 		{
-			if(data->maps[c].matches[d].inverse)
+			if(data->maps[c].matches[d].inverse != inverse)
 			{
 				continue;
 			}
@@ -408,7 +447,14 @@ spindle_prop_test_(struct propdata_struct *data, librdf_statement *st, const cha
 			}
 			if(!strcmp(predicate, data->maps[c].matches[d].predicate))
 			{
-				obj = librdf_statement_get_object(st);
+				if(inverse)
+				{
+					obj = librdf_statement_get_subject(st);
+				}
+				else
+				{
+					obj = librdf_statement_get_object(st);
+				}
 				spindle_prop_candidate_(data, &(data->matches[c]), &(data->maps[c].matches[d]), st, obj);
 				break;
 			}
