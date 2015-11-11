@@ -521,7 +521,6 @@ void:inDataset spindle:property [
 
 ## dct:isPartOf
 
-
 dct:isPartOf
 	a spindle:Property ;
 	olo:index 10 ;
@@ -536,6 +535,12 @@ dct:isPartOf spindle:property [
 
 void:subset spindle:inverseProperty [
 	olo:index 0 ;
+	spindle:expressedAs dct:isPartOf
+] .
+
+rdfs:seeAlso spindle:inverseProperty [
+	olo:index 0 ;
+	rdfs:domain dcmitype:Collection ;
 	spindle:expressedAs dct:isPartOf
 ] .
 
@@ -709,20 +714,6 @@ foaf:isPrimaryTopicOf spindle:property [
 gn:wikipediaArticle spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs foaf:page
-] .
-
-## rdfs:seeAlso
-
-rdfs:seeAlso
-	a spindle:Property ;
-	olo:index 14 ;
-	spindle:expect rdfs:Resource ;
-	spindle:proxyOnly true .
-
-rdfs:seeAlso spindle:property [
-	olo:index 0 ;
-	rdfs:domain dcmitype:Collection ;
-	spindle:expressedAs rdfs:seeAlso
 ] .
 
 ## dct:rights
