@@ -218,6 +218,7 @@ foaf:Image spindle:expressedAs foaf:Document .
 dcmitype:Image spindle:expressedAs foaf:Document .
 dcmitype:Text spindle:expressedAs foaf:Document .
 dcmitype:Sound spindle:expressedAs foaf:Document .
+dcmitype:MovingImage spindle:expressedAs foaf:Document .
 dcmitype:InteractiveResource spindle:expressedAs foaf:Document .
 schema:Article spindle:expressedAs foaf:Document .
 
