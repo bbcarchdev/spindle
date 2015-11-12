@@ -309,7 +309,7 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 	const char *t;
 	char idbuf[36], *p, *abstract;	
 
-	abstract = quilt_canon_str(request->canonical, QCO_ABSTRACT);
+	abstract = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
 	for(c = 0; !sql_stmt_eof(rs) && c < request->limit; sql_stmt_next(rs))
 	{
 		c++;

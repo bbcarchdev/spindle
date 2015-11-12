@@ -227,7 +227,7 @@ spindle_index_metadata_sparqlres_(QUILTREQ *request, struct query_struct *query,
 	const char *uristr;
 	librdf_statement *st;
 
-	abstract = quilt_canon_str(request->canonical, QCO_ABSTRACT);
+	abstract = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
 	buflen = 128 + strlen(request->base);
 	querystr = (char *) calloc(1, buflen);
 	more = 0;

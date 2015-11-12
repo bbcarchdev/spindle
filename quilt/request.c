@@ -124,10 +124,12 @@ spindle_add_concrete(QUILTREQ *request)
 	const char *s;
 	char *abstract, *concrete, *typebuf;
 	librdf_statement *st;
+	int explicit;
 
-	abstract = quilt_canon_str(request->canonical, QCO_ABSTRACT);
-	concrete = quilt_canon_str(request->canonical, QCO_CONCRETE);
-	
+	explicit = (request->ext != NULL);
+	abstract = quilt_canon_str(request->canonical, (explicit ? QCO_ABSTRACT : QCO_REQUEST));
+	concrete = quilt_canon_str(request->canonical, (explicit ? QCO_REQUEST : QCO_CONCRETE));
+		
 	st = quilt_st_create_uri(abstract, NS_DCTERMS "hasFormat", concrete);
 	librdf_model_add_statement(request->model, st);
 	librdf_free_statement(st);

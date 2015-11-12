@@ -66,7 +66,7 @@ spindle_index(QUILTREQ *request, const char *qclass)
 	r = spindle_query(request, &query);
 	if(r == 200)
 	{
-		abstract = quilt_canon_str(request->canonical, QCO_ABSTRACT);
+		abstract = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
 		spindle_index_meta_(request, abstract, &query);
 		free(abstract);
 	}

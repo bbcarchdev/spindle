@@ -59,7 +59,7 @@ spindle_home(QUILTREQ *request)
 	}
 
 	/* Add OpenSearch information to the index */
-	abstract = quilt_canon_str(request->canonical, QCO_ABSTRACT);
+	abstract = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
 	link = quilt_canon_create(request->canonical);
 	quilt_canon_reset_params(link);
 	quilt_canon_add_param(link, "q", "{searchTerms?}");
@@ -92,7 +92,7 @@ spindle_home(QUILTREQ *request)
 	librdf_free_statement(st);
 
 	/* Add VoID descriptive metadata */
-	abstract = quilt_canon_str(request->canonical, QCO_ABSTRACT);
+/*	abstract = quilt_canon_str(request->canonical, QCO_ABSTRACT); */
 	link = quilt_canon_create(request->canonical);
 	quilt_canon_reset_params(link);
 	quilt_canon_add_param(link, "uri", "");
