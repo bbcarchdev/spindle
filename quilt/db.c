@@ -37,6 +37,7 @@ struct mediamatch_struct spindle_mediamatch[] = {
 	{ "collection", "http://purl.org/dc/dcmitype/Collection" },
 	{ "dataset", "http://purl.org/dc/dcmitype/Dataset" },
 	{ "video", "http://purl.org/dc/dcmitype/MovingImage" },
+	{ "image", "http://purl.org/dc/dcmitype/StillImage" },
 	{ "interactive", "http://purl.org/dc/dcmitype/InteractiveResource" },
 	{ "software", "http://purl.org/dc/dcmitype/Software" },
 	{ "audio", "http://purl.org/dc/dcmitype/Sound" },
