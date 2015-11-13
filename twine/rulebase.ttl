@@ -214,6 +214,8 @@ foaf:Document
 		olo:index 90 ;
 		rdfs:label "Digital object"@en .
 
+foaf:Image spindle:expressedAs foaf:Document .
+dcmitype:Image spindle:expressedAs foaf:Document .
 dcmitype:StillImage spindle:expressedAs foaf:Document .
 dcmitype:Text spindle:expressedAs foaf:Document .
 dcmitype:Sound spindle:expressedAs foaf:Document .
