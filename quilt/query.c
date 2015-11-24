@@ -89,6 +89,10 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 	{
 		quilt_canon_set_param(request->canonical, "type", dest->type);
 	}
+	if(!dest->score)
+	{
+		dest->score = SPINDLE_THRESHOLD;
+	}
 	return 200;
 }
 

@@ -192,7 +192,14 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		t = appendf(t, &qbuflen, ", \"membership\" \"cm\"");
 	}
 	/* WHERE */
-	t = appendf(t, &qbuflen, " WHERE \"i\".\"score\" < 40");
+	if(query->score != -1)
+	{
+		t = appendf(t, &qbuflen, " WHERE \"i\".\"score\" < %d", query->score);
+	}
+	else
+	{
+		t = appendf(t, &qbuflen, " WHERE \"i\".\"score\" IS NOT NULL");
+	}
 	if(query->text)
 	{
 		t = appendf(t, &qbuflen, " AND \"query\" @@ \"index_%s\"", query->lang);

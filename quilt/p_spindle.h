@@ -34,6 +34,8 @@
 
 # define QUILT_PLUGIN_NAME              "spindle"
 
+# define SPINDLE_THRESHOLD              40
+
 /* Namespaces */
 # define NS_RDF                         "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 # define NS_XSD                         "http://www.w3.org/2001/XMLSchema#"
@@ -88,6 +90,8 @@ struct query_struct
 	int offset;
 	/* Set after a query has been processed if there are more results */
 	int more;
+	/* Score threshold */
+	int score;
 };
 
 struct mediamatch_struct {
