@@ -24,112 +24,79 @@
 
 #include "p_spindle.h"
 
+static int spindle_request_is_query_(QUILTREQ *req);
+static const char *spindle_request_is_lookup_(QUILTREQ *req);
+static int spindle_request_is_partition_(QUILTREQ *req, char **qclass);
+static int spindle_request_is_item_(QUILTREQ *req);
+
 int
 spindle_process(QUILTREQ *request)
 {
 	char *qclass;
-	const char *t;
-	size_t c;
 	int r;
-		
+	const char *uri;
+
+	/* Process a request and determine how it should be handled.
+	 *
+	 * In order of preference:
+	 *
+	 * - Requests for partitions (look-up against our static list)
+	 * - Requests for items (pattern match)
+	 * - (Future) Requests for endpoints that are generated on the fly
+	 *   (such as /audiences)
+	 * - URI lookup queries
+	 * - Queries at the index, if no path parameters
+	 */
+	
 	qclass = NULL;
-	t = quilt_request_getparam(request, "q");
-	if(t && t[0])
+	if(spindle_request_is_partition_(request, &qclass))
 	{
-		quilt_canon_set_param(request->canonical, "q", t);
-		request->index = 1;
-		request->home = 0;
+		r = spindle_index(request, qclass);
+		free(qclass);
+		return r;
 	}
-	t = quilt_request_getparam(request, "class");
-	if(t && t[0])
+	if(spindle_request_is_item_(request))
 	{
-		quilt_canon_set_param(request->canonical, "class", t);
-		qclass = (char *) calloc(1, 32 + strlen(t));
-		if(spindle_db)
-		{
-			strcpy(qclass, t);
-		}
-		else
-		{
-			sprintf(qclass, "FILTER ( ?class = <%s> )", t);
-		}
-		if(!request->indextitle)
-		{
-			request->indextitle = t;
-		}
-		request->index = 1;
-		request->home = 0;
+		return spindle_item(request);
 	}
-	else
+	uri = spindle_request_is_lookup_(request);
+	if(uri)
 	{
-		for(c = 0; spindle_indices[c].uri; c++)
-		{
-			if(!strcmp(request->path, spindle_indices[c].uri))
-			{
-				if(spindle_indices[c].qclass)
-				{
-					qclass = (char *) calloc(1, 32 + strlen(spindle_indices[c].qclass));
-					if(spindle_db)
-					{
-						strcpy(qclass, spindle_indices[c].qclass);
-					}
-					else
-					{
-						sprintf(qclass, "FILTER ( ?class = <%s> )", spindle_indices[c].qclass);
-					}
-				}
-				request->indextitle = spindle_indices[c].title;
-				request->index = 1;
-				quilt_canon_add_path(request->canonical, spindle_indices[c].uri);			   
-				break;
-			}
-		}
+		return spindle_lookup(request, uri);
 	}
-	if(request->home &&
-	   (quilt_request_getparam(request, "media") ||
-		quilt_request_getparam(request, "type") ||
-		quilt_request_getparam(request, "for")))
+	if(spindle_request_is_query_(request))
 	{
-		request->index = 1;
-		request->home = 0;
-		request->indextitle = "Everything";
-		for(c = 0; spindle_indices[c].uri; c++)
-		{
-			if(!spindle_indices[c].qclass)
-			{
-				request->indextitle = spindle_indices[c].title;
-				break;
-			}
-		}
+		return spindle_index(request, NULL);
 	}
 	if(request->home)
 	{
-		r = spindle_home(request);
+		return spindle_home(request);
 	}
-	else if(request->index)
-	{
-		r = spindle_index(request, qclass);
-	}
-	else
-	{
-		r = spindle_item(request);
-	}
-	free(qclass);
-	return r;
+	return 404;
 }
 
+/* Add information to the model about relationship between the concrete and
+ * abstract documents
+ */
 int
 spindle_add_concrete(QUILTREQ *request)
 {
 	const char *s;
-	char *abstract, *concrete, *typebuf;
+	char *subject, *abstract, *concrete, *typebuf;
 	librdf_statement *st;
 	int explicit;
 
 	explicit = (request->ext != NULL);
 	abstract = quilt_canon_str(request->canonical, (explicit ? QCO_ABSTRACT : QCO_REQUEST));
 	concrete = quilt_canon_str(request->canonical, (explicit ? QCO_REQUEST : QCO_CONCRETE));
-		
+	subject = quilt_canon_str(request->canonical, QCO_NOEXT|QCO_FRAGMENT);
+	
+	/* abstract foaf:primaryTopic subject */
+	st = quilt_st_create_uri(abstract, NS_FOAF "primaryTopic", subject);
+	librdf_model_add_statement(request->model, st);
+	librdf_free_statement(st);	
+
+	/* abstract dct:hasFormat concrete */
 	st = quilt_st_create_uri(abstract, NS_DCTERMS "hasFormat", concrete);
 	librdf_model_add_statement(request->model, st);
 	librdf_free_statement(st);
@@ -171,5 +138,124 @@ spindle_add_concrete(QUILTREQ *request)
 
 	free(abstract);
 	free(concrete);
+
+	return 200;
+}
+
+/* Is this a request constituting a query for something against the index?
+ *
+ * Note that this only applies at the root - if we already know it's a
+ * non-home index then the query will be performed automatically
+ */
+static int
+spindle_request_is_query_(QUILTREQ *request)
+{
+	if(!request->home)
+	{
+		return 0;
+	}
+	if(quilt_request_getparam(request, "q") ||
+	   quilt_request_getparam(request, "media") ||
+	   quilt_request_getparam(request, "for") ||
+	   quilt_request_getparam(request, "type"))
+	{
+		request->index = 1;
+		request->home = 0;
+		return 1;
+	}
 	return 0;
+}
+
+/* Is this a request for a (potential) item? */
+static int
+spindle_request_is_item_(QUILTREQ *request)
+{
+	size_t l;
+	const char *t;
+
+	for(t = request->path; *t == '/'; t++);
+	if(!*t)
+	{
+		return 0;
+	}
+	for(l = 0; isalnum(*t); t++)
+	{
+		l++;
+	}
+	if(*t && *t != '/')
+	{
+		return 0;
+	}
+	if(l != 32)
+	{
+		return 0;
+	}
+	return 1;
+}
+
+/* Is this a request for a class partition? If so, return the URI string */
+static int
+spindle_request_is_partition_(QUILTREQ *request, char **qclass)
+{
+	const char *t;
+	size_t c;
+	
+	qclass = NULL;
+	/* First check to determine whether there's a match against the list */
+	for(c = 0; spindle_indices[c].uri; c++)
+	{
+		if(!strcmp(request->path, spindle_indices[c].uri))
+		{
+			if(spindle_indices[c].qclass)
+			{
+				*qclass = (char *) calloc(1, 32 + strlen(spindle_indices[c].qclass));
+				if(spindle_db)
+				{
+					strcpy(*qclass, spindle_indices[c].qclass);
+				}
+				else
+				{
+					sprintf(*qclass, "FILTER ( ?class = <%s> )", spindle_indices[c].qclass);
+				}
+			}
+			request->indextitle = spindle_indices[c].title;		   
+			request->index = 1;
+			request->home = 0;
+			quilt_canon_add_path(request->canonical, spindle_indices[c].uri);
+			return 1;
+		}
+	}
+	/* Check for an explicit ?class=... parameter at the root */
+	t = quilt_request_getparam(request, "class");
+	if(t && request->home)
+	{
+		quilt_canon_set_param(request->canonical, "class", t);
+		*qclass = (char *) calloc(1, 32 + strlen(t));
+		if(spindle_db)
+		{
+			strcpy(*qclass, t);
+		}
+		else
+		{
+			sprintf(*qclass, "FILTER ( ?class = <%s> )", t);
+		}
+		if(!request->indextitle)
+		{
+			request->indextitle = t;
+		}
+		request->index = 1;
+		request->home = 0;
+		return 1;
+	}
+	return 0;
+}
+
+static const char *
+spindle_request_is_lookup_(QUILTREQ *request)
+{
+	if(!request->home)
+	{
+		return NULL;
+	}
+	return quilt_request_getparam(request, "uri");
 }

@@ -67,6 +67,10 @@ struct index_struct
 
 struct query_struct
 {
+	/* Is this an explicit search for something, or just an index of items? */
+	int explicit;
+	/* Query within a collection */
+	const char *collection;
 	/* Find things related to... */
 	const char *related;
 	QUILTCANON *rcanon;
@@ -79,7 +83,7 @@ struct query_struct
 	const char *media;
 	const char *audience;
 	const char *type;
-	/* Query bounds */
+	/* Query bounds */   
 	int limit;
 	int offset;
 	/* Set after a query has been processed if there are more results */
@@ -104,9 +108,15 @@ int spindle_home(QUILTREQ *req);
 int spindle_item(QUILTREQ *req);
 int spindle_item_related(QUILTREQ *request);
 int spindle_lookup(QUILTREQ *req, const char *uri);
-int spindle_query(QUILTREQ *request, struct query_struct *query);
 
 int spindle_add_concrete(QUILTREQ *request);
+
+/* Populate an empty query_struct from a QUILTREQ */
+int spindle_query_request(struct query_struct *dest, QUILTREQ *req, const char *qclass);
+/* Perform a query */
+int spindle_query(QUILTREQ *request, struct query_struct *query);
+/* Generate query metadata */
+int spindle_query_meta(QUILTREQ *request, struct query_struct *query);
 
 /* SQL back-end */
 int spindle_query_db(QUILTREQ *request, struct query_struct *query);

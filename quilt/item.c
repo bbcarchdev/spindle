@@ -24,10 +24,13 @@
 
 #include "p_spindle.h"
 
+static int spindle_item_is_collection_(QUILTREQ *req);
+
 /* Given an item's URI, attempt to redirect to it */
 int
 spindle_lookup(QUILTREQ *request, const char *target)
 {
+	quilt_canon_set_param(request->canonical, "uri", target);
 	if(spindle_db)
 	{
 		return spindle_lookup_db(request, target);
@@ -58,9 +61,10 @@ spindle_item(QUILTREQ *request)
 	{
 		return r;
 	}
-	if(spindle_add_concrete(request))
+	r = spindle_add_concrete(request);
+	if(r != 200)
 	{
-		return 500;
+		return r;
 	}
 	/* Return 200 to auto-serialise */
 	return 200;
@@ -73,8 +77,58 @@ int
 spindle_item_related(QUILTREQ *request)
 {
 	struct query_struct query;
+	int r;
 
 	memset(&query, 0, sizeof(struct query_struct));
+	if(spindle_item_is_collection_(request))
+	{
+		query.collection = request->subject;
+		r = spindle_query_request(&query, request, NULL);
+		if(r != 200)
+		{
+			return r;
+		}
+		r = spindle_query(request, &query);
+		if(r != 200)
+		{
+			return r;
+		}
+		r = spindle_query_meta(request, &query);
+		if(r != 200)
+		{
+			return r;
+		}
+		return 200;
+	}
 	query.related = request->subject;
-	return spindle_query(request, &query);
+	r = spindle_query(request, &query);
+	if(r != 200)
+	{
+		return r;
+	}
+	return 200;
+}
+
+static int
+spindle_item_is_collection_(QUILTREQ *req)
+{
+	librdf_statement *query;
+	librdf_stream *stream;
+	int r;
+	char *uri;
+	
+	uri = quilt_canon_str(req->canonical, QCO_SUBJECT);	
+	/* Look for <subject> a dmcitype:Collection */
+	query = quilt_st_create_uri(uri, NS_RDF "type", NS_DCMITYPE "Collection");
+	free(uri);
+	stream = librdf_model_find_statements(req->model, query);
+	if(!stream)
+	{
+		librdf_free_statement(query);
+		return 0;
+	}
+	r = librdf_stream_end(stream) ? 0 : 1;
+	librdf_free_stream(stream);
+	librdf_free_statement(query);
+	return r;
 }

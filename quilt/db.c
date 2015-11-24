@@ -53,12 +53,13 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	char *qbuf, *t;
 	SQL_STATEMENT *rs;
 	const void *args[8];
-	const char *related;
+	const char *related, *collection;
 
 	memset(args, 0, sizeof(args));
 	qbuflen = 560;
 	n = 0;
 	related = NULL;
+	collection = NULL;
 	if(query->related)
 	{
 		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": DB: related: <%s> (base is <%s>)\n", query->related, request->base);
@@ -72,6 +73,28 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 			}
 			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": DB: related: '%s'\n", related);
 			if(strlen(related) != 32)
+			{
+				return 404;
+			}
+		}
+		else
+		{
+			return 404;
+		}
+	}
+	else if(query->collection)
+	{
+		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": DB: collection: <%s> (base is <%s>)\n", query->collection, request->base);
+		c = strlen(request->base);
+		if(!strncmp(query->collection, request->base, c))
+		{
+			collection = query->collection + c;
+			while(collection[0] == '/')
+			{
+				collection++;
+			}
+			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": DB: collection: '%s'\n", collection);
+			if(strlen(collection) != 32)
 			{
 				return 404;
 			}
@@ -164,6 +187,10 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 			t = appendf(t, &qbuflen, ", \"media\" \"m\"");
 		}	
 	}
+	if(collection)
+	{
+		t = appendf(t, &qbuflen, ", \"membership\" \"cm\"");
+	}
 	/* WHERE */
 	t = appendf(t, &qbuflen, " WHERE \"i\".\"score\" < 40");
 	if(query->text)
@@ -229,6 +256,13 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	{
 		/* NOT related and HAS media query (subquery) */
 		t = appendf(t, &qbuflen, ") ");
+	}
+	/* Collection: the item must be within the specified collection */
+	if(collection)
+	{
+		t = appendf(t, &qbuflen, " AND \"cm\".\"id\" = \"i\".\"id\" AND \"cm\".\"collection\" = %Q");
+		args[n] = collection;
+		n++;
 	}
 	/* ORDER BY */
 	if(query->text)
@@ -308,9 +342,16 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 	QUILTCANON *item;
 	int c;
 	const char *t;
-	char idbuf[36], *p, *abstract;	
+	char idbuf[36], *p, *self;	
 
-	abstract = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
+	if(request->index)
+	{
+		self = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
+	}
+	else
+	{
+		self = quilt_canon_str(request->canonical, QCO_NOEXT|QCO_FRAGMENT);
+	}
 	for(c = 0; !sql_stmt_eof(rs) && c < request->limit; sql_stmt_next(rs))
 	{
 		c++;
@@ -331,7 +372,7 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 		*p = 0;
 		quilt_logf(LOG_DEBUG, "idbuf=<%s>\n", idbuf);
 		quilt_canon_add_path(item, idbuf);
-		process_row(request, query, rs, idbuf, abstract, item);
+		process_row(request, query, rs, idbuf, self, item);
 		quilt_canon_destroy(item);
 	}
 	if(!sql_stmt_eof(rs))
@@ -339,7 +380,7 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 		query->more = 1;
 	}
 	sql_stmt_destroy(rs);
-	free(abstract);
+	free(self);
 	return 200;
 }
 

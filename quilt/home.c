@@ -191,7 +191,11 @@ spindle_home(QUILTREQ *request)
 	{
 		return -1;
 	}
-	spindle_add_concrete(request);
+	r = spindle_add_concrete(request);
+	if(r != 200)
+	{
+		return r;
+	}
 	/* Return 200, rather than 0, to auto-serialise the model */
 	return 200;
 }

@@ -43,6 +43,10 @@ spindle_query_sparql(QUILTREQ *request, struct query_struct *query)
 	{
 		return 200;
 	}
+	if(query->collection)
+	{
+		return 200;
+	}
 	if(query->related)
 	{
 		sparql = quilt_sparql();
