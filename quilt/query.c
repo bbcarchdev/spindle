@@ -260,6 +260,9 @@ spindle_query_osd(QUILTREQ *request)
 	{
 		quilt_canon_add_param(link, "class", "{rdfs:Class?}");
 	}
+	quilt_canon_add_param(link, "for", "{odrl:Party?}");
+	quilt_canon_add_param(link, "media", "{dct:DCMIType?}");
+	quilt_canon_add_param(link, "type", "{dct:IMT?}");
 	quilt_canon_set_ext(link, NULL);
 	linkstr = quilt_canon_str(link, QCO_ABSTRACT|QCO_FRAGMENT);
 	st = quilt_st_create_literal(self, NS_OSD "template", linkstr, NULL);
