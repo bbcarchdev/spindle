@@ -117,6 +117,8 @@ int spindle_query_request(struct query_struct *dest, QUILTREQ *req, const char *
 int spindle_query(QUILTREQ *request, struct query_struct *query);
 /* Generate query metadata */
 int spindle_query_meta(QUILTREQ *request, struct query_struct *query);
+/* Add OpenSearch metadata to roots */
+int spindle_query_osd(QUILTREQ *request);
 
 /* SQL back-end */
 int spindle_query_db(QUILTREQ *request, struct query_struct *query);

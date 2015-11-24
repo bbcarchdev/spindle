@@ -98,6 +98,11 @@ spindle_item_related(QUILTREQ *request)
 		{
 			return r;
 		}
+		r = spindle_query_osd(request);
+		if(r != 200)
+		{
+			return r;
+		}
 		return 200;
 	}
 	query.related = request->subject;

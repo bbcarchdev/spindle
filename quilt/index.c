@@ -50,6 +50,11 @@ spindle_index(QUILTREQ *request, const char *qclass)
 	{
 		return r;
 	}
+	r = spindle_query_osd(request);
+	if(r != 200)
+	{
+		return r;
+	}
 	r = spindle_add_concrete(request);
 	if(r != 200)
 	{

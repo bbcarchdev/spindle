@@ -51,71 +51,15 @@ spindle_home(QUILTREQ *request)
 	int r;
 	const char *uri;
 
-	uri = quilt_request_getparam(request, "uri");
-	if(uri && uri[0])
+	r = spindle_query_osd(request);
+	if(r != 200)
 	{
-		quilt_canon_set_param(request->canonical, "uri", uri);
-		return spindle_lookup(request, uri);
+		return 200;
 	}
 
-	/* Add OpenSearch information to the index */
-	abstract = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
-	link = quilt_canon_create(request->canonical);
-	quilt_canon_reset_params(link);
-	quilt_canon_add_param(link, "q", "{searchTerms?}");
-	quilt_canon_add_param(link, "lang", "{language?}");
-	quilt_canon_add_param(link, "limit", "{count?}");
-	quilt_canon_add_param(link, "offset", "{startIndex?}");
-	quilt_canon_add_param(link, "class", "{rdfs:Class?}");
-	quilt_canon_set_ext(link, NULL);						
-	linkstr = quilt_canon_str(link, QCO_ABSTRACT);
-	st = quilt_st_create_literal(abstract, NS_OSD "template", linkstr, NULL);
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
-	librdf_free_statement(st);
-	free(linkstr);
-	quilt_canon_destroy(link);
-
-	st = quilt_st_create_literal(abstract, NS_OSD "Language", "en-gb", NULL);
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
-	librdf_free_statement(st);
-
-	st = quilt_st_create_literal(abstract, NS_OSD "Language", "cy-gb", NULL);
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
-	librdf_free_statement(st);
-
-	st = quilt_st_create_literal(abstract, NS_OSD "Language", "gd-gb", NULL);
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
-	librdf_free_statement(st);
-
-	st = quilt_st_create_literal(abstract, NS_OSD "Language", "ga-gb", NULL);
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
-	librdf_free_statement(st);
-
-	/* Add VoID descriptive metadata */
-/*	abstract = quilt_canon_str(request->canonical, QCO_ABSTRACT); */
-	link = quilt_canon_create(request->canonical);
-	quilt_canon_reset_params(link);
-	quilt_canon_add_param(link, "uri", "");
-	linkstr = quilt_canon_str(link, QCO_ABSTRACT);
-	st = quilt_st_create_uri(abstract, NS_VOID "uriLookupEndpoint", linkstr);
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
-	librdf_free_statement(st);	
-	free(linkstr);
-	quilt_canon_destroy(link);
-
-	link = quilt_canon_create(request->canonical);
-	quilt_canon_reset_params(link);
-	quilt_canon_set_explicitext(link, NULL);
-	quilt_canon_set_ext(link, "osd");
-	linkstr = quilt_canon_str(link, QCO_CONCRETE);
-	st = quilt_st_create_uri(abstract, NS_VOID "openSearchDescription", linkstr);	
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
-	librdf_free_statement(st);	
-	free(linkstr);
-	quilt_canon_destroy(link);
-	
 	/* Add all of the indices as void:Datasets */
 	r = 0;
+	abstract = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
 	partcanon = NULL;
 	partstr = NULL;
 	for(c = 0; spindle_indices[c].uri; c++)
