@@ -49,6 +49,7 @@ static int spindle_db_audiences_permission_(SPINDLE *spindle, librdf_model *mode
 static int spindle_db_audiences_action_(SPINDLE *spindle, librdf_model *model, librdf_node *subject);
 static int spindle_db_audiences_assignee_(SPINDLE *spindle, librdf_model *model, librdf_node *subject, char ***audiences);
 static int spindle_db_membership_(SQL *sql, const char *id, SPINDLECACHE *data);
+static int spindle_db_membership_add_(SQL *sql, const char *id, const char *collid);
 #endif
 
 #if SPINDLE_DB_PROXIES
@@ -881,6 +882,8 @@ spindle_db_audiences_action_(SPINDLE *spindle, librdf_model *model, librdf_node 
 	const char *uristr;
 	int r;
 
+	(void) spindle;
+
 	query = twine_rdf_st_create();
 	if(!query)
 	{
@@ -948,6 +951,8 @@ spindle_db_audiences_assignee_(SPINDLE *spindle, librdf_model *model, librdf_nod
 	int r;
 	char **p;
 	size_t c;
+
+	(void) spindle;
 
 	query = twine_rdf_st_create();
 	if(!query)
@@ -1068,7 +1073,7 @@ spindle_db_membership_(SQL *sql, const char *id, SPINDLECACHE *data)
 				r = -1;
 				break;
 			}
-			if(sql_executef(sql, "INSERT INTO \"membership\" (\"id\", \"collection\") VALUES (%Q, %Q)", id, collid))
+			if(spindle_db_membership_add_(sql, id, collid))
 			{
 				free(collid);
 				r = -1;
@@ -1083,6 +1088,30 @@ spindle_db_membership_(SQL *sql, const char *id, SPINDLECACHE *data)
 	return r;
 }
 
+static int
+spindle_db_membership_add_(SQL *sql, const char *id, const char *collid)
+{
+	SQL_STATEMENT *rs;
+
+	rs = sql_queryf(sql, "SELECT \"id\" FROM \"membership\" WHERE \"id\" = %Q AND \"collection\" = %Q");	
+	if(!sql_stmt_eof(rs))
+	{
+		sql_stmt_destroy(rs);
+		return 0;
+	}
+	sql_stmt_destroy(rs);
+	if(sql_executef(sql, "INSERT INTO \"membership\" (\"id\", \"collection\") VALUES (%Q, %Q)", id, collid))
+	{
+		return -1;
+	}
+	rs = sql_queryf(sql, "SELECT \"collection\" FROM \"membership\" WHERE \"id\" = %Q", collid);
+	for(; !sql_stmt_eof(rs); sql_stmt_next(rs))
+	{
+		spindle_db_membership_add_(sql, id, sql_stmt_str(rs, 0));
+	}
+	sql_stmt_destroy(rs);
+	return 0;
+}
 
 /* Update the language-specific index "index_<target>" using (in order of
  * preference), <specific>, <generic>, (none).
