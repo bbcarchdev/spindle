@@ -105,9 +105,12 @@ spindle_add_concrete(QUILTREQ *request)
 	subject = quilt_canon_str(request->canonical, QCO_NOEXT|QCO_FRAGMENT);
 	
 	/* abstract foaf:primaryTopic subject */
-	st = quilt_st_create_uri(abstract, NS_FOAF "primaryTopic", subject);
-	librdf_model_add_statement(request->model, st);
-	librdf_free_statement(st);	
+	if(strchr(subject, '#'))
+	{
+		st = quilt_st_create_uri(abstract, NS_FOAF "primaryTopic", subject);
+		librdf_model_add_statement(request->model, st);
+		librdf_free_statement(st);
+	}
 
 	/* abstract dct:hasFormat concrete */
 	st = quilt_st_create_uri(abstract, NS_DCTERMS "hasFormat", concrete);
