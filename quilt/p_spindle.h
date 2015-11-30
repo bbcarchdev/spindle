@@ -60,6 +60,13 @@
 # define NS_SKOS                        "http://www.w3.org/2004/02/skos/core#"
 # define NS_FRBR                        "http://purl.org/vocab/frbr/core#"
 # define NS_OSD                         "http://a9.com/-/spec/opensearch/1.1/"
+# define NS_OLO                         "http://purl.org/ontology/olo/core#"
+
+typedef enum
+{
+	QM_DEFAULT = 0,
+	QM_AUTOCOMPLETE = 1
+} SPINDLEQMODE;
 
 struct index_struct
 {
@@ -70,6 +77,8 @@ struct index_struct
 
 struct query_struct
 {
+	/* Query mode */
+	SPINDLEQMODE mode;
 	/* Is this an explicit search for something, or just an index of items? */
 	int explicit;
 	/* Query within a collection */
@@ -124,6 +133,8 @@ int spindle_lookup(QUILTREQ *req, const char *uri);
 
 int spindle_add_concrete(QUILTREQ *request);
 
+/* Initialise a query structure */
+int spindle_query_init(struct query_struct *dest);
 /* Populate an empty query_struct from a QUILTREQ */
 int spindle_query_request(struct query_struct *dest, QUILTREQ *req, const char *qclass);
 /* Perform a query */

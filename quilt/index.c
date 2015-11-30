@@ -30,7 +30,7 @@ spindle_index(QUILTREQ *request, const char *qclass)
 	struct query_struct query;
 	int r;
 
-	memset(&query, 0, sizeof(query));	
+	spindle_query_init(&query);
 	r = spindle_query_request(&query, request, qclass);
 	if(r != 200)
 	{

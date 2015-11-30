@@ -79,7 +79,7 @@ spindle_item_related(QUILTREQ *request)
 	struct query_struct query;
 	int r;
 
-	memset(&query, 0, sizeof(struct query_struct));
+	spindle_query_init(&query);
 	if(spindle_item_is_collection_(request))
 	{
 		query.collection = request->subject;

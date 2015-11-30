@@ -301,7 +301,7 @@ spindle_request_audiences_(QUILTREQ *req, struct spindle_dynamic_endpoint *endpo
 	int r;
 	struct query_struct query;
 
-	memset(&query, 0, sizeof(query));
+	spindle_query_init(&query);
 	req->index = 1;
 	req->home = 0;
 	/* There are no subsidiary resources, only accept the actual endpoint as

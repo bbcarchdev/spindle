@@ -27,6 +27,15 @@
 static char *spindle_query_subjtitle_(QUILTREQ *request, const char *primary, const char *secondary);
 static int spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struct *query);
 
+/* Initialise a query_struct */
+int
+spindle_query_init(struct query_struct *dest)
+{
+	memset(dest, 0, sizeof(struct query_struct));
+	dest->score = -1;
+	return 0;
+}
+
 /* Populate an empty query_struct from a QUILTREQ */
 int
 spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *qclass)
@@ -89,7 +98,23 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 	{
 		quilt_canon_set_param(request->canonical, "type", dest->type);
 	}
-	if(!dest->score)
+	t = quilt_request_getparam(request, "mode");
+	if(t)
+	{
+		if(!strcmp(t, "autocomplete"))
+		{
+			dest->mode = QM_AUTOCOMPLETE;
+		}
+		else
+		{
+			t = NULL;
+		}
+		if(t)
+		{
+			quilt_canon_set_param(request->canonical, "mode", t);
+		}
+	}
+	if(dest->score == -1)
 	{
 		dest->score = SPINDLE_THRESHOLD;
 	}

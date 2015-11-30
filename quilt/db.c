@@ -25,7 +25,7 @@
 #include "p_spindle.h"
 
 static int process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs);
-static int process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item);
+static int process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item, int index);
 static const char *checklang(QUILTREQ *request, const char *lang);
 static int add_langvector(librdf_model *model, const char *vector, const char *subject, const char *predicate);
 static int add_array(librdf_model *model, const char *array, const char *subject, const char *predicate);
@@ -54,6 +54,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	SQL_STATEMENT *rs;
 	const void *args[8];
 	const char *related, *collection;
+	int rankflags;
 
 	memset(args, 0, sizeof(args));
 	qbuflen = 560;
@@ -164,11 +165,28 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	t = appendf(t, &qbuflen, "SELECT \"i\".\"id\", \"i\".\"classes\", \"i\".\"title\", \"i\".\"description\", \"i\".\"coordinates\", \"i\".\"modified\"");
 	if(query->text)
 	{
-		/* 4 divides the rank by the mean harmonic distance between extents
-		 * 32 divides the rank by itself
+		/* Rank flags:
+		 *  0 (the default) ignores the document length
+		 *  1 divides the rank by 1 + the logarithm of the document length
+		 *  2 divides the rank by the document length
+		 *  4 divides the rank by the mean harmonic distance between extents
+		 *   (this is implemented only by ts_rank_cd)
+		 *  8 divides the rank by the number of unique words in document
+		 * 16 divides the rank by 1 + the logarithm of the number of unique
+		 *    words in document
+		 * 32 divides the rank by itself + 1
 		 * See http://www.postgresql.org/docs/9.4/static/textsearch-controls.html
 		 */
-		t = appendf(t, &qbuflen, ", ts_rank_cd(\"i\".\"index_%s\", \"query\", 4|32) AS \"rank\"", query->lang);
+		if(query->mode == QM_AUTOCOMPLETE)
+		{
+			rankflags = 32;
+			t = appendf(t, &qbuflen, ", ts_rank_cd(ARRAY[0, 0, 0, 1.0], \"i\".\"index_%s\", \"query\", %d) AS \"rank\"", query->lang, rankflags);
+		}
+		else
+		{
+			rankflags = 4|32;
+			t = appendf(t, &qbuflen, ", ts_rank_cd(\"i\".\"index_%s\", \"query\", %d) AS \"rank\"", query->lang, rankflags);
+		}
 	}
 	/* FROM */
 	t = appendf(t, &qbuflen, " FROM \"index\" \"i\"");
@@ -192,9 +210,9 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		t = appendf(t, &qbuflen, ", \"membership\" \"cm\"");
 	}
 	/* WHERE */
-	if(query->score != -1)
+	if(query->score > 0)
 	{
-		t = appendf(t, &qbuflen, " WHERE \"i\".\"score\" < %d", query->score);
+		t = appendf(t, &qbuflen, " WHERE \"i\".\"score\" <= %d", query->score);
 	}
 	else
 	{
@@ -274,7 +292,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	/* ORDER BY */
 	if(query->text)
 	{
-		t = appendf(t, &qbuflen, " ORDER BY \"rank\", \"modified\" DESC");
+		t = appendf(t, &qbuflen, " ORDER BY \"rank\" DESC, \"i\".\"score\" ASC, \"modified\" DESC");
 	}
 	else
 	{
@@ -289,7 +307,6 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	{
 		t = appendf(t, &qbuflen, " LIMIT %d", request->limit + 1);
 	}
-	quilt_logf(LOG_DEBUG, "query: [[%s]]\n", qbuf);
 	rs = sql_queryf(spindle_db, qbuf, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
 	if(!rs)
 	{
@@ -442,7 +459,6 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 		quilt_canon_reset_params(item);
 		quilt_canon_set_fragment(item, "id");
 		t = sql_stmt_str(rs, 0);
-		quilt_logf(LOG_DEBUG, "t=<%s>\n", t);
 		for(p = idbuf; p - idbuf < 32; t++)
 		{
 			if(isalnum(*t))
@@ -452,9 +468,8 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 			}
 		}
 		*p = 0;
-		quilt_logf(LOG_DEBUG, "idbuf=<%s>\n", idbuf);
 		quilt_canon_add_path(item, idbuf);
-		process_row(request, query, rs, idbuf, self, item);
+		process_row(request, query, rs, idbuf, self, item, query->offset + c);
 		quilt_canon_destroy(item);
 	}
 	if(!sql_stmt_eof(rs))
@@ -467,17 +482,54 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 }
 
 static int
-process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item)
+process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item, int index)
 {
 	librdf_statement *st;
 	const char *s;
-	char *uri, *related;
-
+	QUILTCANON *slot;
+	char *slotstr, *uri, *related;
+	char nbuf[64];
+	librdf_node *node;
+	
 	(void) id;
 
+	slot = quilt_canon_create(request->canonical);
+	quilt_canon_set_fragment(slot, id);
+	slotstr = quilt_canon_str(slot, QCO_FRAGMENT);
+	
 	uri = quilt_canon_str(item, QCO_SUBJECT);
 	quilt_logf(LOG_DEBUG, "adding row <%s>\n", uri);
+	
+	/* rdfs:seeAlso */
 	st = quilt_st_create_uri(self, NS_RDFS "seeAlso", uri);
+	librdf_model_add_statement(request->model, st);
+	librdf_free_statement(st);
+
+	/* olo:slot */
+	st = quilt_st_create_uri(self, NS_OLO "slot", slotstr);
+	librdf_model_add_statement(request->model, st);
+	librdf_free_statement(st);
+
+	/* <slot> rdf:type olo:Slot */
+	st = quilt_st_create_uri(slotstr, NS_RDF "type", NS_OLO "Slot");
+	librdf_model_add_statement(request->model, st);
+	librdf_free_statement(st);
+
+	/* <slot> olo:item <item> */
+	st = quilt_st_create_uri(slotstr, NS_OLO "item", uri);
+	librdf_model_add_statement(request->model, st);
+	librdf_free_statement(st);
+
+	/* <slot> rdfs:label "Result item %d" */
+	snprintf(nbuf, sizeof(nbuf) - 1, "Result #%d", index);
+	st = quilt_st_create_literal(slotstr, NS_RDFS "label", nbuf, "en-gb");
+	librdf_model_add_statement(request->model, st);
+	librdf_free_statement(st);
+
+	/* <slot> olo:index nn */
+	st = quilt_st_create(slotstr, NS_OLO "index");
+	node = quilt_node_create_int(index);
+	librdf_statement_set_object(st, node);
 	librdf_model_add_statement(request->model, st);
 	librdf_free_statement(st);
 
@@ -519,6 +571,8 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 		add_point(request->model, s, uri);
 	}
 	free(uri);
+	quilt_canon_destroy(slot);
+	free(slotstr);
 	return 0;
 }
 
