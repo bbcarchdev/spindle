@@ -46,10 +46,9 @@ spindle_home(QUILTREQ *request)
 {
 	librdf_statement *st;
 	size_t c;
-	QUILTCANON *partcanon, *link;
-	char *abstract, *partstr, *linkstr;
+	QUILTCANON *partcanon;
+	char *abstract, *partstr;
 	int r;
-	const char *uri;
 
 	r = spindle_query_osd(request);
 	if(r != 200)
@@ -130,11 +129,31 @@ spindle_home(QUILTREQ *request)
 		quilt_canon_destroy(partcanon);
 	}
 	free(partstr);
-	free(abstract);
 	if(r)
 	{
+		free(abstract);		
 		return -1;
 	}
+	/* Add entries for dynamic endpoints */
+	partcanon = quilt_canon_create(request->canonical);
+	quilt_canon_reset_path(partcanon);
+	quilt_canon_reset_params(partcanon);
+	quilt_canon_set_name(partcanon, NULL);
+	quilt_canon_add_path(partcanon, "audiences");
+	partstr = quilt_canon_str(partcanon, QCO_ABSTRACT);
+	st = quilt_st_create_uri(abstract, NS_RDFS "seeAlso", partstr);
+	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_free_statement(st);	
+	st = quilt_st_create_uri(partstr, NS_RDF "type", NS_VOID "Dataset");
+	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_free_statement(st);	
+	st = quilt_st_create_literal(partstr, NS_RDFS "label", "Audiences", "en-gb");
+	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_free_statement(st);	
+	free(partstr);
+	quilt_canon_destroy(partcanon);	
+	free(abstract);
+
 	r = spindle_add_concrete(request);
 	if(r != 200)
 	{

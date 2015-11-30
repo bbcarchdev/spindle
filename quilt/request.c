@@ -28,6 +28,14 @@ static int spindle_request_is_query_(QUILTREQ *req);
 static const char *spindle_request_is_lookup_(QUILTREQ *req);
 static int spindle_request_is_partition_(QUILTREQ *req, char **qclass);
 static int spindle_request_is_item_(QUILTREQ *req);
+static struct spindle_dynamic_endpoint *spindle_request_is_dynamic_(QUILTREQ *req);
+static int spindle_request_audiences_(QUILTREQ *req, struct spindle_dynamic_endpoint *endpoint);
+
+static struct spindle_dynamic_endpoint spindle_endpoints[] =
+{
+	{ "/audiences", 10, spindle_request_audiences_ },
+	{ NULL, 0, NULL }
+};
 
 int
 spindle_process(QUILTREQ *request)
@@ -35,6 +43,7 @@ spindle_process(QUILTREQ *request)
 	char *qclass;
 	int r;
 	const char *uri;
+	struct spindle_dynamic_endpoint *endpoint;
 
 	/* Process a request and determine how it should be handled.
 	 *
@@ -42,7 +51,7 @@ spindle_process(QUILTREQ *request)
 	 *
 	 * - Requests for partitions (look-up against our static list)
 	 * - Requests for items (pattern match)
-	 * - (Future) Requests for endpoints that are generated on the fly
+	 * - Requests for endpoints that are generated on the fly
 	 *   (such as /audiences)
 	 * - URI lookup queries
 	 * - Queries at the index, if no path parameters
@@ -58,6 +67,10 @@ spindle_process(QUILTREQ *request)
 	if(spindle_request_is_item_(request))
 	{
 		return spindle_item(request);
+	}
+	if((endpoint = spindle_request_is_dynamic_(request)))
+	{
+		return endpoint->process(request, endpoint);
 	}
 	uri = spindle_request_is_lookup_(request);
 	if(uri)
@@ -258,4 +271,111 @@ spindle_request_is_lookup_(QUILTREQ *request)
 		return NULL;
 	}
 	return quilt_request_getparam(request, "uri");
+}
+
+static struct spindle_dynamic_endpoint *
+spindle_request_is_dynamic_(QUILTREQ *req)
+{
+	size_t c;
+
+	for(c = 0; spindle_endpoints[c].path; c++)
+	{
+		if(!strncmp(req->path, spindle_endpoints[c].path, spindle_endpoints[c].pathlen))
+		{
+			if(!req->path[spindle_endpoints[c].pathlen] ||
+			   req->path[spindle_endpoints[c].pathlen] == '/')
+			{
+				return &(spindle_endpoints[c]);
+			}
+		}
+	}
+	return NULL;
+}
+
+static int
+spindle_request_audiences_(QUILTREQ *req, struct spindle_dynamic_endpoint *endpoint)
+{
+	librdf_statement *st;
+	QUILTCANON *entry, *dest;
+	char *entrystr, *deststr, *self;
+	int r;
+	struct query_struct query;
+
+	memset(&query, 0, sizeof(query));
+	req->index = 1;
+	req->home = 0;
+	/* There are no subsidiary resources, only accept the actual endpoint as
+	 * a request-URI
+	 */
+	quilt_canon_add_path(req->canonical, req->path);
+	if(strcmp(req->path, endpoint->path))
+	{
+		return 404;
+	}
+	if(req->offset)
+	{
+		quilt_canon_set_param_int(req->canonical, "offset", req->offset);
+	}
+	if(req->limit != req->deflimit)
+	{
+		quilt_canon_set_param_int(req->canonical, "limit", req->limit);
+	}
+	req->indextitle = "Audiences";
+	self = quilt_canon_str(req->canonical, (req->ext ? QCO_ABSTRACT : QCO_REQUEST));
+/*	st = quilt_st_create_literal(self, NS_RDFS "label", "Audiences", "en-gb");
+	librdf_model_add_statement(req->model, st);
+	librdf_free_statement(st);	
+	st = quilt_st_create_uri(self, NS_RDF "type", NS_VOID "Dataset");
+	librdf_model_add_statement(req->model, st);
+	librdf_free_statement(st);	 */
+	
+	if(!req->offset)
+	{		
+		/* Generate a magic entry for 'any' */
+		entry = quilt_canon_create(req->canonical);
+		quilt_canon_reset_path(entry);
+		quilt_canon_reset_params(entry);
+		quilt_canon_add_path(entry, endpoint->path);
+		quilt_canon_set_fragment(entry, "any");
+		entrystr = quilt_canon_str(entry, QCO_SUBJECT);
+		dest = quilt_canon_create(req->canonical);
+		quilt_canon_reset_path(dest);
+		quilt_canon_reset_params(dest);
+		quilt_canon_add_path(dest, "everything");
+		quilt_canon_set_fragment(dest, NULL);
+		deststr = quilt_canon_str(dest, QCO_FRAGMENT);
+		st = quilt_st_create_uri(entrystr, NS_RDF "type", NS_ODRL "Group");
+		librdf_model_add_statement(req->model, st);
+		librdf_free_statement(st);
+		st = quilt_st_create_literal(entrystr, NS_RDFS "label", "Anyone", "en-gb");
+		librdf_model_add_statement(req->model, st);
+		librdf_free_statement(st);
+		st = quilt_st_create_uri(entrystr, NS_RDFS "seeAlso", deststr);
+		librdf_model_add_statement(req->model, st);
+		librdf_free_statement(st);
+		st = quilt_st_create_uri(self, NS_RDFS "seeAlso", entrystr);
+		librdf_model_add_statement(req->model, st);
+		librdf_free_statement(st);
+		free(entrystr);
+		free(deststr);
+		quilt_canon_destroy(entry);
+		quilt_canon_destroy(dest);
+	}
+	if(spindle_db)
+	{
+		if((r = spindle_audiences_db(req, &query)) != 200)
+		{
+			return r;
+		}	   
+	}
+	if((r = spindle_add_concrete(req)) != 200)
+	{
+		return r;
+	}
+	if((r = spindle_query_meta(req, &query)) != 200)
+	{
+		return r;
+	}
+	free(self);
+	return 200;
 }

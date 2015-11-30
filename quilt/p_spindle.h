@@ -22,6 +22,7 @@
 # define P_SPINDLE_H_                  1
 
 # define _BSD_SOURCE                   1
+# define QUILT_LEGACY_REQUEST_STRUCT   1
 
 # include <stdlib.h>
 # include <string.h>
@@ -94,9 +95,17 @@ struct query_struct
 	int score;
 };
 
-struct mediamatch_struct {
-		const char *name;
-		const char *uri;
+struct mediamatch_struct
+{
+	const char *name;
+	const char *uri;
+};
+
+struct spindle_dynamic_endpoint
+{
+	const char *path;
+	size_t pathlen;
+	int (*process)(QUILTREQ *req, struct spindle_dynamic_endpoint *endpoint);
 };
 
 extern SQL *spindle_db;
@@ -127,6 +136,7 @@ int spindle_query_osd(QUILTREQ *request);
 /* SQL back-end */
 int spindle_query_db(QUILTREQ *request, struct query_struct *query);
 int spindle_lookup_db(QUILTREQ *request, const char *target);
+int spindle_audiences_db(QUILTREQ *request, struct query_struct *query);
 
 /* SPARQL back-end */
 int spindle_query_sparql(QUILTREQ *request, struct query_struct *query);

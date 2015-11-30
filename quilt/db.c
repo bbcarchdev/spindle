@@ -343,6 +343,81 @@ spindle_lookup_db(QUILTREQ *request, const char *target)
 	return 0;
 }
 
+/* Retrieve the list of audiences */
+int
+spindle_audiences_db(QUILTREQ *request, struct query_struct *query)
+{
+	SQL_STATEMENT *rs;
+	int limit, offset;
+	QUILTCANON *dest;
+	char *self, *deststr;
+	const char *audience;
+	librdf_statement *st;
+	const char *title;
+
+	limit = request->limit;
+	offset = request->offset;
+	
+	/* We synthesise an entry at the start of the list, so adjust our
+	 * limits and offsets accordingly
+	 */
+	if(!offset)
+	{
+		limit--;
+	}
+	else
+	{
+		offset--;
+	}
+	if(!limit)
+	{
+		return 200;
+	}
+	if(offset)
+	{
+		rs = sql_queryf(spindle_db, "SELECT DISTINCT \"m\".\"audience\", \"i\".\"title\" FROM \"media\" \"m\" LEFT JOIN \"proxy\" \"p\" ON \"m\".\"audience\" = ANY(\"p\".\"sameas\") LEFT JOIN \"index\" \"i\" ON \"i\".\"id\" = \"p\".\"id\" LIMIT %d OFFSET %d", limit + 1, offset);
+	}
+	else
+	{
+		rs = sql_queryf(spindle_db, "SELECT DISTINCT \"m\".\"audience\", \"i\".\"title\" FROM \"media\" \"m\" LEFT JOIN \"proxy\" \"p\" ON \"m\".\"audience\" = ANY(\"p\".\"sameas\") LEFT JOIN \"index\" \"i\" ON \"i\".\"id\" = \"p\".\"id\" LIMIT %d", limit + 1);
+	}
+	self = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
+	dest = quilt_canon_create(request->canonical);
+	quilt_canon_reset_path(dest);
+	quilt_canon_reset_params(dest);
+	quilt_canon_set_fragment(dest, NULL);
+	for(; limit && !sql_stmt_eof(rs); sql_stmt_next(rs))
+	{
+		limit--;
+		audience = sql_stmt_str(rs, 0);
+		title = sql_stmt_str(rs, 1);
+		quilt_canon_set_param(dest, "for", audience);
+		deststr = quilt_canon_str(dest, QCO_DEFAULT);
+		st = quilt_st_create_uri(audience, NS_RDF "type", NS_ODRL "Group");
+		librdf_model_add_statement(request->model, st);
+		librdf_free_statement(st);
+		st = quilt_st_create_uri(audience, NS_RDFS "seeAlso", deststr);
+		librdf_model_add_statement(request->model, st);
+		librdf_free_statement(st);
+		st = quilt_st_create_uri(self, NS_RDFS "seeAlso", audience);
+		librdf_model_add_statement(request->model, st);
+		librdf_free_statement(st);
+		if(title)
+		{
+			add_langvector(request->model, title, audience, NS_RDFS "label");
+		}
+		free(deststr);
+	}
+	if(!limit && !sql_stmt_eof(rs))
+	{
+		query->more = 1;
+	}
+	quilt_canon_destroy(dest);
+	sql_stmt_destroy(rs);
+	free(self);
+	return 200;
+}
+
 static int
 process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 {
