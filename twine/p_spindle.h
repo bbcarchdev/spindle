@@ -53,6 +53,12 @@
 # define SF_UPDATED                     (1<<1)
 # define SF_REFRESHED                   (1<<2)
 
+/* Trigger kinds */
+# define TK_PROXY                       (1<<0)
+# define TK_TOPICS                      (1<<1)
+# define TK_MEDIA                       (1<<2)
+# define TK_MEMBERSHIP                  (1<<3)
+
 # define SPINDLE_URI_MIME               "application/x-spindle-uri"
 
 /* Namespaces */
@@ -230,6 +236,12 @@ struct spindle_strset_struct
 	size_t size;
 };
 
+struct spindle_trigger_struct
+{
+	char *uri;
+	unsigned int kind;
+};
+
 /* State used while generating a single proxy entry */
 struct spindle_cache_struct
 {
@@ -277,6 +289,9 @@ struct spindle_cache_struct
 	/* Geographical co-ordinates */
 	int has_geo;
 	double lat, lon;
+	/* List of URIs which trigger updates to this entity */
+	size_t ntriggers;
+	struct spindle_trigger_struct *triggers;
 };
 
 struct spindle_graphcache_struct
@@ -343,6 +358,8 @@ int spindle_cache_update_set(SPINDLE *spindle, struct spindle_strset_struct *set
  * if no references exist any more, the cached data will be removed.
  */
 int spindle_cache_update(SPINDLE *spindle, const char *localname, struct spindle_strset_struct *set);
+/* Add a trigger URI */
+int spindle_cache_trigger(SPINDLECACHE *cache, const char *uri, unsigned int kind);
 
 /* Generate and store pre-composed N-Quads */
 int spindle_precompose_init(SPINDLE *spindle);

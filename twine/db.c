@@ -50,6 +50,7 @@ static int spindle_db_audiences_action_(SPINDLE *spindle, librdf_model *model, l
 static int spindle_db_audiences_assignee_(SPINDLE *spindle, librdf_model *model, librdf_node *subject, char ***audiences);
 static int spindle_db_membership_(SQL *sql, const char *id, SPINDLECACHE *data);
 static int spindle_db_membership_add_(SQL *sql, const char *id, const char *collid);
+static int spindle_db_triggers_(SQL *sql, const char *id, SPINDLECACHE *data);
 #endif
 
 #if SPINDLE_DB_PROXIES
@@ -155,6 +156,11 @@ spindle_db_cache_store(SPINDLECACHE *data)
 		return -1;
 	}
 	if(spindle_db_membership_(sql, id, data))
+	{
+		free(id);
+		return -1;
+	}
+	if(spindle_db_triggers_(sql, id, data))
 	{
 		free(id);
 		return -1;
@@ -445,6 +451,7 @@ spindle_db_media_(SQL *sql, const char *id, SPINDLECACHE *data)
 	if(license)
 	{
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": license URI for <%s> is <%s>\n", refs[0], license);
+		spindle_cache_trigger(data, license, TK_MEDIA);
 		if(spindle_db_audiences_(data->spindle, license, &audiences))
 		{
 			free(license);
@@ -1122,6 +1129,22 @@ spindle_db_membership_add_(SQL *sql, const char *id, const char *collid)
 		spindle_db_membership_add_(sql, id, sql_stmt_str(rs, 0));
 	}
 	sql_stmt_destroy(rs);
+	return 0;
+}
+
+/* Add the set of trigger URIs to the database */
+static int
+spindle_db_triggers_(SQL *sql, const char *id, SPINDLECACHE *data)
+{
+	size_t c;
+
+	for(c = 0; c < data->ntriggers; c++)
+	{
+		if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\") VALUES (%Q, %Q)", id, data->triggers[c].uri))
+		{
+			return -1;
+		}
+	}
 	return 0;
 }
 

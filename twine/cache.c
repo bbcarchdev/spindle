@@ -255,6 +255,39 @@ spindle_cache_init_(SPINDLECACHE *data, SPINDLE *spindle, const char *localname)
 	return 0;
 }
 
+/* Add a trigger URI */
+int
+spindle_cache_trigger(SPINDLECACHE *cache, const char *uri, unsigned int kind)
+{
+	size_t c;
+	struct spindle_trigger_struct *p;
+
+	for(c = 0; c < cache->ntriggers; c++)
+	{
+		if(!strcmp(cache->triggers[c].uri, uri))
+		{
+			cache->triggers[c].kind |= kind;
+			return 0;
+		}
+	}
+	p = (struct spindle_trigger_struct *) realloc(cache->triggers, (cache->ntriggers + 1) * (sizeof(struct spindle_trigger_struct)));
+	if(!p)
+	{
+		return -1;
+	}
+	cache->triggers = p;
+	p = &(cache->triggers[cache->ntriggers]);
+	memset(p, 0, sizeof(struct spindle_trigger_struct));
+	p->uri = strdup(uri);
+	if(!p->uri)
+	{
+		return -1;
+	}
+	p->kind = kind;
+	cache->ntriggers++;
+	return 0;
+}
+
 /* Clean up the proxy entity update state data structure */
 static int
 spindle_cache_cleanup_(SPINDLECACHE *data)
@@ -300,6 +333,11 @@ spindle_cache_cleanup_(SPINDLECACHE *data)
 	{
 		spindle_strset_destroy(data->classes);
 	}
+	for(c = 0; c < data->ntriggers; c++)
+	{
+		free(data->triggers[c].uri);
+	}
+	free(data->triggers);
 	/* Never free data->graph - it is a pointer to data->doc or spindle->rootgraph */
 	free(data->title);
 	free(data->title_en);
