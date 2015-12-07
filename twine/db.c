@@ -199,6 +199,13 @@ spindle_db_remove_(SQL *sql, const char *id)
 	return 0;
 }
 
+/* Populate the core index entry for an object. This stores:
+ * - Title
+ * - Description
+ * - Class URIs
+ * - Prominence score
+ * - Coordinates (for places)
+ */
 static int
 spindle_db_add_(SQL *sql, const char *id, SPINDLECACHE *data)
 {
