@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               13
+#define DB_SCHEMA_VERSION               14
 
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
@@ -323,6 +323,33 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 			return -1;
 		}
 		if(sql_execute(sql, "CREATE INDEX \"moved_to\" ON \"moved\" (\"to\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 14)
+	{
+		/* The triggers table is used to express processing dependency
+		 * relationships between entities. The "id" is the UUID of
+		 * the entity whose update should be triggered, while the "uri"
+		 * is the URI whose processing should trigger that update. For
+		 * example, a media item's processing should be triggered by
+		 * a change in state in the license URI.
+		 */
+		if(sql_execute(sql, "CREATE TABLE \"triggers\" ("
+			"  \"id\" uuid NOT NULL, "
+			"  \"uri\" text NOT NULL, "
+			"  PRIMARY KEY(\"id\")"
+			")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"triggers_id\" ON \"triggers\" (\"id\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"triggers_uri\" ON \"triggers\" (\"uri\")"))
 		{
 			return -1;
 		}
