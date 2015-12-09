@@ -49,7 +49,10 @@ static int spindle_db_audiences_permission_(SPINDLE *spindle, librdf_model *mode
 static int spindle_db_audiences_action_(SPINDLE *spindle, librdf_model *model, librdf_node *subject);
 static int spindle_db_audiences_assignee_(SPINDLE *spindle, librdf_model *model, librdf_node *subject, char ***audiences);
 static int spindle_db_membership_(SQL *sql, const char *id, SPINDLECACHE *data);
+static int spindle_db_membership_add_uri_(SPINDLECACHE *data, SQL *sql, const char *id, const char *uristr);
 static int spindle_db_membership_add_(SQL *sql, const char *id, const char *collid);
+static int spindle_db_membership_query_(SQL *sql, const char *id, SPINDLECACHE *data, librdf_model *model, librdf_node *graph, const char *predicate, int inverse, int matchrefs);
+static int spindle_db_membership_strset_(SQL *sql, const char *id, SPINDLECACHE *data, struct spindle_strset_struct *set);
 static int spindle_db_triggers_(SQL *sql, const char *id, SPINDLECACHE *data);
 #endif
 
@@ -1039,66 +1042,169 @@ spindle_db_audiences_assignee_(SPINDLE *spindle, librdf_model *model, librdf_nod
 /* Add information to the database about this entities membership in
  * collections.
  *
- * - <this> dct:isPartOf <collection>
- *
- * The actual predicates evaluated here should be configurable via the
+ * XXX The actual predicates evaluated here should be configurable via the
  * rulebase.
  */
 static int
 spindle_db_membership_(SQL *sql, const char *id, SPINDLECACHE *data)
 {
+	/* Find the statements within the proxy model which explicity express
+	 * the fact that our proxy is a member of some collection.
+	 */
+	if(spindle_db_membership_query_(sql, id, data, data->proxydata, data->graph, NS_DCTERMS "isPartOf", 0, 0))
+	{
+		return -1;
+	}
+	/* Find the statements within the source data which express the fact
+	 * that the document describing our subject is a member of a collection
+	 */
+	if(spindle_db_membership_query_(sql, id, data, data->sourcedata, NULL, NS_FOAF "primaryTopic", 1, 1))
+	{
+		return -1;
+	}
+	/* Attempt to recursively add this proxy to a collection corresponding to
+	 * the source graph URI (which may also be a member of other collections).
+	 */
+	if(spindle_db_membership_strset_(sql, id, data, data->sources))
+	{
+		return -1;
+	}
+	return 0;
+}
+
+/* Query the model for collection membership, where the objects of the
+ * triples are proxy URIs (in which case they're translated to UUIDs),
+ * or remote URIs which need to be looked up.
+ *
+ * - 'inverse' means the query will be in the form ?s <predicate> <proxy-uri>
+ *
+ * - 'matchrefs' means any subject or object (depending upon 'inverse') which
+ *   is in data->refs (i.e., all of the source data URIs for the entity being
+ *   processed) will be matched in place of <proxy-uri>
+ */
+static int
+spindle_db_membership_query_(SQL *sql, const char *id, SPINDLECACHE *data, librdf_model *model, librdf_node *graph, const char *predicate, int inverse, int matchrefs)
+{
+	librdf_iterator *i;
 	librdf_statement *query, *st;
 	librdf_node *node;
 	librdf_stream *stream;
 	librdf_uri *uri;
 	const char *uristr;
-	char *collid;
-	int r;
+	size_t c;
+	int r, match;	
 
+	if(!graph)
+	{
+		for(i = librdf_model_get_contexts(model); !librdf_iterator_end(i); librdf_iterator_next(i))
+		{
+			graph = librdf_iterator_get_object(i);
+			if(!graph)
+			{
+				return -1;
+			}
+			if(spindle_db_membership_query_(sql, id, data, model, graph, predicate, inverse, matchrefs))
+			{
+				return -1;
+			}
+		}
+		librdf_free_iterator(i);
+		return 0;
+	}
 	if(!(query = librdf_new_statement(data->spindle->world)))
 	{
 		return -1;
 	}
-	if(!(node = librdf_new_node_from_node(data->self)))
+	if(!matchrefs)
 	{
-		librdf_free_statement(query);
-		return -1;
+		if(!(node = librdf_new_node_from_node(data->self)))
+		{
+			librdf_free_statement(query);
+			return -1;
+		}
+		if(inverse)
+		{
+			librdf_statement_set_object(query, node);
+		}
+		else
+		{
+			librdf_statement_set_subject(query, node);
+		}
+		/* the above 'node' is now owned by 'query' */
 	}
-	librdf_statement_set_subject(query, node);
-	/* 'node' is now owned by 'query' */
-	if(!(node = librdf_new_node_from_uri_string(data->spindle->world, (const unsigned char *) NS_DCTERMS "isPartOf")))
+	if(!(node = librdf_new_node_from_uri_string(data->spindle->world, (const unsigned char *) predicate)))
 	{
 		librdf_free_statement(query);
 		return -1;
 	}
 	librdf_statement_set_predicate(query, node);
-	/* 'node' is now owned by 'query' */
+	/* the above 'node' is now owned by 'query' */
 	r = 0;
-	for(stream = librdf_model_find_statements_in_context(data->proxydata, query, data->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
+	stream = librdf_model_find_statements_in_context(model, query, graph);
+	for(; !librdf_stream_end(stream); librdf_stream_next(stream))
 	{
+		r = 0;
 		st = librdf_stream_get_object(stream);
-		if((node = librdf_statement_get_object(st)) &&
+		if(matchrefs)
+		{
+			/* If 'matchrefs' is set, then the subject (inverse=0) or object
+			 * (inverse=1) of the query is unset, and we should compare its
+			 * value against the external URIs for the entity we're updating,
+			 * as listed in data->refs[]. If we get a match, then the triple
+			 * refers to this entity, and we can proceed with the membership
+			 * addition.
+			 */
+			if(inverse)
+			{
+				node = librdf_statement_get_object(st);
+			}
+			else
+			{
+				node = librdf_statement_get_subject(st);
+			}
+			if(node &&
+			   librdf_node_is_resource(node) &&
+			   (uri = librdf_node_get_uri(node)) &&
+			   (uristr = (const char *) librdf_uri_as_string(uri)))
+			{
+				match = 0;
+				for(c = 0; data->refs[c]; c++)
+				{
+					if(!strcmp(uristr, data->refs[c]))
+					{
+						match = 1;
+						break;
+					}
+				}
+				if(!match)
+				{
+					continue;
+				}
+			}
+			else
+			{
+				/* Not a URI node */
+				continue;
+			}
+		}
+		if(inverse)
+		{
+			node = librdf_statement_get_subject(st);
+		}
+		else
+		{
+			node = librdf_statement_get_object(st);
+		}
+		if(node &&
 		   librdf_node_is_resource(node) &&
 		   (uri = librdf_node_get_uri(node)) &&
 		   (uristr = (const char *) librdf_uri_as_string(uri)))
 		{
-			if(!spindle_db_local_(data->spindle, uristr))
-			{
-				continue;
-			}
-			collid = spindle_db_id_(uristr);
-			if(!collid)
+			if(spindle_db_membership_add_uri_(data, sql, id, uristr))
 			{
 				r = -1;
 				break;
 			}
-			if(spindle_db_membership_add_(sql, id, collid))
-			{
-				free(collid);
-				r = -1;
-				break;
-			}
-			free(collid);
 		}
 	}
 	librdf_free_stream(stream);
@@ -1107,12 +1213,81 @@ spindle_db_membership_(SQL *sql, const char *id, SPINDLECACHE *data)
 	return r;
 }
 
+/* Iterate a set of URIs, where each is either a proxy URI (in which case
+ * it's translated to a UUID), or a remote URI which needs to be looked up.
+ */
+static int
+spindle_db_membership_strset_(SQL *sql, const char *id, SPINDLECACHE *data, struct spindle_strset_struct *set)
+{
+	int r;
+	size_t c;
+
+	for(c = 0; c < set->count; c++)
+	{
+		if((r = spindle_db_membership_add_uri_(data, sql, id, set->strings[c])))
+		{
+			break;
+		}
+	}
+	return r;
+}
+
+static int
+spindle_db_membership_add_uri_(SPINDLECACHE *data, SQL *sql, const char *id, const char *uristr)
+{
+	char *collid, *localuri;
+	int r;
+
+	r = 0;
+	localuri = NULL;
+	collid = NULL;
+	if(spindle_db_local_(data->spindle, uristr))
+	{
+		collid = spindle_db_id_(uristr);
+		if(!collid)
+		{
+			r = -1;
+		}
+		if(!r && spindle_db_membership_add_(sql, id, collid))
+		{
+			r = -1;
+		}
+	}
+	else
+	{
+		spindle_cache_trigger(data, uristr, TK_MEMBERSHIP);
+		localuri = spindle_proxy_locate(data->spindle, uristr);
+		if(!localuri)
+		{
+			twine_logf(LOG_DEBUG, PLUGIN_NAME ": membership: no proxy found for <%s>\n", uristr);
+			return 0;
+		}			   
+		collid = spindle_db_id_(localuri);
+		if(!collid)
+		{
+			twine_logf(LOG_ERR, PLUGIN_NAME ": membership: failed to locate local UUID for <%s>\n", localuri);
+			r = -1;
+		}
+		if(!r && spindle_db_membership_add_(sql, id, collid))
+		{
+			r = -1;
+		}  
+	}
+	free(collid);
+	free(localuri);
+	return r;
+}
+
 static int
 spindle_db_membership_add_(SQL *sql, const char *id, const char *collid)
 {
 	SQL_STATEMENT *rs;
 
-	rs = sql_queryf(sql, "SELECT \"id\" FROM \"membership\" WHERE \"id\" = %Q AND \"collection\" = %Q");	
+	rs = sql_queryf(sql, "SELECT \"id\" FROM \"membership\" WHERE \"id\" = %Q AND \"collection\" = %Q", id, collid);
+	if(!rs)
+	{
+		return -1;
+	}
 	if(!sql_stmt_eof(rs))
 	{
 		sql_stmt_destroy(rs);
@@ -1124,6 +1299,10 @@ spindle_db_membership_add_(SQL *sql, const char *id, const char *collid)
 		return -1;
 	}
 	rs = sql_queryf(sql, "SELECT \"collection\" FROM \"membership\" WHERE \"id\" = %Q", collid);
+	if(!rs)
+	{
+		return -1;
+	}
 	for(; !sql_stmt_eof(rs); sql_stmt_next(rs))
 	{
 		spindle_db_membership_add_(sql, id, sql_stmt_str(rs, 0));

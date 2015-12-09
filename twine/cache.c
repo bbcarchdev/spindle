@@ -252,6 +252,10 @@ spindle_cache_init_(SPINDLECACHE *data, SPINDLE *spindle, const char *localname)
 	{
 		return -1;
 	}
+	if(!(data->sources = spindle_strset_create()))
+	{
+		return -1;
+	}
 	return 0;
 }
 
@@ -297,6 +301,7 @@ spindle_cache_cleanup_(SPINDLECACHE *data)
 	twine_logf(LOG_DEBUG, PLUGIN_NAME " ---------------------------------------\n");
 	spindle_cache_cleanup_literalset_(&(data->titleset));
 	spindle_cache_cleanup_literalset_(&(data->descset));
+	spindle_strset_destroy(data->sources);
 	if(data->refs)
 	{
 		for(c = 0; data->refs[c]; c++)
@@ -500,6 +505,8 @@ spindle_cache_describedby_(SPINDLECACHE *data)
 	librdf_stream *stream;
 	librdf_node *node, *subject;
 	librdf_statement *st, *statement;
+	librdf_uri *nodeuri;
+	const char *nodeuristr;
 	const char *uri;
 
 	/* Find all of the triples related to all of the graphs describing
@@ -549,7 +556,17 @@ spindle_cache_describedby_(SPINDLECACHE *data)
 			{
 				continue;
 			}
-			
+			nodeuri = librdf_node_get_uri(node);
+			if(!nodeuri)
+			{
+				continue;
+			}
+			nodeuristr = (const char *) librdf_uri_as_string(nodeuri);
+			if(!nodeuristr)
+			{
+				continue;
+			}
+			spindle_strset_add(data->sources, nodeuristr);
 			st = twine_rdf_st_create();
 			librdf_statement_set_subject(st, librdf_new_node_from_node(subject));
 			librdf_statement_set_predicate(st, twine_rdf_node_createuri(NS_POWDER "describedBy"));

@@ -292,6 +292,8 @@ struct spindle_cache_struct
 	/* List of URIs which trigger updates to this entity */
 	size_t ntriggers;
 	struct spindle_trigger_struct *triggers;
+	/* List of URIs which describe this entity */
+	struct spindle_strset_struct *sources;
 };
 
 struct spindle_graphcache_struct
