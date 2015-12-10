@@ -308,6 +308,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		t = appendf(t, &qbuflen, " LIMIT %d", request->limit + 1);
 	}
 	rs = sql_queryf(spindle_db, qbuf, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
+	free(qbuf);
 	if(!rs)
 	{
 		quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": query execution failed\n");
@@ -923,15 +924,27 @@ appendf(char *buf, size_t *buflen, const char *fmt, ...)
 	va_list ap;
 	int l;
 	
+	if(!*buflen)
+	{
+		return 0;
+	}
 	va_start(ap, fmt);
-	l = vsnprintf(buf, *buflen, fmt, ap);
+	l = vsnprintf(buf, (*buflen) - 1, fmt, ap);
 	va_end(ap);
 	if(l == -1)
 	{
 		return NULL;
 	}
+	buf[*buflen] = 0;
 	buf += l;
-	*buflen -= l;
+	if(l > (ssize_t) *buflen)
+	{
+		*buflen = 0;
+	}
+	else
+	{
+		*buflen -= l;
+	}
 	return buf;
 }
 
