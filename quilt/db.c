@@ -57,7 +57,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	int rankflags;
 
 	memset(args, 0, sizeof(args));
-	qbuflen = 560;
+	qbuflen = 1024;
 	n = 0;
 	related = NULL;
 	collection = NULL;
