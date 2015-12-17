@@ -56,6 +56,11 @@ spindle_item(QUILTREQ *request)
 	{
 		return r;
 	}
+	r = spindle_membership(request);
+	if(r != 200)
+	{
+		return r;
+	}
 	r = spindle_item_related(request);
 	if(r != 200)
 	{

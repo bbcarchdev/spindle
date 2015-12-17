@@ -608,3 +608,12 @@ spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struc
 	return 0;
 }
 
+int
+spindle_membership(QUILTREQ *request)
+{
+	if(spindle_db)
+	{
+		return spindle_membership_db(request);
+	}
+	return 200;
+}

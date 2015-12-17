@@ -31,6 +31,7 @@ static int add_langvector(librdf_model *model, const char *vector, const char *s
 static int add_array(librdf_model *model, const char *array, const char *subject, const char *predicate);
 static int add_point(librdf_model *model, const char *array, const char *subject);
 static char *appendf(char *buf, size_t *buflen, const char *fmt, ...);
+static int process_membership_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item);
 
 /* Short names for media classes which can be used for convenience */
 struct mediamatch_struct spindle_mediamatch[] = {
@@ -317,6 +318,77 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	return process_rs(request, query, rs);	
 }
 
+/* For a given item, determine what collections (if any) this item is part
+ * of.
+ */
+int
+spindle_membership_db(QUILTREQ *request)
+{
+	size_t c;
+	const char *id, *t;
+	SQL_STATEMENT *rs;
+	QUILTCANON *item;
+	char idbuf[36];
+	char *self, *p;
+
+	c = strlen(request->base);
+	if(!strncmp(request->subject, request->base, c))
+	{
+		id = request->subject + c;
+		while(id[0] == '/')
+		{
+			id++;
+		}
+		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": DB: membership: '%s'\n", id);
+		if(strlen(id) != 32)
+		{
+			return 404;
+		}
+	}
+	else
+	{
+		return 404;
+	}
+	if(request->index)
+	{
+		self = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
+	}
+	else
+	{
+		self = quilt_canon_str(request->canonical, QCO_NOEXT|QCO_FRAGMENT);
+	}
+	rs = sql_queryf(spindle_db, "SELECT \"collection\" FROM \"membership\" WHERE \"id\" = %Q", id);
+	if(!rs)
+	{
+		free(self);
+		return 500;
+	}
+	for(; !sql_stmt_eof(rs); sql_stmt_next(rs))
+	{
+		item = quilt_canon_create(request->canonical);
+		quilt_canon_reset_path(item);
+		quilt_canon_reset_params(item);
+		quilt_canon_set_fragment(item, "id");
+		t = sql_stmt_str(rs, 0);
+		for(p = idbuf; p - idbuf < 32; t++)
+		{
+			if(isalnum(*t))
+			{
+				*p = tolower(*t);
+				p++;
+			}
+		}
+		*p = 0;
+		quilt_canon_add_path(item, idbuf);
+		process_membership_row(request, rs, idbuf, self, item);
+		quilt_canon_destroy(item);
+	}
+	sql_stmt_destroy(rs);
+	free(self);
+	return 200;
+}
+
+
 /* Look up an item using the SQL database back-end */
 int
 spindle_lookup_db(QUILTREQ *request, const char *target)
@@ -574,6 +646,24 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	free(uri);
 	quilt_canon_destroy(slot);
 	free(slotstr);
+	return 0;
+}
+
+static int
+process_membership_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item)
+{
+	char *uri;
+	librdf_statement *st;
+
+	(void) rs;
+	(void) id;
+
+	/* <item> dct:isPartOf <self> */
+	uri = quilt_canon_str(item, QCO_SUBJECT);
+	st = quilt_st_create_uri(self, NS_DCTERMS "isPartOf", uri);
+	librdf_model_add_statement(request->model, st);
+	librdf_free_statement(st);
+	free(uri);
 	return 0;
 }
 

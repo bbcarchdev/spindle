@@ -143,11 +143,14 @@ int spindle_query(QUILTREQ *request, struct query_struct *query);
 int spindle_query_meta(QUILTREQ *request, struct query_struct *query);
 /* Add OpenSearch metadata to roots */
 int spindle_query_osd(QUILTREQ *request);
+/* Determine what collections something is part of */
+int spindle_membership(QUILTREQ *request);
 
 /* SQL back-end */
 int spindle_query_db(QUILTREQ *request, struct query_struct *query);
 int spindle_lookup_db(QUILTREQ *request, const char *target);
 int spindle_audiences_db(QUILTREQ *request, struct query_struct *query);
+int spindle_membership_db(QUILTREQ *request);
 
 /* SPARQL back-end */
 int spindle_query_sparql(QUILTREQ *request, struct query_struct *query);
