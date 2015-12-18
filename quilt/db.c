@@ -206,9 +206,15 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 			t = appendf(t, &qbuflen, ", \"media\" \"m\"");
 		}	
 	}
-	if(collection)
-	{
+	if(collection && !query->media)
+	{	   
 		t = appendf(t, &qbuflen, ", \"membership\" \"cm\"");
+	}
+	else if(collection && query->media)
+	{
+		t = appendf(t, &qbuflen, " LEFT JOIN \"membership\" \"cm1\" ON (\"i\".\"id\" = \"cm1\".\"id\" AND \"cm1\".\"collection\" = %Q)");
+		args[n] = collection;
+		n++;
 	}
 	/* WHERE */
 	if(query->score > 0)
@@ -244,13 +250,10 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	{
 		/* NOT related but HAS media query (subquery) */
 		t = appendf(t, &qbuflen, " AND \"i\".\"id\" IN ( "
-					"SELECT \"a\".\"about\" FROM "
-					" \"about\" \"a\", "
-					" \"index_media\" \"im\", "
-					" \"media\" \"m\" "
-					"WHERE "
-					" \"im\".\"id\" = \"a\".\"id\" AND "
-					" \"m\".\"id\" = \"im\".\"media\" ");
+					"SELECT \"a\".\"about\" "
+					" FROM \"about\" \"a\" "
+					" INNER JOIN \"index_media\" \"im\" ON (\"a\".\"id\" = \"im\".\"id\")"
+					" INNER JOIN \"media\" \"m\" ON (\"im\".\"media\" = \"m\".\"id\"");
 	}
 	if(query->media)
 	{
@@ -280,11 +283,23 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	}
 	if(!related && query->media)
 	{
-		/* NOT related and HAS media query (subquery) */
-		t = appendf(t, &qbuflen, ") ");
+		/* NOT related and HAS media query (subquery) */	   
+		if(collection)
+		{
+			t = appendf(t, &qbuflen, ")"
+					   " LEFT JOIN \"membership\" \"cm2\" ON (\"im\".\"id\" = \"cm2\".\"id\" AND \"cm2\".\"collection\" = %Q)"
+					   " WHERE (\"cm1\".\"collection\" IS NOT NULL OR \"cm2\".\"collection\" IS NOT NULL)"
+					   ")");
+			args[n] = collection;
+			n++;
+		}
+		else
+		{
+			t = appendf(t, &qbuflen, ") )");
+		}
 	}
-	/* Collection: the item must be within the specified collection */
-	if(collection)
+	/* Collection (but no media): the item must be within the specified collection */
+	else if(collection)
 	{
 		t = appendf(t, &qbuflen, " AND \"cm\".\"id\" = \"i\".\"id\" AND \"cm\".\"collection\" = %Q");
 		args[n] = collection;
