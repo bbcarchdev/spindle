@@ -47,6 +47,8 @@ RUN echo \
 	RewriteRule ^(.*)$ /index.fcgi [NS,L]\n\
 </VirtualHost>' > /etc/apache2/sites-available/quilt
 RUN a2dissite 000-default && a2ensite quilt
+RUN	ln -sf /dev/stdout /var/log/apache2/quilt.access.log && \
+	ln -sf /dev/stderr /var/log/apache2/error.log
 
 # Adjust Quilt config
 RUN 	sed -i -e 's|engine=file|engine=spindle|' /etc/quilt.conf && \
