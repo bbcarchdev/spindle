@@ -11,7 +11,7 @@ ENV APACHE_RUN_DIR	/var/run/apache2
 ENV APACHE_LOCK_DIR	/var/lock/apache2
 
 # Install Spindle-specific dependencies
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
 	liburi-dev libsparqlclient-dev \
 	libtwine-dev libquilt-dev libsql-dev \
 	libawsclient-dev twine quilt-fcgi \
