@@ -51,11 +51,12 @@ RUN	ln -sf /dev/stdout /var/log/apache2/quilt.access.log && \
 	ln -sf /dev/stderr /var/log/apache2/error.log
 
 # Adjust Quilt config
-RUN 	sed -i -e 's|engine=file|engine=spindle|' /etc/quilt.conf && \
+RUN 	sed -i -e 's|base=http://data\.example\.com|base=http://acropolis\.org\.uk|' /etc/quilt.conf && \
+	sed -i -e 's|engine=file|engine=spindle|' /etc/quilt.conf && \
 	sed -i -e 's|module=file.so|module=spindle.so|' /etc/quilt.conf && \
 	echo '\n\
 [spindle]\n\
-graph=http://bbcarchdev.net/\n\
+graph=http://acropolis.org.uk/\n\
 bucket=spindle\n\
 db=pgsql://postgres:postgres@postgres/postgres\n\
 \n\
@@ -79,7 +80,7 @@ data=http://4store:8080/data/\n\
 query=http://4store:8080/sparql/\n\
 \n\
 [spindle]\n\
-graph=http://bbcarchdev.net/\n\
+graph=http://acropolis.org.uk/\n\
 multigraph=yes\n\
 bucket=spindle\n\
 db=pgsql://postgres:postgres@postgres/postgres\n\
