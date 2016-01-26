@@ -25,7 +25,7 @@
 
 #if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
 
-static char *
+char *
 spindle_db_literalset_(struct spindle_literalset_struct *set)
 {
 	size_t c, nbytes;
@@ -82,7 +82,7 @@ spindle_db_literalset_(struct spindle_literalset_struct *set)
 	return str;
 }
 
-static char *
+char *
 spindle_db_strset_(struct spindle_strset_struct *set)
 {
 	size_t c, nbytes;
@@ -123,7 +123,7 @@ spindle_db_strset_(struct spindle_strset_struct *set)
 	return str;
 }
 
-static size_t
+size_t
 spindle_db_esclen_(const char *src)
 {
 	size_t len;
@@ -140,7 +140,7 @@ spindle_db_esclen_(const char *src)
 	return len;
 }
 
-static char *
+char *
 spindle_db_escstr_(char *dest, const char *src)
 {
 	for(; *src; src++)
@@ -156,7 +156,7 @@ spindle_db_escstr_(char *dest, const char *src)
 	return dest;
 }
 
-static char *
+char *
 spindle_db_escstr_lower_(char *dest, const char *src)
 {
 	for(; *src; src++)
@@ -172,7 +172,7 @@ spindle_db_escstr_lower_(char *dest, const char *src)
 	return dest;
 }
 
-static int
+int
 spindle_db_local_(SPINDLE *spindle, const char *localname)
 {
 	if(strncmp(localname, spindle->root, strlen(spindle->root)))
@@ -182,7 +182,7 @@ spindle_db_local_(SPINDLE *spindle, const char *localname)
 	return 1;
 }
 
-static char *
+char *
 spindle_db_id_(const char *localname)
 {
 	char *id, *p;

@@ -278,4 +278,3 @@ spindle_db_cache_source(SPINDLECACHE *data)
 }
 
 #endif /* SPINDLE_DB_PROXIES */
-
