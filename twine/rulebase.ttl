@@ -192,6 +192,9 @@ po:Clip
 po:Episode
 	spindle:expressedAs frbr:Work ;
 	spindle:prominence 25 .
+<http://shakespeare.floop.org.uk/ontologies/work#Play>
+	spindle:expressedAs frbr:Work ;
+	spindle:prominence 30 .
 po:Version
 	spindle:expressedAs frbr:Work ;
 	spindle:prominence -50 .
