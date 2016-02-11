@@ -185,7 +185,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		}
 		else
 		{
-			rankflags = 4|32;
+			rankflags = 1|32;
 			t = appendf(t, &qbuflen, ", ts_rank_cd(\"i\".\"index_%s\", \"query\", %d) AS \"rank\"", query->lang, rankflags);
 		}
 	}
