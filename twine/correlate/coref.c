@@ -21,7 +21,9 @@
 # include "config.h"
 #endif
 
-#include "p_spindle.h"
+#include "p_spindle-correlate.h"
+
+static int spindle_coref_add_(struct spindle_corefset_struct *set, const char *l, const char *r);
 
 /* Extract a list of co-references from a librdf model */
 struct spindle_corefset_struct *
@@ -44,10 +46,10 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 		return NULL;
 	}
 	/* Loop through each of the co-referencing predicates */
-	for(c = 0; c < spindle->corefcount; c++)
+	for(c = 0; c < spindle->rules->corefcount; c++)
 	{
 		query = librdf_new_statement(spindle->world);
-		pred = librdf_new_node_from_uri_string(spindle->world, (const unsigned char *) spindle->coref[c].predicate);
+		pred = librdf_new_node_from_uri_string(spindle->world, (const unsigned char *) spindle->rules->coref[c].predicate);
 		librdf_statement_set_predicate(query, pred);
 		/* pred is now owned by query */
 		pred = NULL;
@@ -64,7 +66,7 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 				uri = librdf_node_get_uri(obj);
 				r = librdf_uri_as_string(uri);
 /*				twine_logf(LOG_DEBUG, PLUGIN_NAME ": found coref (<%s>, <%s>) with <%s>\n", (const char *) l, (const char *) r, spindle->coref[c].predicate); */
-				if(spindle->coref[c].callback(set, (const char *) l, (const char *) r))
+				if(spindle->rules->coref[c].callback(set, (const char *) l, (const char *) r))
 				{
 					spindle_coref_destroy(set);
 					set = NULL;
@@ -95,7 +97,7 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 		   (l = librdf_uri_as_string(uri)))
 		{
 /*			twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding subject <%s>\n", (const char *) l); */
-			if(spindle_coref_add(set, (const char *) l, NULL))
+			if(spindle_coref_add_(set, (const char *) l, NULL))
 			{
 				spindle_coref_destroy(set);
 				set = NULL;
@@ -109,9 +111,62 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 	return set;
 }
 
-/* Add a single co-reference to a set (or if r is NULL, a lone subject) */
+/* Free the resources used by a co-reference set */
 int
-spindle_coref_add(struct spindle_corefset_struct *set, const char *l, const char *r)
+spindle_coref_destroy(struct spindle_corefset_struct *set)
+{
+	size_t c;
+
+	for(c = 0; c < set->refcount; c++)
+	{
+		free(set->refs[c].left);
+		free(set->refs[c].right);
+	}
+	free(set->refs);
+	free(set);
+	return 0;
+}
+
+/* Callback invoked when owl:sameAs references are found */
+int
+spindle_match_sameas(struct spindle_corefset_struct *set, const char *subject, const char *object)
+{
+	if(spindle_coref_add_(set, subject, object))
+	{
+		return -1;
+	}
+	return 0;		   	
+}
+
+int
+spindle_match_wikipedia(struct spindle_corefset_struct *set, const char *subject, const char *object)
+{
+	char *buf;
+
+	if(strncmp(object, "http://en.wikipedia.org/wiki/", 29))
+	{
+		return 0;
+	}
+	object += 29;
+	buf = (char *) malloc(strlen(object) + 29);
+	if(!buf)
+	{
+		return -1;
+	}
+	strcpy(buf, "http://dbpedia.org/resource/");
+	strcat(buf, object);
+	if(spindle_coref_add_(set, subject, buf))
+	{
+		free(buf);
+		return -1;
+	}
+	free(buf);
+	return 0;
+}
+
+/* Add a single co-reference to a set (or if r is NULL, a lone subject) */
+static int
+spindle_coref_add_(struct spindle_corefset_struct *set, const char *l, const char *r)
 {
 	struct spindle_coref_struct *p;
 	size_t c;
@@ -152,58 +207,5 @@ spindle_coref_add(struct spindle_corefset_struct *set, const char *l, const char
 	}
 	set->refcount++;
 /*	twine_logf(LOG_DEBUG, "refcount=%d, (added %s = %s)\n", (int) set->refcount, p->left, p->right); */
-	return 0;
-}
-
-/* Free the resources used by a co-reference set */
-int
-spindle_coref_destroy(struct spindle_corefset_struct *set)
-{
-	size_t c;
-
-	for(c = 0; c < set->refcount; c++)
-	{
-		free(set->refs[c].left);
-		free(set->refs[c].right);
-	}
-	free(set->refs);
-	free(set);
-	return 0;
-}
-
-/* Callback invoked when owl:sameAs references are found */
-int
-spindle_match_sameas(struct spindle_corefset_struct *set, const char *subject, const char *object)
-{
-	if(spindle_coref_add(set, subject, object))
-	{
-		return -1;
-	}
-	return 0;		   	
-}
-
-int
-spindle_match_wikipedia(struct spindle_corefset_struct *set, const char *subject, const char *object)
-{
-	char *buf;
-
-	if(strncmp(object, "http://en.wikipedia.org/wiki/", 29))
-	{
-		return 0;
-	}
-	object += 29;
-	buf = (char *) malloc(strlen(object) + 29);
-	if(!buf)
-	{
-		return -1;
-	}
-	strcpy(buf, "http://dbpedia.org/resource/");
-	strcat(buf, object);
-	if(spindle_coref_add(set, subject, buf))
-	{
-		free(buf);
-		return -1;
-	}
-	free(buf);
 	return 0;
 }

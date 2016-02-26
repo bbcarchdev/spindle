@@ -23,37 +23,8 @@
 
 #include "p_spindle.h"
 
-static SPINDLE spindle;
-
-static int spindle_init_(SPINDLE *spindle);
-static int spindle_cleanup_(SPINDLE *spindle);
-
-/* Twine plug-in entry-point */
 int
-twine_plugin_init(void)
-{	
-	twine_logf(LOG_DEBUG, PLUGIN_NAME " plug-in: initialising\n");
-	if(spindle_init_(&spindle))
-	{
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": initialisation failed\n");
-		spindle_cleanup_(&spindle);
-		return -1;
-	}
-	twine_logf(LOG_INFO, PLUGIN_NAME ": URI prefix is <%s>\n", spindle.root);
-	twine_preproc_register(PLUGIN_NAME, spindle_preproc, &spindle);
-	return 0;
-}
-
-int
-twine_plugin_done(void)
-{
-	twine_logf(LOG_DEBUG, PLUGIN_NAME " plug-in: cleaning up\n");
-	spindle_cleanup_(&spindle);
-	return 0;
-}
-
-static int
-spindle_init_(SPINDLE *spindle)
+spindle_init(SPINDLE *spindle)
 {
 	memset(spindle, 0, sizeof(SPINDLE));
 	spindle->world = twine_rdf_world();
@@ -61,10 +32,16 @@ spindle_init_(SPINDLE *spindle)
 	{
 		return -1;
 	}
+	spindle->multigraph = twine_config_get_bool("spindle:multigraph", 0);
 	spindle->root = twine_config_geta("spindle:graph", NULL);
 	if(!spindle->root)
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to obtain Spindle root graph name\n");
+		return -1;
+	}
+	spindle->sparql = twine_sparql_create();
+	if(!spindle->sparql)
+	{
 		return -1;
 	}
 	spindle->sameas = librdf_new_node_from_uri_string(spindle->world, (const unsigned char *) NS_OWL "sameAs");
@@ -97,17 +74,16 @@ spindle_init_(SPINDLE *spindle)
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create URI for xsd:dateTime\n");
 		return -1;
 	}
-	if(spindle_rulebase_init(spindle))
-	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to load rulebase\n");
-		return -1;
-	}
 	return 0;
 }
 
-static int
-spindle_cleanup_(SPINDLE *spindle)
+int
+spindle_cleanup(SPINDLE *spindle)
 {
+	if(spindle->sparql)
+	{
+		sparql_destroy(spindle->sparql);
+	}
 	if(spindle->root)
 	{
 		free(spindle->root);
@@ -132,31 +108,10 @@ spindle_cleanup_(SPINDLE *spindle)
 	{
 		librdf_free_uri(spindle->xsd_dateTime);
 	}
-	free(spindle->titlepred);
-	spindle_rulebase_cleanup(spindle);
+	if(spindle->rules)
+	{
+		spindle_rulebase_destroy(spindle->rules);
+	}
+	spindle_db_cleanup(spindle);
 	return 0;
-}
-
-/* Provide no-op placeholders for the matching methods because the rulebase
- * needs them to load correctly.
- * This can change if the rulebase loading because non-monolithic.
- */
-int
-spindle_match_sameas(struct spindle_corefset_struct *set, const char *subject, const char *object)
-{
-	(void) set;
-	(void) subject;
-	(void) object;
-	
-	return -1;
-}
-
-int
-spindle_match_wikipedia(struct spindle_corefset_struct *set, const char *subject, const char *object)
-{
-	(void) set;
-	(void) subject;
-	(void) object;
-
-	return -1;
 }

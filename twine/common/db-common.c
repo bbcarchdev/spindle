@@ -23,10 +23,53 @@
 
 #include "p_spindle.h"
 
-#if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
+static int spindle_db_querylog_(SQL *restrict sql, const char *query);
+static int spindle_db_noticelog_(SQL *restrict sql, const char *notice);
+static int spindle_db_errorlog_(SQL *restrict sql, const char *sqlstate, const char *message);
+
+/* Initialise a Spindle database connection, if configured to use one */
+int
+spindle_db_init(SPINDLE *spindle)
+{
+	char *t;
+
+	t = twine_config_geta("spindle:db", NULL);
+	if(!t)
+	{
+		return 0;
+	}
+	spindle->db = sql_connect(t);
+	if(!spindle->db)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to connect to database <%s>\n", t);
+		free(t);
+		return -1;
+	}
+	free(t);
+	sql_set_querylog(spindle->db, spindle_db_querylog_);
+	sql_set_errorlog(spindle->db, spindle_db_errorlog_);
+	sql_set_noticelog(spindle->db, spindle_db_noticelog_);
+	if(spindle_db_schema_update_(spindle))
+	{
+		return -1;
+	}
+	return 0;	
+}
+
+/* Clean up resources used by a Spindle database connection */
+int
+spindle_db_cleanup(SPINDLE *spindle)
+{
+	if(spindle->db)
+	{
+		sql_disconnect(spindle->db);
+	}
+	spindle->db = NULL;
+	return 0;
+}
 
 char *
-spindle_db_literalset_(struct spindle_literalset_struct *set)
+spindle_db_literalset(struct spindle_literalset_struct *set)
 {
 	size_t c, nbytes;
 	char *str, *p;
@@ -38,14 +81,14 @@ spindle_db_literalset_(struct spindle_literalset_struct *set)
 		nbytes += 7;
 		if(set->literals[c].lang[0])
 		{
-			nbytes += spindle_db_esclen_(set->literals[c].lang);
+			nbytes += spindle_db_esclen(set->literals[c].lang);
 		}
 		else
 		{
 			/* We use an underscore to indicate no language */
 			nbytes++;
 		}
-		nbytes += spindle_db_esclen_(set->literals[c].str);
+		nbytes += spindle_db_esclen(set->literals[c].str);
 	}
 	str = (char *) malloc(nbytes);
 	if(!str)
@@ -65,7 +108,7 @@ spindle_db_literalset_(struct spindle_literalset_struct *set)
 		p++;
 		if(set->literals[c].lang[0])
 		{
-			p = spindle_db_escstr_lower_(p, set->literals[c].lang);
+			p = spindle_db_escstr_lower(p, set->literals[c].lang);
 		}
 		else
 		{
@@ -74,7 +117,7 @@ spindle_db_literalset_(struct spindle_literalset_struct *set)
 		}
 		strcpy(p, "\"=>\"");
 		p += 4;
-		p = spindle_db_escstr_(p, set->literals[c].str);
+		p = spindle_db_escstr(p, set->literals[c].str);
 		*p = '"';
 		p++;
 	}
@@ -83,7 +126,7 @@ spindle_db_literalset_(struct spindle_literalset_struct *set)
 }
 
 char *
-spindle_db_strset_(struct spindle_strset_struct *set)
+spindle_db_strset(struct spindle_strset_struct *set)
 {
 	size_t c, nbytes;
 	char *str, *p;
@@ -93,7 +136,7 @@ spindle_db_strset_(struct spindle_strset_struct *set)
 	{
 		/* "string", */
 		nbytes += 3;
-		nbytes += spindle_db_esclen_(set->strings[c]);
+		nbytes += spindle_db_esclen(set->strings[c]);
 	}
 	str = (char *) malloc(nbytes);
 	if(!str)
@@ -113,7 +156,7 @@ spindle_db_strset_(struct spindle_strset_struct *set)
 		}
 		*p = '"';
 		p++;
-		p = spindle_db_escstr_(p, set->strings[c]);
+		p = spindle_db_escstr(p, set->strings[c]);
 		*p = '"';
 		p++;
 	}
@@ -124,7 +167,7 @@ spindle_db_strset_(struct spindle_strset_struct *set)
 }
 
 size_t
-spindle_db_esclen_(const char *src)
+spindle_db_esclen(const char *src)
 {
 	size_t len;
 
@@ -141,7 +184,7 @@ spindle_db_esclen_(const char *src)
 }
 
 char *
-spindle_db_escstr_(char *dest, const char *src)
+spindle_db_escstr(char *dest, const char *src)
 {
 	for(; *src; src++)
 	{
@@ -157,7 +200,7 @@ spindle_db_escstr_(char *dest, const char *src)
 }
 
 char *
-spindle_db_escstr_lower_(char *dest, const char *src)
+spindle_db_escstr_lower(char *dest, const char *src)
 {
 	for(; *src; src++)
 	{
@@ -173,7 +216,7 @@ spindle_db_escstr_lower_(char *dest, const char *src)
 }
 
 int
-spindle_db_local_(SPINDLE *spindle, const char *localname)
+spindle_db_local(SPINDLE *spindle, const char *localname)
 {
 	if(strncmp(localname, spindle->root, strlen(spindle->root)))
 	{
@@ -183,7 +226,7 @@ spindle_db_local_(SPINDLE *spindle, const char *localname)
 }
 
 char *
-spindle_db_id_(const char *localname)
+spindle_db_id(const char *localname)
 {
 	char *id, *p;
 	const char *t;
@@ -230,4 +273,29 @@ spindle_db_id_(const char *localname)
 	return id;
 }
 
-#endif /* SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES */
+static int
+spindle_db_querylog_(SQL *restrict sql, const char *query)
+{
+	(void) sql;
+
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": SQL: %s\n", query);
+	return 0;
+}
+
+static int
+spindle_db_noticelog_(SQL *restrict sql, const char *notice)
+{
+	(void) sql;
+
+	twine_logf(LOG_NOTICE, PLUGIN_NAME ": %s\n", notice);
+	return 0;
+}
+
+static int
+spindle_db_errorlog_(SQL *restrict sql, const char *sqlstate, const char *message)
+{
+	(void) sql;
+
+	twine_logf(LOG_ERR, PLUGIN_NAME ": [%s] %s\n", sqlstate, message);
+	return 0;
+}

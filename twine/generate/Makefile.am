@@ -18,4 +18,18 @@
 
 EXTRA_DIST = README.md
 
-SUBDIRS = common strip correlate generate
+AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ -I$(srcdir)/../common
+
+twinemodule_LTLIBRARIES = spindle-generate.la
+
+spindle_generate_la_SOURCES = p_spindle-generate.h \
+	module.c processor.c \
+	generate.c entry.c source.c describe.c related.c store.c \
+	classes.c props.c doc.c licenses.c precomposed.c \
+	index.c index-core.c index-about.c index-membership.c \
+	index-media.c index-audiences.c
+
+spindle_generate_la_LDFLAGS = -no-undefined -module -avoid-version
+
+spindle_generate_la_LIBADD = ../common/libspindle-common.la \
+	@LIBAWSCLIENT_LOCAL_LIBS@ @LIBAWSCLIENT_LIBS@

@@ -21,7 +21,7 @@
 # include "config.h"
 #endif
 
-#include "p_spindle.h"
+#include "p_spindle-correlate.h"
 
 /* Post-processing hook, invoked by Twine operations
  *
@@ -32,7 +32,7 @@
  * - caching and transforming source data and storing it with the proxies
  */
 int
-spindle_postproc(twine_graph *graph, void *data)
+spindle_correlate(twine_graph *graph, void *data)
 {
 	SPINDLE *spindle;
 	struct spindle_corefset_struct *oldset, *newset;
@@ -57,7 +57,7 @@ spindle_postproc(twine_graph *graph, void *data)
 		return -1;
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": extracting references from new graph\n");
-	newset = spindle_coref_extract(spindle, graph->store ? graph->store : graph->pristine, graph->uri);
+	newset = spindle_coref_extract(spindle, graph->store, graph->uri);
 	if(!newset)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to extract co-references from new graph state\n");

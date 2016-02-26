@@ -23,7 +23,6 @@
 
 #include "p_spindle.h"
 
-#if SPINDLE_DB_PROXIES
 struct relate_struct
 {
 	SPINDLE *spindle;
@@ -32,9 +31,6 @@ struct relate_struct
 };
 
 static int spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict userdata);
-#endif
-
-#if SPINDLE_DB_PROXIES
 
 char *
 spindle_db_proxy_locate(SPINDLE *spindle, const char *uri)
@@ -101,7 +97,7 @@ spindle_db_proxy_relate(SPINDLE *spindle, const char *remote, const char *local)
 	char *id;
 	struct relate_struct data;
 
-	id = spindle_db_id_(local);
+	id = spindle_db_id(local);
 	if(!id)
 	{
 		return -1;
@@ -130,7 +126,7 @@ spindle_db_proxy_refs(SPINDLE *spindle, const char *uri)
 	char **refset;
 	size_t count;
 
-	id = spindle_db_id_(uri);
+	id = spindle_db_id(uri);
 	if(!id)
 	{
 		return NULL;
@@ -186,8 +182,8 @@ spindle_db_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, cha
 
 	(void) refs;
 
-	oldid = spindle_db_id_(from);
-	newid = spindle_db_id_(to);
+	oldid = spindle_db_id(from);
+	newid = spindle_db_id(to);
 	if(!oldid || !newid)
 	{
 		free(oldid);
@@ -229,52 +225,3 @@ spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict userdata)
 	}
 	return 1;
 }
-
-/* Fetch all of the source data about the entities that relate to this
- * proxy
- */
-int
-spindle_db_cache_source(SPINDLECACHE *data)
-{
-	int r;
-	size_t c;
-	librdf_statement *st;
-
-	if(!data->refs)
-	{
-		data->refs = spindle_db_proxy_refs(data->spindle, data->localname);
-		if(!data->refs)
-		{
-			return -1;
-		}
-	}
-	r = 0;
-	for(c = 0; data->refs[c]; c++)
-	{
-		/* Add <ref> owl:sameAs <localname> triples to the proxy model */
-		st = twine_rdf_st_create();
-		librdf_statement_set_subject(st, twine_rdf_node_createuri(data->refs[c]));
-		librdf_statement_set_predicate(st, twine_rdf_node_clone(data->spindle->sameas));
-		librdf_statement_set_object(st, twine_rdf_node_createuri(data->localname));
-		librdf_model_context_add_statement(data->proxydata, data->graph, st);
-		twine_rdf_st_destroy(st);
-		/* Fetch the source data into the source model */
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": DB: fetching data for <%s>\n", data->refs[c]);
-		if(sparql_queryf_model(data->spindle->sparql, data->sourcedata,
-							   "SELECT DISTINCT ?s ?p ?o ?g\n"
-							   " WHERE {\n"
-							   "  GRAPH ?g {\n"
-							   "   ?s ?p ?o .\n"
-							   "   FILTER(?s = <%s> || ?o = <%s>)\n"
-							   "  }\n"
-							   "}",
-							   data->refs[c], data->refs[c]))
-		{
-			r = -1;
-			break;
-		}
-	}
-	return r;
-}
-
-#endif /* SPINDLE_DB_PROXIES */

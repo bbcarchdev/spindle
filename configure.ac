@@ -69,6 +69,10 @@ BT_DEFINE_PREFIX
 AC_CONFIG_FILES([Makefile
 m4/Makefile
 twine/Makefile
+twine/common/Makefile
+twine/strip/Makefile
+twine/correlate/Makefile
+twine/generate/Makefile
 quilt/Makefile
 docbook-html5/Makefile
 docs/Makefile

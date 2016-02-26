@@ -21,7 +21,7 @@
 # include "config.h"
 #endif
 
-#include "p_spindle.h"
+#include "p_spindle-generate.h"
 
 /* The matching state for a single property; 'map' points to the predicate
  * mapping data (defined above).
@@ -57,7 +57,7 @@ struct literal_struct
 struct propdata_struct
 {
 	SPINDLE *spindle;
-	SPINDLECACHE *cache;
+	SPINDLEENTRY *entry;
 	const char *localname;
 	const char *classname;
 	librdf_node *context;
@@ -73,7 +73,7 @@ struct propdata_struct
 	double lat, lon;
 };
 
-static int spindle_prop_init_(struct propdata_struct *data, SPINDLECACHE *cache);
+static int spindle_prop_init_(struct propdata_struct *data, SPINDLEENTRY *cache);
 static int spindle_prop_cleanup_(struct propdata_struct *data);
 static int spindle_prop_loop_(struct propdata_struct *data);
 static int spindle_prop_test_(struct propdata_struct *data, librdf_statement *st, const char *predicate, int inverse);
@@ -86,7 +86,7 @@ static int spindle_prop_apply_(struct propdata_struct *data);
 static int spindle_prop_copystrings_(struct spindle_literalset_struct *dest, struct propmatch_struct *source);
 
 int
-spindle_prop_update(SPINDLECACHE *cache)
+spindle_prop_update_entry(SPINDLEENTRY *cache)
 {
 	struct propdata_struct data;
 	int r;
@@ -162,27 +162,27 @@ spindle_prop_update(SPINDLECACHE *cache)
 
 /* Initialise the property data structure */
 static int
-spindle_prop_init_(struct propdata_struct *data, SPINDLECACHE *cache)
+spindle_prop_init_(struct propdata_struct *data, SPINDLEENTRY *cache)
 {
 	size_t c;
 
 	memset(data, 0, sizeof(struct propdata_struct));
 	data->spindle = cache->spindle;
-	data->cache = cache;
+	data->entry = cache;
 	data->source = cache->sourcedata;
 	data->localname = cache->localname;
 	data->classname = cache->classname;
 	data->proxymodel = cache->proxydata;
 	data->rootmodel = cache->rootdata;
 	data->context = cache->graph;
-	data->maps = cache->spindle->predicates;
-	data->matches = (struct propmatch_struct *) calloc(cache->spindle->predcount + 1, sizeof(struct propmatch_struct));
+	data->maps = cache->rules->predicates;
+	data->matches = (struct propmatch_struct *) calloc(cache->rules->predcount + 1, sizeof(struct propmatch_struct));
 	if(!data->matches)
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate memory for property match state\n");
 		return -1;
 	}
-	for(c = 0; c < cache->spindle->predcount; c++)
+	for(c = 0; c < cache->rules->predcount; c++)
 	{
 		data->matches[c].map = &(data->maps[c]);
 	}
@@ -265,16 +265,16 @@ spindle_prop_loop_(struct propdata_struct *data)
 			ostr = (const char *) librdf_uri_as_string(ouri);
 		}
 		r = 0;
-		for(c = 0; data->cache->refs[c]; c++)
+		for(c = 0; data->entry->refs[c]; c++)
 		{
-			if(sstr && !strcmp(sstr, data->cache->refs[c]))
+			if(sstr && !strcmp(sstr, data->entry->refs[c]))
 			{
 				r = spindle_prop_test_(data, st, pstr, 0);
 				break;
 			}
-			if(ostr && !strcmp(ostr, data->cache->refs[c]))
+			if(ostr && !strcmp(ostr, data->entry->refs[c]))
 			{
-				twine_logf(LOG_DEBUG, PLUGIN_NAME ": spindle_prop_loop_(): object match\n");
+/*				twine_logf(LOG_DEBUG, PLUGIN_NAME ": spindle_prop_loop_(): object match\n"); */
 				r = spindle_prop_test_(data, st, pstr, 1);
 				break;
 			}
@@ -301,7 +301,7 @@ spindle_prop_apply_(struct propdata_struct *data)
 	int r;
 
 	/* Generate a model containing the new data for the proxy */
-	node = twine_rdf_node_clone(data->cache->self);
+	node = twine_rdf_node_clone(data->entry->self);
 	if(!node) return -1;
 
 	base = twine_rdf_st_create();
@@ -323,7 +323,7 @@ spindle_prop_apply_(struct propdata_struct *data)
 		{
 			data->descmatch = &(data->matches[c]);
 		}
-		data->cache->score -= data->matches[c].prominence;
+		data->entry->score -= data->matches[c].prominence;
 		pst = twine_rdf_st_clone(base);
 		if(!pst)
 		{
@@ -538,7 +538,7 @@ spindle_prop_candidate_uri_(struct propdata_struct *data, struct propmatch_struc
 			twine_rdf_node_destroy(newobj);
 			return -1;
 		}
-		node = twine_rdf_node_clone(data->cache->self);
+		node = twine_rdf_node_clone(data->entry->self);
 		if(!node)
 		{
 			twine_rdf_node_destroy(newobj);
@@ -574,11 +574,11 @@ spindle_prop_candidate_uri_(struct propdata_struct *data, struct propmatch_struc
 		twine_rdf_st_destroy(newst);
 		if(criteria->prominence)
 		{
-			data->cache->score -= criteria->prominence;
+			data->entry->score -= criteria->prominence;
 		}
 		else
 		{
-			data->cache->score -= match->map->prominence;
+			data->entry->score -= match->map->prominence;
 		}
 		return 1;
 	}
@@ -801,17 +801,17 @@ spindle_prop_candidate_lang_(struct propdata_struct *data, struct propmatch_stru
 	{
 		match->prominence = match->map->prominence;
 	}
-	if(data->spindle->titlepred && !strcmp(match->map->target, data->spindle->titlepred))
+	if(data->entry->generate->titlepred && !strcmp(match->map->target, data->entry->generate->titlepred))
 	{
 		if(lang && !strcmp(lang, "en"))
 		{
-			free(data->cache->title_en);
-			data->cache->title_en = strdup((char *) librdf_node_get_literal_value(obj));
+			free(data->entry->title_en);
+			data->entry->title_en = strdup((char *) librdf_node_get_literal_value(obj));
 		}
 		else if(!lang)
 		{
-			free(data->cache->title);
-			data->cache->title = strdup((char *) librdf_node_get_literal_value(obj));
+			free(data->entry->title);
+			data->entry->title = strdup((char *) librdf_node_get_literal_value(obj));
 		}
 	}
 	return 1;

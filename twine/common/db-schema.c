@@ -29,12 +29,10 @@
  */
 #define DB_SCHEMA_VERSION               15
 
-#if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
-
 static int spindle_db_migrate_(SQL *restrict, const char *identifier, int newversion, void *restrict userdata);
 
 int
-spindle_db_schema_update(SPINDLE *spindle)
+spindle_db_schema_update_(SPINDLE *spindle)
 {
 	if(sql_migrate(spindle->db, "com.github.bbcarchdev.spindle.twine", spindle_db_migrate_, NULL))
 	{
@@ -366,5 +364,3 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 	twine_logf(LOG_NOTICE, PLUGIN_NAME ": unsupported database schema version %d\n", newversion);
 	return -1;
 }
-
-#endif /*SPINDLE_DB_INDEX*/
