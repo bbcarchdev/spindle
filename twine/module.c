@@ -35,7 +35,7 @@ static int spindle_db_errorlog_(SQL *restrict sql, const char *sqlstate, const c
 /* Twine plug-in entry-point */
 int
 twine_plugin_init(void)
-{	
+{
 	twine_logf(LOG_DEBUG, PLUGIN_NAME " plug-in: initialising\n");
 	if(spindle_init_(&spindle))
 	{
@@ -97,7 +97,7 @@ spindle_init_(SPINDLE *spindle)
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create node for <%s>\n", spindle->root);
 		return -1;
-	}	
+	}
 	spindle->modified = librdf_new_node_from_uri_string(spindle->world, (const unsigned char *) NS_DCTERMS "modified");
 	if(!spindle->modified)
 	{
@@ -329,7 +329,7 @@ spindle_graph_description_node(SPINDLE *spindle, librdf_model *target, librdf_no
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to fetch a graph description\n");
 		return -1;
-	}	
+	}
 /*
 	if(sparql_queryf_model(spindle->sparql, spindle->graphcache[c].model,
 						   "SELECT DISTINCT ?s ?p ?o ?g\n"
@@ -358,7 +358,7 @@ spindle_graph_description_node(SPINDLE *spindle, librdf_model *target, librdf_no
 	librdf_free_stream(stream);
 
 	librdf_free_statement(query);
-	librdf_free_model(temp);
+	twine_rdf_model_destroy(temp);
 
 	return 0;
 }
