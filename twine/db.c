@@ -1588,11 +1588,12 @@ spindle_db_cache_source(SPINDLECACHE *data)
 							   "SELECT DISTINCT ?s ?p ?o ?g\n"
 							   " WHERE {\n"
 							   "  GRAPH ?g {\n"
-							   "   ?s ?p ?o .\n"
-							   "   FILTER(?s = <%s> || ?o = <%s>)\n"
+							   "  	{ <%s> ?p ?o .\n BIND(<%s> as ?s)}\n"
+							   "  UNION\n"
+							   "  	{ ?s ?p <%s> .\n BIND(<%s> as ?o)}\n"
 							   "  }\n"
 							   "}",
-							   data->refs[c], data->refs[c]))
+							   data->refs[c], data->refs[c], data->refs[c], data->refs[c]))
 		{
 			r = -1;
 			break;
