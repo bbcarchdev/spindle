@@ -23,6 +23,27 @@
 
 #include "p_spindle.h"
 
+static unsigned long long
+gettimems(void)
+{
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL);
+	return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+}
+
+static int
+gettimediffms(unsigned long long *start)
+{
+	struct timeval tv;
+	int r;
+
+	gettimeofday(&tv, NULL);
+	r = (int) (((tv.tv_sec * 1000) + (tv.tv_usec / 1000)) - *start);
+	*start = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+	return r;
+}
+
 /* Post-processing hook, invoked by Twine operations
  *
  * This hook is invoked once (preprocessed) RDF has been pushed into the
@@ -39,6 +60,9 @@ spindle_postproc(twine_graph *graph, void *data)
 	struct spindle_strset_struct *changes;
 	size_t c;
 	int r;
+
+	unsigned long long start;
+	start = gettimems();
 
 	spindle = (SPINDLE *) data;
 	twine_logf(LOG_INFO, PLUGIN_NAME ": evaluating updated graph <%s>\n", graph->uri);
@@ -88,7 +112,9 @@ spindle_postproc(twine_graph *graph, void *data)
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": updating caches for <%s>\n", graph->uri);
 	r  = spindle_cache_update_set(spindle, changes);
 	spindle_strset_destroy(changes);
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] post-processing graph \n", gettimediffms(&start));
 	twine_logf(LOG_INFO, PLUGIN_NAME ": processing complete for graph <%s>\n", graph->uri);
+
 	return r;
 }
 
