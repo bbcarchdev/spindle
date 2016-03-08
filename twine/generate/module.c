@@ -37,7 +37,6 @@ twine_plugin_init(void)
 	if(spindle_generate_init_(&generate))
 	{
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": initialisation failed\n");
-		spindle_generate_cleanup_(&generate);
 		return -1;
 	}
 	twine_logf(LOG_INFO, PLUGIN_NAME ": URI prefix is <%s>\n", spindle.root);
@@ -52,7 +51,7 @@ int
 twine_plugin_done(void)
 {
 	twine_logf(LOG_DEBUG, PLUGIN_NAME " plug-in: cleaning up\n");
-	spindle_cleanup(&spindle);
+	spindle_generate_cleanup_(&generate);
 	return 0;
 }
 

@@ -40,20 +40,17 @@ twine_plugin_init(void)
 	if(spindle_init(&spindle))
 	{
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": initialisation failed\n");
-		spindle_cleanup(&spindle);
 		return -1;
 	}
 	spindle.rules = spindle_rulebase_create(NULL, coref_match_types);
 	if(!spindle.rules)
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to load rule-base\n");
-		spindle_cleanup(&spindle);
 		return -1;
 	}
 	if(spindle_db_init(&spindle))
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to connect to database\n");
-		spindle_cleanup(&spindle);
 		return -1;
 	}
 	twine_logf(LOG_INFO, PLUGIN_NAME ": URI prefix is <%s>\n", spindle.root);
