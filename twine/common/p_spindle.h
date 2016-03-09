@@ -42,15 +42,18 @@ int spindle_rulebase_class_add_node(SPINDLERULES *rules, librdf_model *model, co
 int spindle_rulebase_class_add_matchnode(SPINDLERULES *rules, librdf_model *model, const char *matchuri, librdf_node *node);
 int spindle_rulebase_class_finalise(SPINDLERULES *rules);
 int spindle_rulebase_class_cleanup(SPINDLERULES *rules);
+int spindle_rulebase_class_dump(SPINDLERULES *rules);
 
 int spindle_rulebase_pred_add_node(SPINDLERULES *rules, librdf_model *model, const char *uri, librdf_node *node);
 int spindle_rulebase_pred_add_matchnode(SPINDLERULES *rules, librdf_model *model, const char *matchuri, librdf_node *matchnode, int inverse);
 int spindle_rulebase_pred_finalise(SPINDLERULES *rules);
 int spindle_rulebase_pred_cleanup(SPINDLERULES *rules);
+int spindle_rulebase_pred_dump(SPINDLERULES *rules);
 
 int spindle_rulebase_cachepred_add(SPINDLERULES *rules, const char *uri);
 int spindle_rulebase_cachepred_finalise(SPINDLERULES *rules);
 int spindle_rulebase_cachepred_cleanup(SPINDLERULES *rules);
+int spindle_rulebase_cachepred_dump(SPINDLERULES *rules);
 
 int spindle_rulebase_coref_add_node(SPINDLERULES *rules, const char *predicate, librdf_node *node);
 
@@ -62,5 +65,6 @@ char *spindle_db_proxy_locate(SPINDLE *spindle, const char *uri);
 int spindle_db_proxy_relate(SPINDLE *spindle, const char *remote, const char *local);
 char **spindle_db_proxy_refs(SPINDLE *spindle, const char *uri);
 int spindle_db_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, char **refs);
+int spindle_db_proxy_state_(SPINDLE *spindle, const char *id, int changed);
 
 #endif /*!P_SPINDLE_H_*/

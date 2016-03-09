@@ -145,7 +145,7 @@ spindle_db_proxy_refs(SPINDLE *spindle, const char *uri)
 	refset = (char **) calloc(count + 1, sizeof(char *));
 	if(!refset)
 	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate buffer for reference-set\n");		
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate buffer for reference-set\n");
 		sql_stmt_destroy(rs);
 		return NULL;
 	}
@@ -179,7 +179,8 @@ int
 spindle_db_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, char **refs)
 {
 	char *oldid, *newid;
-
+	SQL_STATEMENT *rs;
+	
 	(void) refs;
 
 	oldid = spindle_db_id(from);
@@ -191,10 +192,79 @@ spindle_db_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, cha
 		return -1;
 	}
 	/* Transaction */
+	rs = sql_queryf(spindle->db, "SELECT * FROM \"moved\" WHERE \"from\" = %Q", from);
+	if(sql_stmt_eof(rs))
+	{
+		sql_executef(spindle->db, "INSERT INTO \"moved\" (\"from\", \"to\") VALUES (%Q, %Q)", from, to);
+	}
+	else
+	{
+		sql_executef(spindle->db, "UPDATE \"moved\" SET \"to\" = %Q WHERE \"from\" = %Q", to, from);
+	}
+	sql_stmt_destroy(rs);
 	sql_executef(spindle->db, "UPDATE \"proxy\" SET \"sameas\" = \"sameas\" || ( SELECT \"sameas\" FROM \"proxy\" WHERE \"id\" = %Q ) WHERE \"id\" = %Q", oldid, newid); 
 	sql_executef(spindle->db, "DELETE FROM \"proxy\" WHERE \"id\" = %Q", oldid);
+	sql_executef(spindle->db, "DELETE FROM \"index\" WHERE \"id\" = %Q", oldid);	
+	sql_executef(spindle->db, "UPDATE \"triggers\" SET \"triggerid\" = %Q WHERE \"triggerid\" = %Q", newid, oldid);
+	sql_executef(spindle->db, "UPDATE \"triggers\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
+	sql_executef(spindle->db, "UPDATE \"audiences\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
+	sql_executef(spindle->db, "UPDATE \"media\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
+	sql_executef(spindle->db, "UPDATE \"membership\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
+	sql_executef(spindle->db, "UPDATE \"membership\" SET \"collection\" = %Q WHERE \"collection\" = %Q", newid, oldid);
+	sql_executef(spindle->db, "UPDATE \"index_media\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
+	sql_executef(spindle->db, "UPDATE \"index_media\" SET \"media\" = %Q WHERE \"media\" = %Q", newid, oldid);
+	sql_executef(spindle->db, "UPDATE \"media\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
+	sql_executef(spindle->db, "UPDATE \"about\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
+	sql_executef(spindle->db, "UPDATE \"about\" SET \"about\" = %Q WHERE \"about\" = %Q", newid, oldid);
+	spindle_db_proxy_state_(spindle, newid, 1);
+	sql_executef(spindle->db, "DELETE FROM \"state\" WHERE \"id\" = %Q", oldid);
 	free(oldid);
 	free(newid);
+	return 0;
+}
+
+/* Ensure there's an entry in the state table for this proxy */
+int
+spindle_db_proxy_state_(SPINDLE *spindle, const char *id, int changed)
+{
+	SQL_STATEMENT *rs;
+	char skey[16], tbuf[20];
+	uint32_t shortkey;
+	time_t t;
+	struct tm tm;
+	
+	rs = sql_queryf(spindle->db, "SELECT \"id\" FROM \"state\" WHERE \"id\" = %Q", id);
+	if(!rs)
+	{
+		return -2;
+	}
+	strncpy(skey, id, 8);
+	skey[8] = 0;
+	shortkey = (uint32_t) strtoul(skey, NULL, 16);
+	t = time(NULL);
+	gmtime_r(&t, &tm);
+	strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S", &tm);
+	if(sql_stmt_eof(rs))
+	{
+		if(sql_executef(spindle->db, "INSERT INTO \"state\" (\"id\", \"shorthash\", \"tinyhash\", \"status\", \"modified\", \"flags\") VALUES (%Q, '%lu', '%d', %Q, %Q, 0)",
+			id, (unsigned long) shortkey, (int) (shortkey % 256), "DIRTY", tbuf
+			))
+		{
+			sql_stmt_destroy(rs);
+			return -2;
+		}
+		sql_stmt_destroy(rs);
+		return 1;
+	}
+	if(changed)
+	{
+		if(sql_executef(spindle->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = 0, \"modified\" = %Q WHERE \"id\" = %Q",
+			"DIRTY", tbuf, id))
+		{
+			return -2;
+		}
+		return 1;
+	}
 	return 0;
 }
 
@@ -203,7 +273,8 @@ spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict userdata)
 {
 	struct relate_struct *data;
 	SQL_STATEMENT *rs;
-
+	int r;
+	
 	data = (struct relate_struct *) userdata;
 	rs = sql_queryf(db, "SELECT \"id\" FROM \"proxy\" WHERE \"id\" = %Q", data->id);
 	if(!rs)
@@ -220,6 +291,20 @@ spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict userdata)
 	}
 	sql_stmt_destroy(rs);
 	if(sql_executef(db, "UPDATE \"proxy\" SET \"sameas\" = array_append(\"sameas\", %Q) WHERE \"id\" = %Q", data->uri, data->id))
+	{
+		return -2;
+	}
+	/* Update any indexes which refer to this URI */
+	if(sql_executef(db, "UPDATE \"triggers\" SET \"triggerid\" = %Q WHERE \"uri\" = %Q", data->id, data->uri))
+	{
+		return -2;
+	}
+	if(sql_executef(db, "UPDATE \"audiences\" SET \"id\" = %Q WHERE \"uri\" = %Q", data->id, data->uri))
+	{
+		return -2;
+	}
+	r = spindle_db_proxy_state_(data->spindle, data->id, 1);
+	if(r < 0)
 	{
 		return -2;
 	}

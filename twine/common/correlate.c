@@ -125,7 +125,7 @@ spindle_proxy_locate(SPINDLE *spindle, const char *uri)
 int
 spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struct spindle_strset_struct *changeset)
 {
-	char *u1, *u2, *uu;
+	char *u1, *u2, *uu, *id;
 	unsigned flags = SF_REFRESHED;
 
 	u1 = spindle_proxy_locate(spindle, uri1);
@@ -145,6 +145,13 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		{
 			spindle_strset_add_flags(changeset, u1, flags);
 		}
+		/* Ensure that proxy state is up to date */
+		if(spindle->db)
+		{
+			id = spindle_db_id(u1);
+			spindle_db_proxy_state_(spindle, id, 0);
+			free(id);
+		}
 		free(u1);
 		free(u2);
 		return 0;
@@ -156,6 +163,13 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		if(changeset)
 		{
 			spindle_strset_add_flags(changeset, u1, flags);
+		}
+		/* Ensure that the proxy state is up to date */
+		if(spindle->db)
+		{
+			id = spindle_db_id(u1);
+			spindle_db_proxy_state_(spindle, id, 0);
+			free(id);
 		}
 		free(u1);
 		free(u2);
