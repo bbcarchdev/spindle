@@ -47,7 +47,8 @@ spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data)
 {
 	size_t c;
 	char **refs, **audiences;
-	char *kind, *type, *license;   
+	char *kind, *type, *license, *audienceuri, *audienceid;
+	SQL_STATEMENT *rs;
 	int r;
 
 	r = 0;
@@ -114,14 +115,37 @@ spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data)
 	}
 	else
 	{
+		/* Ensure there's an entry in the audiences table for the audience
+		 * URI we've determined applies to this media item
+		 */
 		for(c = 0; audiences[c]; c++)
 		{
+			audienceuri = spindle_proxy_locate(data->spindle, audiences[c]);
+			if(audienceuri)
+			{
+				audienceid = spindle_db_id(audienceuri);
+				rs = sql_queryf(sql, "SELECT \"id\" FROM \"audiences\" WHERE \"id\" = %Q", audienceid);
+				if(rs)
+				{
+					if(sql_stmt_eof(rs))
+					{
+						sql_executef(sql, "INSERT INTO \"audiences\" (\"id\", \"uri\") VALUES (%Q, %Q)", audienceid, audiences[c]);
+					}
+					sql_stmt_destroy(rs);
+				}
+			}
+			else
+			{
+				audienceid = NULL;
+			}
 			/* For each target audience (based upon ODRL descriptions), add
 			 * a row to the media table.
 			 */
-			r = sql_executef(sql, "INSERT INTO \"media\" (\"id\", \"uri\", \"class\", \"type\", \"audience\") VALUES (%Q, %Q, %Q, %Q, %Q)",
-							 id, refs[0], kind, type, audiences[c]);
+			r = sql_executef(sql, "INSERT INTO \"media\" (\"id\", \"uri\", \"class\", \"type\", \"audience\", \"audienceid\") VALUES (%Q, %Q, %Q, %Q, %Q, %Q)",
+							 id, refs[0], kind, type, audiences[c], audienceid);
 			free(audiences[c]);
+			free(audienceuri);
+			free(audienceid);
 		}
 		free(audiences);
 	}
