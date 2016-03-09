@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -135,7 +135,7 @@ spindle_match_sameas(struct spindle_corefset_struct *set, const char *subject, c
 	{
 		return -1;
 	}
-	return 0;		   	
+	return 0;
 }
 
 int
