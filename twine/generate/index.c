@@ -123,7 +123,7 @@ spindle_index_triggers_(SQL *sql, const char *id, SPINDLEENTRY *data)
 
 	for(c = 0; c < data->ntriggers; c++)
 	{
-		if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\") VALUES (%Q, %Q)", id, data->triggers[c].uri))
+		if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\", \"flags\") VALUES (%Q, %Q, '%d')", id, data->triggers[c].uri, data->triggers[c].kind))
 		{
 			return -1;
 		}
