@@ -25,6 +25,10 @@
 
 static int spindle_generate_all_(SPINDLEGENERATE *generate);
 
+/* TODO: don't use SF_xxx flags here - use TK_xxx flags instead, as they're
+ * used in the state and triggers tables
+ */
+
 /* Update handler: re-build the cached contents of the item with the supplied
  * identifier (which may be a UUID or a complete URI)
  *

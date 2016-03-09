@@ -43,7 +43,15 @@ spindle_entry_init(SPINDLEENTRY *data, SPINDLEGENERATE *generate, const char *lo
 	data->localname = localname;
 	data->score = 50;
 	data->sameas = generate->spindle->sameas;
-	
+	if(data->db)
+	{
+		data->id = spindle_db_id(localname);
+		if(!data->id)
+		{
+			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to obtain UUID for <%s>\n", localname);
+			return -1;
+		}
+	}
 	/* Create a node representing the full URI of the proxy entity */
 	data->self = librdf_new_node_from_uri_string(generate->spindle->world, (const unsigned char *) localname);
 	if(!data->self)
@@ -152,6 +160,7 @@ spindle_entry_cleanup(SPINDLEENTRY *data)
 	}
 	free(data->triggers);
 	/* Never free data->graph - it is a pointer to data->doc or spindle->rootgraph */
+	free(data->id);
 	free(data->title);
 	free(data->title_en);
 	free(data->docname);

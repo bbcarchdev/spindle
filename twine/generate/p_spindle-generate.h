@@ -81,9 +81,13 @@ struct spindle_entry_struct
 	char *docname;
 	char *title;
 	char *title_en;
+	char *id;
 	const char *localname;
 	const char *classname;
 	char **refs;
+	time_t modified;
+	int flags;
+	
 	/* Data which will be inserted into the root graph, always in the form
 	 * <proxy> pred obj
 	 */

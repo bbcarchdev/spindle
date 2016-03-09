@@ -23,7 +23,7 @@
 
 #include "p_spindle-generate.h"
 
-static int spindle_index_remove_(SQL *sql, const char *id);
+static int spindle_index_remove_(SQL *sql, const char *id, SPINDLEENTRY *data);
 static int spindle_index_triggers_(SQL *sql, const char *id, SPINDLEENTRY *data);
 
 /* Store an index entry in a PostgreSQL (or compatible) database for a proxy */
@@ -45,32 +45,32 @@ spindle_index_entry(SPINDLEENTRY *data)
 		return -1;
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": DB: ID is '%s'\n", id);
-	if(spindle_index_remove_(sql, id))
+	if(spindle_index_remove_(sql, id, data))
 	{
 		free(id);
 		return -1;
 	}
-	if(spindle_index_core(sql, id, data))
+	if((data->flags & TK_PROXY) && spindle_index_core(sql, id, data))
 	{
 		free(id);
 		return -1;
 	}
-	if(spindle_index_about(sql, id, data))
+	if((data->flags & TK_TOPICS) && spindle_index_about(sql, id, data))
 	{
 		free(id);
 		return -1;
 	}
-	if(spindle_index_media(sql, id, data))
+	if((data->flags & TK_MEDIA) && spindle_index_media(sql, id, data))
 	{
 		free(id);
 		return -1;
 	}
-	if(spindle_index_membership(sql, id, data))
+	if((data->flags & TK_MEMBERSHIP) && spindle_index_membership(sql, id, data))
 	{
 		free(id);
 		return -1;
 	}
-	if(spindle_index_triggers_(sql, id, data))
+	if((data->flags == -1) && spindle_index_triggers_(sql, id, data))
 	{
 		free(id);
 		return -1;
@@ -80,37 +80,52 @@ spindle_index_entry(SPINDLEENTRY *data)
 }
 
 static int
-spindle_index_remove_(SQL *sql, const char *id)
+spindle_index_remove_(SQL *sql, const char *id, SPINDLEENTRY *data)
 {
-	if(sql_executef(sql, "DELETE FROM \"index\" WHERE \"id\" = %Q",
-					id))
+	if(data->flags & TK_PROXY)
 	{
-		return -1;
+		if(sql_executef(sql, "DELETE FROM \"index\" WHERE \"id\" = %Q",
+						id))
+		{
+			return -1;
+		}
 	}
-	if(sql_executef(sql, "DELETE FROM \"about\" WHERE \"id\" = %Q",
-					id))
+	if(data->flags & TK_TOPICS)
 	{
-		return -1;
+		if(sql_executef(sql, "DELETE FROM \"about\" WHERE \"id\" = %Q",
+						id))
+		{
+			return -1;
+		}
 	}
-	if(sql_executef(sql, "DELETE FROM \"media\" WHERE \"id\" = %Q",
-					id))
+	if(data->flags & TK_MEDIA)
 	{
-		return -1;
+		if(sql_executef(sql, "DELETE FROM \"media\" WHERE \"id\" = %Q",
+						id))
+		{
+			return -1;
+		}
+		if(sql_executef(sql, "DELETE FROM \"index_media\" WHERE \"id\" = %Q",
+						id))
+		{
+			return -1;
+		}
 	}
-	if(sql_executef(sql, "DELETE FROM \"index_media\" WHERE \"id\" = %Q",
-					id))
+	if(data->flags & TK_MEMBERSHIP)
 	{
-		return -1;
+		if(sql_executef(sql, "DELETE FROM \"membership\" WHERE \"id\" = %Q",
+						id))
+		{
+			return -1;
+		}
 	}
-	if(sql_executef(sql, "DELETE FROM \"membership\" WHERE \"id\" = %Q",
-					id))
+	if(data->flags == -1)
 	{
-		return -1;
-	}
-	if(sql_executef(sql, "DELETE FROM \"triggers\" WHERE \"id\" = %Q",
-					id))
-	{
-		return -1;
+		if(sql_executef(sql, "DELETE FROM \"triggers\" WHERE \"id\" = %Q",
+						id))
+		{
+			return -1;
+		}
 	}
 	return 0;
 }

@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,6 +31,8 @@ struct s3_upload_struct
 };
 
 static char *spindle_generate_uri_(SPINDLEGENERATE *generate, const char *identifier);
+static int spindle_generate_state_fetch_(SPINDLEENTRY *cache);
+static int spindle_generate_state_update_(SPINDLEENTRY *cache);
 static int spindle_generate_entry_(SPINDLEENTRY *entry);
 
 #if 0
@@ -80,6 +82,9 @@ spindle_generate(SPINDLEGENERATE *generate, const char *identifier, int mode)
 	{
 		r = spindle_generate_entry_(&data);
 	}
+	/* TODO: once we've updated an entry, turn triggers referring to this
+	 * proxy into updates of the state table
+	 */
 	spindle_entry_cleanup(&data);
 	if(r)
 	{
@@ -212,54 +217,64 @@ spindle_generate_entry_(SPINDLEENTRY *entry)
 	twine_logf(LOG_INFO, PLUGIN_NAME ": updating <%s>\n", entry->localname);
 	/* Obtain cached source data */
 	start = gettimems();
+	/* TODO: when performing a partial update, what sort of data do we need to retrieve in order for indexing to work correctly? */
+	/* TODO: can we use the cache? */
+	if(spindle_generate_state_fetch_(entry))
+	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to retrieve entity state\n");
+		return -1;
+	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] retrieve state\n", gettimediffms(&start));
 	if(spindle_source_fetch_entry(entry))
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to obtain cached data from store\n");
 		return -1;
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] obtain cached data\n", gettimediffms(&start));
-	/* Update proxy classes */
-	if(spindle_class_update_entry(entry) < 0)
+	if(entry->flags & TK_PROXY)
 	{
-		return -1;
+		/* Update proxy classes */
+		if(spindle_class_update_entry(entry) < 0)
+		{
+			return -1;
+		}
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update classes\n", gettimediffms(&start));
+		/* Update proxy properties */
+		if(spindle_prop_update_entry(entry) < 0)
+		{
+			return -1;
+		}
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update properties\n", gettimediffms(&start));
+		/* Fetch information about the documents describing the entities */
+		if(spindle_describe_entry(entry) < 0)
+		{
+			return -1;
+		}
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update describedBy\n", gettimediffms(&start));
+		/* Describe the document itself */
+		if(spindle_doc_apply(entry) < 0)
+		{
+			return -1;
+		}
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] add information resource\n", gettimediffms(&start));
+		/* Describing licensing information */
+		if(spindle_license_apply(entry) < 0)
+		{
+			return -1;
+		}
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] add licensing information\n", gettimediffms(&start));
+		/* Fetch data about related resources */
+		if(spindle_related_fetch_entry(entry) < 0)
+		{
+			return -1;
+		}
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] fetch related data\n", gettimediffms(&start));
 	}
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update classes\n", gettimediffms(&start));
-	/* Update proxy properties */
-	if(spindle_prop_update_entry(entry) < 0)
-	{
-		return -1;
-	}
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update properties\n", gettimediffms(&start));
-	/* Fetch information about the documents describing the entities */
-	if(spindle_describe_entry(entry) < 0)
-	{
-		return -1;
-	}
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update describedBy\n", gettimediffms(&start));
-	/* Describe the document itself */
-	if(spindle_doc_apply(entry) < 0)
-	{
-		return -1;
-	}
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] add information resource\n", gettimediffms(&start));
-	/* Describing licensing information */
-	if(spindle_license_apply(entry) < 0)
-	{
-		return -1;
-	}
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] add licensing information\n", gettimediffms(&start));
-	/* Fetch data about related resources */
-	if(spindle_related_fetch_entry(entry) < 0)
-	{
-		return -1;
-	}
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] fetch related data\n", gettimediffms(&start));
 	/* Index the resulting model */
 	if(spindle_index_entry(entry) < 0)
 	{
 		return -1;
 	}
-
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] index generated entry\n", gettimediffms(&start));
 	/* Store the resulting model */
 	if(spindle_store_entry(entry) < 0)
@@ -267,8 +282,66 @@ spindle_generate_entry_(SPINDLEENTRY *entry)
 		return -1;
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] store generated entry\n", gettimediffms(&start));
+	if(spindle_generate_state_update_(entry) < 0)
+	{
+		return -1;
+	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update entry state\n", gettimediffms(&start));
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": generation complete for <%s>\n", entry->localname);
 	return 0;
+}
+
+static int
+spindle_generate_state_fetch_(SPINDLEENTRY *cache)
+{
+	SQL_STATEMENT *rs;
+	const char *modified, *state;
+	int flags;
+	struct tm tm;
+	
+	if(!cache->id)
+	{
+		/* No database, nothing to do */
+		cache->flags = -1;
+		return 0;
+	}
+	rs = sql_queryf(cache->db, "SELECT \"status\", \"modified\", \"flags\" FROM \"state\" WHERE \"id\" = %Q", cache->id);
+	if(!rs)
+	{
+		return -1;
+	}
+	if(sql_stmt_eof(rs))
+	{
+		twine_logf(LOG_WARNING, PLUGIN_NAME ": no state entry exists for <%s>\n", cache->localname);
+		cache->flags = -1;
+		return 0;
+	}
+	state = sql_stmt_str(rs, 0);
+	modified = sql_stmt_str(rs, 1);
+	flags = (int) sql_stmt_long(rs, 2);
+	if(!state || !strcmp(state, "CLEAN") || !flags)
+	{
+		flags = -1;
+	}
+	memset(&tm, 0, sizeof(struct tm));
+	if(strptime(modified, "%Y-%m-%d %H:%M:%S", &tm))
+	{
+		cache->modified = mktime(&tm);
+	}
+	else
+	{
+		modified = NULL;
+	}
+	cache->flags = flags;
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": {%s} has state %s, last modified %s, flags %ld\n",
+		cache->id, state, modified, flags);
+	return 0;
+}
+
+static int
+spindle_generate_state_update_(SPINDLEENTRY *cache)
+{
+	return sql_executef(cache->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = '%d' WHERE \"id\" = %Q", "COMPLETE", 0, cache->id);
 }
 
 /* Add a trigger URI */
