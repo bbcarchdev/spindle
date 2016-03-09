@@ -33,7 +33,6 @@ static int spindle_rulebase_pred_set_expecttype_(struct spindle_predicatemap_str
 static int spindle_rulebase_pred_set_proxyonly_(struct spindle_predicatemap_struct *entry, librdf_statement *statement);
 static int spindle_rulebase_pred_set_indexed_(struct spindle_predicatemap_struct *entry, librdf_statement *statement);
 static int spindle_rulebase_pred_set_inverse_(struct spindle_predicatemap_struct *entry, librdf_statement *statement);
-static int spindle_rulebase_pred_dump_(SPINDLERULES *rules);
 
 /* Given an instance of a spindle:Property, add it to the rulebase */
 int
@@ -244,7 +243,6 @@ int
 spindle_rulebase_pred_finalise(SPINDLERULES *rules)
 {
 	qsort(rules->predicates, rules->predcount, sizeof(struct spindle_predicatemap_struct), spindle_rulebase_pred_compare_);
-	spindle_rulebase_pred_dump_(rules);
 	return 0;
 }
 
@@ -280,8 +278,8 @@ spindle_rulebase_pred_compare_(const void *ptra, const void *ptrb)
 	return a->score - b->score;
 }
 
-static int
-spindle_rulebase_pred_dump_(SPINDLERULES *rules)
+int
+spindle_rulebase_pred_dump(SPINDLERULES *rules)
 {
 	size_t c, d;
 	const char *expect, *po;

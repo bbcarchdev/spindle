@@ -23,7 +23,6 @@
 
 #include "p_spindle.h"
 
-static int spindle_rulebase_cachepred_dump_(SPINDLERULES *rules);
 static int spindle_rulebase_cachepred_compare_(const void *ptra, const void *ptrb);
 
 int
@@ -66,7 +65,6 @@ int
 spindle_rulebase_cachepred_finalise(SPINDLERULES *rules)
 {
 	qsort(rules->cachepreds, rules->cpcount, sizeof(char *), spindle_rulebase_cachepred_compare_);
-	spindle_rulebase_cachepred_dump_(rules);
 	return 0;
 }
 
@@ -85,8 +83,8 @@ spindle_rulebase_cachepred_cleanup(SPINDLERULES *rules)
 	return 0;
 }
 
-static int
-spindle_rulebase_cachepred_dump_(SPINDLERULES *rules)
+int
+spindle_rulebase_cachepred_dump(SPINDLERULES *rules)
 {
 	size_t c;
 

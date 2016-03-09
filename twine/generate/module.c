@@ -97,6 +97,10 @@ spindle_generate_init_(SPINDLEGENERATE *generate)
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create graph cache\n");
 		return -1;
 	}
+	if(twine_config_get_bool(PLUGIN_NAME ":dumprules", twine_config_get_bool("spindle:dumprules", 0)))
+	{
+		spindle_rulebase_dump(generate->rules);
+	}
 	return 0;
 }
 

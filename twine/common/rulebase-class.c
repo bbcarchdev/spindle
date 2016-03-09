@@ -27,7 +27,6 @@ static int spindle_rulebase_class_compare_(const void *ptra, const void *ptrb);
 static struct spindle_classmap_struct *spindle_rulebase_class_add_(SPINDLERULES *rules, const char *uri);
 static int spindle_rulebase_class_add_match_(struct spindle_classmap_struct *match, const char *uri, int prominence);
 static int spindle_rulebase_class_set_score_(struct spindle_classmap_struct *entry, librdf_statement *statement);
-static int spindle_rulebase_class_dump_(SPINDLERULES *rules);
 
 /* Given an instance of a spindle:Class, add it to the rulebase */
 int
@@ -120,12 +119,10 @@ spindle_rulebase_class_add_matchnode(SPINDLERULES *rules, librdf_model *model, c
 	return 1;	
 }
 
-
 int
 spindle_rulebase_class_finalise(SPINDLERULES *rules)
 {
 	qsort(rules->classes, rules->classcount, sizeof(struct spindle_classmap_struct), spindle_rulebase_class_compare_); 
-	spindle_rulebase_class_dump_(rules);
 	return 0;
 }
 
@@ -159,8 +156,8 @@ spindle_rulebase_class_compare_(const void *ptra, const void *ptrb)
 	return a->score - b->score;
 }
 
-static int
-spindle_rulebase_class_dump_(SPINDLERULES *rules)
+int
+spindle_rulebase_class_dump(SPINDLERULES *rules)
 {
 	size_t c, d;
 

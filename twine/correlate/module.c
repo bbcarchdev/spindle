@@ -56,6 +56,10 @@ twine_plugin_init(void)
 	twine_logf(LOG_INFO, PLUGIN_NAME ": URI prefix is <%s>\n", spindle.root);
 	twine_postproc_register("spindle", spindle_correlate, &spindle);
 	twine_graph_register(PLUGIN_NAME, spindle_correlate, &spindle);
+	if(twine_config_get_bool(PLUGIN_NAME ":dumprules", twine_config_get_bool("spindle:dumprules", 0)))
+	{
+		spindle_rulebase_dump(spindle.rules);
+	}
 	return 0;
 }
 

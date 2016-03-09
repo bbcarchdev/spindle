@@ -221,6 +221,8 @@ int spindle_cleanup(SPINDLE *spindle);
 SPINDLERULES *spindle_rulebase_create(const char *path, const struct coref_match_struct *match_types);
 /* Free resources used by the rulebase */
 int spindle_rulebase_destroy(SPINDLERULES *rules);
+/* Dump the contents of the loaded rulebase */
+int spindle_rulebase_dump(SPINDLERULES *rules);
 
 /* Create an empty string-set */
 struct spindle_strset_struct *spindle_strset_create(void);
