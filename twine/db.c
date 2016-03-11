@@ -659,8 +659,11 @@ spindle_db_media_license_(SPINDLECACHE *data)
 		   (uristr = (const char *) librdf_uri_as_string(uri)))
 		{
 			license = strdup(uristr);
+			librdf_free_stream(stream);
+			librdf_free_statement(query);
 			return license;
 		}
+		librdf_free_statement(st);
 	}
 	librdf_free_stream(stream);
 	librdf_free_statement(query);	
@@ -1374,6 +1377,7 @@ spindle_db_proxy_locate(SPINDLE *spindle, const char *uri)
 	}
 	if(sql_stmt_eof(rs))
 	{
+		sql_stmt_destroy(rs);
 		return NULL;
 	}
     /* root + '/' + uuid + '#id' + NUL */
@@ -1415,6 +1419,7 @@ spindle_db_proxy_locate(SPINDLE *spindle, const char *uri)
 		}
 	}
 	strcpy(p, "#id");
+	sql_stmt_destroy(rs);
 	return buf;
 }
 
