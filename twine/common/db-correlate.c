@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -106,13 +106,12 @@ spindle_db_proxy_relate(SPINDLE *spindle, const char *remote, const char *local)
 	data.spindle = spindle;
 	data.id = id;
 	data.uri = remote;
-	if(sql_perform(spindle->db, spindle_db_perform_proxy_relate_, (void *) &data, -1, SQL_TXN_CONSISTENT))
+	if(spindle_db_perform_proxy_relate_(spindle->db, (void *) &data) < 0)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to relate <%s> to %s\n", remote, id);
 		free(id);
 		return -1;
 	}
-
 	free(id);
 	return 0;
 }
