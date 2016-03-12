@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -84,15 +84,4 @@ spindle_graph_discard(SPINDLE *spindle, const char *uri)
 
 	return 0;
 }
-
-/* Ask the cache module to update a set of entries */
-int
-spindle_cache_update_set(SPINDLE *spindle, struct spindle_strset_struct *set)
-{
-	(void) spindle;
-	(void) set;
-	
-	return 0;
-}
-
 
