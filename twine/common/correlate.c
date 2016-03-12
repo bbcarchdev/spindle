@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -205,7 +205,16 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 	if(!u1)
 	{
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": relating %s to %s\n", uri1, uu);
-		spindle_proxy_relate(spindle, uri1, uu);
+		if(spindle_proxy_relate(spindle, uri1, uu))
+		{
+			free(u1);
+			free(u2);
+			if(uu != u1 && uu != u2)
+			{
+				free(uu);
+			}
+			return -1;
+		}
 		flags |= SF_MOVED;
 	}
 	/* If the second entity didn't previously have a local proxy, attach it */
@@ -214,7 +223,16 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		if(uri2)
 		{
 			twine_logf(LOG_DEBUG, PLUGIN_NAME ": relating %s to %s\n", uri2, uu);
-			spindle_proxy_relate(spindle, uri2, uu);
+			if(spindle_proxy_relate(spindle, uri2, uu))
+			{
+				free(u1);
+				free(u2);
+				if(uu != u1 && uu != u2)
+				{
+					free(uu);
+				}
+				return -1;
+			}
 		}
 	}
 	else if(strcmp(u2, uu))
@@ -224,7 +242,16 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		 * unified proxy.
 		 */
 		twine_logf(LOG_INFO, PLUGIN_NAME ": relocating references from <%s> to <%s>\n", u2, uu);
-		spindle_proxy_migrate(spindle, u2, uu, NULL);
+		if(spindle_proxy_migrate(spindle, u2, uu, NULL))
+		{
+			free(u1);
+			free(u2);
+			if(uu != u1 && uu != u2)
+			{
+				free(uu);
+			}
+			return -1;
+		}
 		flags |= SF_MOVED;
 		if(changeset)
 		{
