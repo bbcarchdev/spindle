@@ -3,11 +3,11 @@ Section: misc
 Priority: optional
 Maintainer: Mo McRoberts <mo.mcroberts@bbc.co.uk>
 Standards-Version: 3.9.3
-Build-Depends: debhelper (>= 8.0.0), autoconf, automake, libtool, libltdl-dev, libtwine-dev (>= 5.0), uuid-dev, liburi-dev, libsql-dev, libsparqlclient-dev, libquilt-dev (>= 9.1), libawsclient-dev
+Build-Depends: debhelper (>= 8.0.0), autoconf, automake, libtool, libltdl-dev, libtwine-dev (>= 5.0), uuid-dev, liburi-dev, libsql-dev, libsparqlclient-dev, libquilt-dev (>= 9.1), libawsclient-dev, libmq-dev
 
 Package: twine-processor-spindle
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, libuuid1, libtwine (>= 5.0), liburi, libsql, libsparqlclient, libawsclient
+Depends: ${misc:Depends}, ${shlibs:Depends}, libuuid1, libtwine (>= 5.0), liburi, libsql, libsparqlclient, libawsclient, libmq
 Description: Linked Open Data aggregator engine for Twine
 
 Package: quilt-engine-spindle

@@ -23,7 +23,7 @@ AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ -I$(srcdir)/../common
 twinemodule_LTLIBRARIES = spindle-generate.la
 
 spindle_generate_la_SOURCES = p_spindle-generate.h \
-	module.c processor.c \
+	module.c processor.c mq.c \
 	generate.c entry.c source.c describe.c related.c store.c \
 	classes.c props.c doc.c licenses.c precomposed.c \
 	index.c index-core.c index-about.c index-membership.c \
@@ -32,4 +32,5 @@ spindle_generate_la_SOURCES = p_spindle-generate.h \
 spindle_generate_la_LDFLAGS = -no-undefined -module -avoid-version
 
 spindle_generate_la_LIBADD = ../common/libspindle-common.la \
-	@LIBAWSCLIENT_LOCAL_LIBS@ @LIBAWSCLIENT_LIBS@
+	@LIBAWSCLIENT_LOCAL_LIBS@ @LIBAWSCLIENT_LIBS@ \
+	@LIBMQ_LOCAL_LIBS@ @LIBMQ_LIBS@

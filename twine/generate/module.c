@@ -44,6 +44,7 @@ twine_plugin_init(void)
 	twine_graph_register(PLUGIN_NAME, spindle_generate_graph, &generate);
 	twine_update_register("spindle", spindle_generate_update, &generate);
 	twine_plugin_register(SPINDLE_URI_MIME, "Spindle proxy URI", spindle_generate_message, &generate);
+	spindle_mq_init(NULL);
 	return 0;
 }
 

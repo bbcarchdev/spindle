@@ -32,6 +32,7 @@
 # include <sys/stat.h>
 # include <errno.h>
 # include <libawsclient.h>
+# include <libmq-engine.h>
 
 # include "spindle-common.h"
 
@@ -212,5 +213,8 @@ int spindle_license_apply(SPINDLEENTRY *spindle);
 /* SQL index */
 int spindle_db_cache_store(SPINDLEENTRY *data);
 int spindle_db_cache_source(SPINDLEENTRY *data);
+
+/* MQ engine */
+int spindle_mq_init(void *handle);
 
 #endif /*!P_SPINDLE_GENERATE_H_*/
