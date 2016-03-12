@@ -33,6 +33,7 @@ struct s3_upload_struct
 static char *spindle_generate_uri_(SPINDLEGENERATE *generate, const char *identifier);
 static int spindle_generate_state_fetch_(SPINDLEENTRY *cache);
 static int spindle_generate_state_update_(SPINDLEENTRY *cache);
+static int spindle_generate_txn_(SQL *restrict sql, void *restrict userdata);
 static int spindle_generate_entry_(SPINDLEENTRY *entry);
 
 #if 0
@@ -74,9 +75,17 @@ spindle_generate(SPINDLEGENERATE *generate, const char *identifier, int mode)
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to determine identifier for <%s>\n", identifier);
 		return -1;
 	}
+	r = 0;
 	if(spindle_entry_init(&data, generate, idbuf))
 	{
 		r = -1;
+	}
+	else if(data.db)
+	{
+		if(sql_perform(data.db, spindle_generate_txn_, (void *) &data, -1, SQL_TXN_CONSISTENT))
+		{
+			r = -1;
+		}
 	}
 	else
 	{
@@ -204,6 +213,21 @@ spindle_generate_uri_(SPINDLEGENERATE *generate, const char *identifier)
 		return NULL;
 	}
 	return idbuf;
+}
+
+static int
+spindle_generate_txn_(SQL *restrict sql, void *restrict userdata)
+{
+	SPINDLEENTRY *entry;
+	
+	(void) sql;
+	
+	entry = (SPINDLEENTRY *) userdata;
+	if(spindle_generate_entry_(entry))
+	{
+		return -2;
+	}
+	return 1;
 }
 
 /* Re-build the data for the proxy entity identified by cache->localname;
