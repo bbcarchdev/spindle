@@ -23,3 +23,29 @@ in a unified fashion; the second is to enable applications not to have to do
 this work themselves unless they need to because Spindle's rule-base is not
 completely aligned with their specific needs.
 
+## Triggering updates
+
+`spindle-generate` can be triggered in several ways:
+
+* as part of a Twine workflow, `spindle-generate` will (re-)generate the local proxy which represents the resource identified by the graph URI
+* on the command-line, `twine -u spindle IDENTIFIER`, where `IDENTIFIER` is a local proxy URI, an external URI, or a UUID
+* by receiving an `application/x-spindle-uri` message containing a local proxy URI, an external URI, or a UUID
+
+This module also implements an MQ queue which Twine can be configured to use.
+This implementation reads from the `state` database table which is updated by
+both `spindle-correlate` and `spindle-generate` when they are configured to use
+a relational database connection, and generates `application/x-spindle-uri`
+messages for each of the entities in a “dirty” state.
+
+To use this queue, add the following to the Twine configuration, adjusting
+parameters as appropriate:
+
+	[twine]
+	mq=spindle+pgsql://user:password@dbhost/spindledb
+	
+	[spindle]
+	db=pgsql://user:password@dbhost/spindledb
+
+When Twine is configured as part of a cluster, the Spindle MQ implementation
+will automatically load-balance between nodes.
+ 
