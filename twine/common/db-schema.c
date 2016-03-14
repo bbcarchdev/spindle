@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               22
+#define DB_SCHEMA_VERSION               23
 
 static int spindle_db_migrate_(SQL *restrict, const char *identifier, int newversion, void *restrict userdata);
 
@@ -456,6 +456,23 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 	if(newversion == 22)
 	{
 		if(sql_execute(sql, "ALTER TABLE \"triggers\" ADD COLUMN \"flags\" INTEGER NOT NULL default 0"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 23)
+	{
+		/* This can't be executed within the transaction */
+		if(sql_commit(sql))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "ALTER TYPE \"state_status\" ADD VALUE 'REJECTED'"))
+		{
+			return -1;
+		}
+		if(sql_begin(sql, SQL_TXN_CONSISTENT))
 		{
 			return -1;
 		}
