@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,6 +32,24 @@ static int spindle_source_clean_(SPINDLEENTRY *data);
 int
 spindle_source_fetch_entry(SPINDLEENTRY *data)
 {
+	int r;
+	
+	if(!(data->flags & TK_PROXY))
+	{
+		/* If the co-references haven't changed, we can use cached
+		 * source data if it's available.
+		 */
+		r = spindle_cache_fetch(data, "source", data->sourcedata);
+		if(r < 0)
+		{
+			return -1;
+		}
+		if(r > 0)
+		{
+			/* N-Quads were retrieved from the cache */
+			return 0;
+		}
+	}
 	if(data->db)
 	{
 		if(spindle_source_fetch_db_(data))
@@ -50,7 +68,7 @@ spindle_source_fetch_entry(SPINDLEENTRY *data)
 	{
 		return -1;
 	}
-	return 0;
+	return spindle_cache_store(data, "source", data->sourcedata);
 }
 
 /* Fetch all of the source data about the entities that relate to a particular

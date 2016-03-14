@@ -72,7 +72,7 @@ spindle_generate_init_(SPINDLEGENERATE *generate)
 		return -1;
 	}
 	generate->rules = spindle.rules;
-	if(spindle_precompose_init(generate))
+	if(spindle_cache_init(generate))
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to initialise S3 bucket\n");
 		return -1;

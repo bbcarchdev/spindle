@@ -46,6 +46,8 @@
 /* The number of entries in the graph cache */
 # define SPINDLE_GRAPHCACHE_SIZE        16
 
+# define MIME_NQUADS                    "application/n-quads"
+
 typedef struct spindle_generate_struct SPINDLEGENERATE;
 typedef struct spindle_entry_struct SPINDLEENTRY;
 
@@ -186,10 +188,11 @@ int spindle_index_audiences(SPINDLEGENERATE *generate, const char *license, char
 /* Add a trigger URI */
 int spindle_cache_trigger(SPINDLEENTRY *cache, const char *uri, unsigned int kind);
 
-/* Generate and store pre-composed N-Quads */
-int spindle_precompose_init(SPINDLEGENERATE *spindle);
-int spindle_precompose_s3(SPINDLEENTRY *data, char *quadbuf, size_t bufsize);
-int spindle_precompose_file(SPINDLEENTRY *data, char *quadbuf, size_t bufsize);
+/* Cached N-Quads handling */
+int spindle_cache_init(SPINDLEGENERATE *spindle);
+int spindle_cache_store(SPINDLEENTRY *data, const char *suffix, librdf_model *model);
+int spindle_cache_store_buf(SPINDLEENTRY *data, const char *suffix, char *quadbuf, size_t bufsize);
+int spindle_cache_fetch(SPINDLEENTRY *data, const char *suffix, librdf_model *destmodel);
 
 /* Determine the class of something (storing in cache->classname) */
 int spindle_class_match(SPINDLEENTRY *cache, struct spindle_strset_struct *classes);

@@ -191,19 +191,9 @@ spindle_store_cache_(SPINDLEENTRY *data)
 	librdf_free_memory(proxy);
 	librdf_free_memory(source);
 	librdf_free_memory(extra);
-	
-	if(data->generate->bucket)
-	{
-		r = spindle_precompose_s3(data, buf, bufsize);
-	}
-	else if(data->generate->cachepath)
-	{
-		r = spindle_precompose_file(data, buf, bufsize);
-	}
-	else
-	{
-		r = 0;
-	}
+
+	r = spindle_cache_store_buf(data, NULL, buf, bufsize);
+
 	free(buf);
 	return r;
 }
