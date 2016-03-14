@@ -23,6 +23,27 @@
 
 #include "p_spindle.h"
 
+static unsigned long long
+gettimems(void)
+{
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL);
+	return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+}
+
+static int
+gettimediffms(unsigned long long *start)
+{
+	struct timeval tv;
+	int r;
+
+	gettimeofday(&tv, NULL);
+	r = (int) (((tv.tv_sec * 1000) + (tv.tv_usec / 1000)) - *start);
+	*start = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+	return r;
+}
+
 int
 spindle_preproc(twine_graph *graph, void *data)
 {
@@ -35,8 +56,11 @@ spindle_preproc(twine_graph *graph, void *data)
 	size_t c;
 	SPINDLE *spindle;
 
-	spindle = (SPINDLE *) data;
+	unsigned long long start;
 
+	start = gettimems();
+
+	spindle = (SPINDLE *) data;
 	st = librdf_model_as_stream(graph->store);
 	while(!librdf_stream_end(st))
 	{
@@ -70,5 +94,8 @@ spindle_preproc(twine_graph *graph, void *data)
 		librdf_stream_next(st);
 	}
 	librdf_free_stream(st);
+
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] pre-processing graph \n", gettimediffms(&start));
+
 	return 0;
 }
