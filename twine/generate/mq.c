@@ -311,6 +311,7 @@ spindle_mq_next_(MQ *self, MQMESSAGE **msg)
 			return -1;
 		}
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": MQ: next item is {%s}\n", sql_stmt_str(rs, 0));
+		p->kind = MQK_INCOMING;
 		p->buf = strdup(sql_stmt_str(rs, 0));
 		if(!p->buf)
 		{
@@ -395,11 +396,16 @@ spindle_mqmessage_kind_(MQMESSAGE *self)
 /* Mark an incoming message as being accepted */
 static int
 spindle_mqmessage_accept_(MQMESSAGE *self)
-{   
+{
 	RESET_ERROR(self->connection);
-	if(self->kind != MQK_INCOMING)
+	if(self->kind != MQK_INCOMING || !self->buf)
 	{
 		SET_SYSERR(self->connection, EINVAL);
+		return -1;
+	}
+	if(sql_executef(self->connection->sql, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = %d WHERE \"id\" = %Q",
+		"COMPLETE", 0, self->buf))
+	{
 		return -1;
 	}
 	return 0;
@@ -409,9 +415,14 @@ static int
 spindle_mqmessage_reject_(MQMESSAGE *self)
 {
 	RESET_ERROR(self->connection);
-	if(self->kind != MQK_INCOMING)
+	if(self->kind != MQK_INCOMING || !self->buf)
 	{
 		SET_SYSERR(self->connection, EINVAL);
+		return -1;
+	}
+	if(sql_executef(self->connection->sql, "UPDATE \"state\" SET \"status\" = %Q WHERE \"id\" = %Q",
+		"REJECTED", self->buf))
+	{
 		return -1;
 	}
 	return 0;
