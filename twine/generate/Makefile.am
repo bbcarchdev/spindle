@@ -23,7 +23,7 @@ AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ -I$(srcdir)/../common
 twinemodule_LTLIBRARIES = spindle-generate.la
 
 spindle_generate_la_SOURCES = p_spindle-generate.h \
-	module.c processor.c mq.c cache.c \
+	module.c processor.c mq.c cache.c triggers.c \
 	generate.c entry.c source.c describe.c related.c store.c \
 	classes.c props.c doc.c licenses.c \
 	index.c index-core.c index-about.c index-membership.c \

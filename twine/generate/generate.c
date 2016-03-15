@@ -36,19 +36,6 @@ static int spindle_generate_state_update_(SPINDLEENTRY *cache);
 static int spindle_generate_txn_(SQL *restrict sql, void *restrict userdata);
 static int spindle_generate_entry_(SPINDLEENTRY *entry);
 
-#if 0
-static int spindle_cache_init_(SPINDLEENTRY *data, SPINDLE *spindle, const char *localname);
-static int spindle_cache_cleanup_(SPINDLEENTRY *data);
-static int spindle_cache_cleanup_literalset_(struct spindle_literalset_struct *set);
-static int spindle_cache_store_(SPINDLEENTRY *data);
-static int spindle_cache_source_(SPINDLEENTRY *data);
-static int spindle_cache_source_sameas_(SPINDLEENTRY *data);
-static int spindle_cache_source_clean_(SPINDLEENTRY *data);
-static int spindle_cache_strset_refs_(SPINDLEENTRY *data, struct spindle_strset_struct *set);
-static int spindle_cache_describedby_(SPINDLEENTRY *data);
-static int spindle_cache_extra_(SPINDLEENTRY *data);
-#endif
-
 static unsigned long long gettimems(void);
 static int gettimediffms(unsigned long long *start);
 
@@ -91,9 +78,10 @@ spindle_generate(SPINDLEGENERATE *generate, const char *identifier, int mode)
 	{
 		r = spindle_generate_entry_(&data);
 	}
-	/* TODO: once we've updated an entry, turn triggers referring to this
-	 * proxy into updates of the state table
-	 */
+	if(!r)
+	{
+		spindle_trigger_apply(&data);
+	}
 	spindle_entry_cleanup(&data);
 	if(r)
 	{
@@ -255,45 +243,48 @@ spindle_generate_entry_(SPINDLEENTRY *entry)
 		return -1;
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] obtain cached data\n", gettimediffms(&start));
-	if(entry->flags & TK_PROXY)
+	/* Update any triggers */
+	if(spindle_triggers_update(entry) < 0)
 	{
-		/* Update proxy classes */
-		if(spindle_class_update_entry(entry) < 0)
-		{
-			return -1;
-		}
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update classes\n", gettimediffms(&start));
-		/* Update proxy properties */
-		if(spindle_prop_update_entry(entry) < 0)
-		{
-			return -1;
-		}
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update properties\n", gettimediffms(&start));
-		/* Fetch information about the documents describing the entities */
-		if(spindle_describe_entry(entry) < 0)
-		{
-			return -1;
-		}
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update describedBy\n", gettimediffms(&start));
-		/* Describe the document itself */
-		if(spindle_doc_apply(entry) < 0)
-		{
-			return -1;
-		}
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] add information resource\n", gettimediffms(&start));
-		/* Describing licensing information */
-		if(spindle_license_apply(entry) < 0)
-		{
-			return -1;
-		}
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] add licensing information\n", gettimediffms(&start));
-		/* Fetch data about related resources */
-		if(spindle_related_fetch_entry(entry) < 0)
-		{
-			return -1;
-		}
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] fetch related data\n", gettimediffms(&start));
+		return -1;
 	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update triggers\n", gettimediffms(&start));
+	/* Update proxy classes */
+	if(spindle_class_update_entry(entry) < 0)
+	{
+		return -1;
+	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update classes\n", gettimediffms(&start));
+	/* Update proxy properties */
+	if(spindle_prop_update_entry(entry) < 0)
+	{
+		return -1;
+	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update properties\n", gettimediffms(&start));
+	/* Fetch information about the documents describing the entities */
+	if(spindle_describe_entry(entry) < 0)
+	{
+		return -1;
+	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update describedBy\n", gettimediffms(&start));
+	/* Describe the document itself */
+	if(spindle_doc_apply(entry) < 0)
+	{
+		return -1;
+	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] add information resource\n", gettimediffms(&start));
+	/* Describing licensing information */
+	if(spindle_license_apply(entry) < 0)
+	{
+		return -1;
+	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] add licensing information\n", gettimediffms(&start));
+	/* Fetch data about related resources */
+	if(spindle_related_fetch_entry(entry) < 0)
+	{
+		return -1;
+	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] fetch related data\n", gettimediffms(&start));
 	/* Index the resulting model */
 	if(spindle_index_entry(entry) < 0)
 	{
@@ -367,153 +358,4 @@ spindle_generate_state_update_(SPINDLEENTRY *cache)
 {
 	return sql_executef(cache->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = '%d' WHERE \"id\" = %Q", "COMPLETE", 0, cache->id);
 }
-
-/* Add a trigger URI */
-int
-spindle_cache_trigger(SPINDLEENTRY *cache, const char *uri, unsigned int kind)
-{
-	size_t c;
-	struct spindle_trigger_struct *p;
-
-	for(c = 0; c < cache->ntriggers; c++)
-	{
-		if(!strcmp(cache->triggers[c].uri, uri))
-		{
-			cache->triggers[c].kind |= kind;
-			return 0;
-		}
-	}
-	p = (struct spindle_trigger_struct *) realloc(cache->triggers, (cache->ntriggers + 1) * (sizeof(struct spindle_trigger_struct)));
-	if(!p)
-	{
-		return -1;
-	}
-	cache->triggers = p;
-	p = &(cache->triggers[cache->ntriggers]);
-	memset(p, 0, sizeof(struct spindle_trigger_struct));
-	p->uri = strdup(uri);
-	if(!p->uri)
-	{
-		return -1;
-	}
-	p->kind = kind;
-	cache->ntriggers++;
-	return 0;
-}
-
-#if 0
-/* For anything which is the subject of one of the triples in the source
- * dataset, find any triples whose object is that thing and add the
- * subjects to the set if they're not already present.
- *
- * This a trigger mechanism: by adding the local URI of the entity referring to
- * this one to the set, it will be updated as part of this run of the
- * generation process.
- */
-static int
-spindle_cache_strset_refs_(SPINDLEENTRY *data, struct spindle_strset_struct *set)
-{
-	struct spindle_strset_struct *subjects;
-	librdf_stream *stream;
-	librdf_statement *st;
-	librdf_node *node;
-	librdf_uri *uri;
-	const char *uristr;
-	size_t c;
-	SPARQLRES *res;
-	SPARQLROW *row;
-
-	if(!set)
-	{
-		return 0;
-	}
-	/* Build the subject set */
-	subjects = spindle_strset_create();
-	stream = librdf_model_as_stream(data->sourcedata);
-	while(!librdf_stream_end(stream))
-	{
-		st = librdf_stream_get_object(stream);
-		node = librdf_statement_get_subject(st);
-		if(librdf_node_is_resource(node) &&
-		   (uri = librdf_node_get_uri(node)) &&
-		   (uristr = (const char *) librdf_uri_as_string(uri)))
-		{
-			spindle_strset_add(subjects, uristr);
-		}
-		librdf_stream_next(stream);
-	}
-	librdf_free_stream(stream);
-		
-	/* Query for references to each of the subjects */
-	for(c = 0; c < subjects->count; c++)
-	{
-		res = sparql_queryf(data->spindle->sparql,
-							"SELECT ?local, ?s WHERE {\n"
-							" GRAPH %V {\n"
-							"  ?s <" NS_OWL "sameAs> ?local .\n"
-							" }\n"
-							" GRAPH ?g {\n"
-							"   ?s ?p <%s> .\n"
-							" }\n"
-							"}",
-							data->spindle->rootgraph, subjects->strings[c]);
-		if(!res)
-		{
-			twine_logf(LOG_ERR, "SPARQL query for inbound references failed\n");
-			spindle_strset_destroy(subjects);
-			return -1;
-		}
-		/* Add each result to the changeset */
-		while((row = sparqlres_next(res)))
-		{
-			node = sparqlrow_binding(row, 0);
-			if(node && librdf_node_is_resource(node) &&
-			   (uri = librdf_node_get_uri(node)) &&
-			   (uristr = (const char *) librdf_uri_as_string(uri)))
-			{
-				spindle_strset_add(set, uristr);
-			}				
-		}
-		sparqlres_destroy(res);
-	}
-	spindle_strset_destroy(subjects);
-	return 0;
-}
-#endif
-
-#if 0
-/* Re-build the cached data for a set of proxies */
-int
-spindle_cache_update_set(SPINDLE *spindle, struct spindle_strset_struct *set)
-{ 
-	size_t c, origcount;
-
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": updating proxies:\n");
-	for(c = 0; c < set->count; c++)
-	{
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": <%s>\n", set->strings[c]);
-	}
-	/* Keep track of how many things were in the original set, so that we
-	 * don't recursively re-cache a huge amount
-	 */
-	origcount = set->count;
-	for(c = 0; c < set->count; c++)
-	{
-		if(set->flags[c] & SF_DONE)
-		{
-			continue;
-		}
-		if(c < origcount && (set->flags[c] & SF_MOVED))
-		{
-			spindle_cache_update(spindle, set->strings[c], set);
-		}
-		else
-		{
-			spindle_cache_update(spindle, set->strings[c], NULL);
-		}
-		set->flags[c] |= SF_DONE;
-	}
-	return 0;
-}
-#endif
 

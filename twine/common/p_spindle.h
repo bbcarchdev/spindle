@@ -37,6 +37,9 @@
 /* The number of co-references allocated at a time when extending a set */
 # define SET_BLOCKSIZE                  4
 
+/* The number of entries in the graph cache */
+# define SPINDLE_GRAPHCACHE_SIZE        16
+
 /* Internal rule-base processing */
 int spindle_rulebase_class_add_node(SPINDLERULES *rules, librdf_model *model, const char *uri, librdf_node *node);
 int spindle_rulebase_class_add_matchnode(SPINDLERULES *rules, librdf_model *model, const char *matchuri, librdf_node *node);

@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -43,9 +43,6 @@
 
 # define SPINDLE_DB_INDEX_VERSION       1
 
-/* The number of entries in the graph cache */
-# define SPINDLE_GRAPHCACHE_SIZE        16
-
 # define MIME_NQUADS                    "application/n-quads"
 
 typedef struct spindle_generate_struct SPINDLEGENERATE;
@@ -63,8 +60,6 @@ struct spindle_generate_struct
 	int s3_verbose;
 	/* The filesystem paths that precomposed N-Quads should be stored in */
 	char *cachepath;
-	/* Cached information about graphs */
-	struct spindle_graphcache_struct *graphcache;
 	/* Names of specific predicates */
 	char *titlepred;
 	struct spindle_predicatemap_struct *licensepred;
@@ -88,6 +83,7 @@ struct spindle_entry_struct
 	const char *localname;
 	const char *classname;
 	char **refs;
+	size_t refcount;
 	time_t modified;
 	int flags;
 	
@@ -137,12 +133,7 @@ struct spindle_trigger_struct
 {
 	char *uri;
 	unsigned int kind;
-};
-
-struct spindle_graphcache_struct
-{
-	char *uri;
-	librdf_model *model;
+	char *id;
 };
 
 /* Information about a license */
@@ -183,10 +174,8 @@ int spindle_index_core(SQL *sql, const char *id, SPINDLEENTRY *data);
 int spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data);
 int spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data);
 int spindle_index_membership(SQL *sql, const char *id, SPINDLEENTRY *data);
-int spindle_index_audiences(SPINDLEGENERATE *generate, const char *license, char ***audiences);
-
-/* Add a trigger URI */
-int spindle_cache_trigger(SPINDLEENTRY *cache, const char *uri, unsigned int kind);
+int spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data);
+int spindle_index_audiences(SPINDLEGENERATE *generate, const char *license, const char *mediaid, const char *mediauri, const char *mediakind, const char *mediatype);
 
 /* Cached N-Quads handling */
 int spindle_cache_init(SPINDLEGENERATE *spindle);
@@ -202,9 +191,6 @@ int spindle_class_update_entry(SPINDLEENTRY *cache);
 /* Update the properties of a proxy */
 int spindle_prop_update_entry(SPINDLEENTRY *cache);
 
-/* Graph cache */
-int spindle_graph_description_node(SPINDLEGENERATE *generate, librdf_model *target, librdf_node *graph);
-
 /* Update the information resource describing the proxy */
 int spindle_doc_init(SPINDLEGENERATE *spindle);
 int spindle_doc_apply(SPINDLEENTRY *cache);
@@ -219,5 +205,14 @@ int spindle_db_cache_source(SPINDLEENTRY *data);
 
 /* MQ engine */
 int spindle_mq_init(void *handle);
+
+/* Add a new trigger */
+int spindle_trigger_add(SPINDLEENTRY *cache, const char *uri, unsigned int kind, const char *id);
+/* Apply triggers referring to this entity to any others */
+int spindle_trigger_apply(SPINDLEENTRY *entry);
+/* Add triggers to the database */
+int spindle_triggers_index(SQL *sql, const char *id, SPINDLEENTRY *data);
+/* Update any triggers which have one of our URIs */
+int spindle_triggers_update(SPINDLEENTRY *data);
 
 #endif /*!P_SPINDLE_GENERATE_H_*/

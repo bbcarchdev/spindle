@@ -46,9 +46,8 @@ int
 spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data)
 {
 	size_t c;
-	char **refs, **audiences;
-	char *kind, *type, *license, *audienceuri, *audienceid;
-	SQL_STATEMENT *rs;
+	char **refs;
+	char *kind, *type, *license;
 	int r;
 
 	r = 0;
@@ -84,12 +83,15 @@ spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data)
 	}
 	type = spindle_index_media_type_(data);
 	
+	/* TODO: handle multiple licenses */
 	license = spindle_index_media_license_(data);
+	r = 0;
 	if(license)
 	{
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": license URI for <%s> is <%s>\n", refs[0], license);
-		spindle_cache_trigger(data, license, TK_MEDIA);
-		if(spindle_index_audiences(data->generate, license, &audiences))
+		spindle_trigger_add(data, license, TK_MEDIA, NULL);
+		r = spindle_index_audiences(data->generate, license, id, refs[0], kind, type);
+		if(r < 0)
 		{
 			free(license);
 			free(type);
@@ -102,52 +104,12 @@ spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data)
 	else
 	{
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": media object <%s> has no license\n", refs[0]);
-		audiences = NULL;
 	}
-	if(!audiences || audiences[0])
+	r = sql_executef(sql, "INSERT INTO \"index_media\" (\"id\", \"media\") VALUES (%Q, %Q)", id, id);
+	if(r > 0)
 	{
-		r = sql_executef(sql, "INSERT INTO \"index_media\" (\"id\", \"media\") VALUES (%Q, %Q)", id, id);
-	}
-	if(!audiences)
-	{		
 		sql_executef(sql, "INSERT INTO \"media\" (\"id\", \"uri\", \"class\", \"type\", \"audience\") VALUES (%Q, %Q, %Q, %Q, %Q)",
-					 id, refs[0], kind, type, NULL);
-	}
-	else
-	{
-		/* Ensure there's an entry in the audiences table for the audience
-		 * URI we've determined applies to this media item
-		 */
-		for(c = 0; audiences[c]; c++)
-		{
-			audienceuri = spindle_proxy_locate(data->spindle, audiences[c]);
-			if(audienceuri)
-			{
-				audienceid = spindle_db_id(audienceuri);
-				rs = sql_queryf(sql, "SELECT \"id\" FROM \"audiences\" WHERE \"id\" = %Q", audienceid);
-				if(rs)
-				{
-					if(sql_stmt_eof(rs))
-					{
-						sql_executef(sql, "INSERT INTO \"audiences\" (\"id\", \"uri\") VALUES (%Q, %Q)", audienceid, audiences[c]);
-					}
-					sql_stmt_destroy(rs);
-				}
-			}
-			else
-			{
-				audienceid = NULL;
-			}
-			/* For each target audience (based upon ODRL descriptions), add
-			 * a row to the media table.
-			 */
-			r = sql_executef(sql, "INSERT INTO \"media\" (\"id\", \"uri\", \"class\", \"type\", \"audience\", \"audienceid\") VALUES (%Q, %Q, %Q, %Q, %Q, %Q)",
-							 id, refs[0], kind, type, audiences[c], audienceid);
-			free(audiences[c]);
-			free(audienceuri);
-			free(audienceid);
-		}
-		free(audiences);
+			id, refs[0], kind, type, NULL);
 	}
 	free(refs[0]);
 	free(refs);
@@ -206,15 +168,17 @@ spindle_index_media_refs_(SQL *sql, const char *id, SPINDLEENTRY *data)
 			localid = spindle_proxy_locate(data->spindle, uristr);
 			if(!localid)
 			{
+				spindle_trigger_add(data, uristr, TK_MEDIA, NULL);
 				continue;
 			}
-			uristr = localid;
 		}
-		if(!(tid = spindle_db_id(uristr)))
+		if(!(tid = spindle_db_id(localid ? localid : uristr)))
 		{
 			free(localid);
+			spindle_trigger_add(data, uristr, TK_MEDIA, NULL);
 			continue;
 		}
+		spindle_trigger_add(data, uristr, TK_MEDIA, tid);
 		if(sql_executef(sql, "INSERT INTO \"index_media\" (\"id\", \"media\") VALUES (%Q, %Q)", id, tid))
 		{
 			free(tid);

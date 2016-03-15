@@ -30,7 +30,8 @@ spindle_related_fetch_entry(SPINDLEENTRY *data)
 	librdf_node *context;
 	librdf_uri *uri;
 	const char *uristr;
-
+	int r;
+	
 	/* If there's no cache destination, the extradata model won't be used, so
 	 * there's nothing to do here
 	 */
@@ -38,28 +39,44 @@ spindle_related_fetch_entry(SPINDLEENTRY *data)
 	{
 		return 0;
 	}
-	/* Cache information about external resources related to this
-	 * entity, restricted by the predicate used for the relation
-	 */
-	if(sparql_queryf_model(data->spindle->sparql, data->extradata,
-						   "SELECT DISTINCT ?s ?p ?o ?g\n"
-						   " WHERE {\n"
-						   "  GRAPH %V {\n"
-						   "   %V ?p1 ?s .\n"
-						   "   FILTER("
-						   "     ?p1 = <" NS_FOAF "page> || "
-						   "     ?p1 = <" NS_MRSS "player> || "
-						   "     ?p1 = <" NS_MRSS "content> "
-						   "   )\n"
-						   "  }\n"
-						   "  GRAPH ?g {\n"
-						   "   ?s ?p ?o .\n"
-						   "  }\n"
-						   "  FILTER(?g != %V && ?g != %V)\n"
-						   "}",
-						   data->graph, data->self, data->graph, data->spindle->rootgraph))
+	if((data->flags & TK_PROXY) || (data->flags & TK_MEDIA))
+	{
+		r = 0;
+	}
+	else
+	{
+		r = spindle_cache_fetch(data, "related", data->extradata);
+	}
+	if(r < 0)
 	{
 		return -1;
+	}
+	if(r == 0)
+	{
+		/* Cache information about external resources related to this
+		 * entity, restricted by the predicate used for the relation
+		 */
+		if(sparql_queryf_model(data->spindle->sparql, data->extradata,
+							   "SELECT DISTINCT ?s ?p ?o ?g\n"
+							   " WHERE {\n"
+							   "  GRAPH %V {\n"
+							   "   %V ?p1 ?s .\n"
+							   "   FILTER("
+							   "     ?p1 = <" NS_FOAF "page> || "
+							   "     ?p1 = <" NS_MRSS "player> || "
+							   "     ?p1 = <" NS_MRSS "content> "
+							   "   )\n"
+							   "  }\n"
+							   "  GRAPH ?g {\n"
+							   "   ?s ?p ?o .\n"
+							   "  }\n"
+							   "  FILTER(?g != %V && ?g != %V)\n"
+							   "}",
+							   data->graph, data->self, data->graph, data->spindle->rootgraph))
+		{
+			return -1;
+		}
+		spindle_cache_store(data, "related", data->extradata);
 	}
 	/* Remove anything in a local graph */
 	iterator = librdf_model_get_contexts(data->extradata);

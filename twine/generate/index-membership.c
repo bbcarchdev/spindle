@@ -42,6 +42,7 @@ spindle_index_membership(SQL *sql, const char *id, SPINDLEENTRY *data)
 	 */
 	if(spindle_index_membership_query_(sql, id, data, data->proxydata, data->graph, NS_DCTERMS "isPartOf", 0, 0))
 	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to query proxy for dct:isPartOf statements\n");
 		return -1;
 	}
 	/* Find the statements within the source data which express the fact
@@ -49,6 +50,7 @@ spindle_index_membership(SQL *sql, const char *id, SPINDLEENTRY *data)
 	 */
 	if(spindle_index_membership_query_(sql, id, data, data->sourcedata, NULL, NS_FOAF "primaryTopic", 1, 1))
 	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to query proxy for foaf:primaryTopic statements\n");
 		return -1;
 	}
 	/* Attempt to recursively add this proxy to a collection corresponding to
@@ -56,6 +58,7 @@ spindle_index_membership(SQL *sql, const char *id, SPINDLEENTRY *data)
 	 */
 	if(spindle_index_membership_strset_(sql, id, data, data->sources))
 	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to recursively add proxy to collections\n");
 		return -1;
 	}
 	return 0;
@@ -211,6 +214,7 @@ spindle_index_membership_strset_(SQL *sql, const char *id, SPINDLEENTRY *data, s
 	int r;
 	size_t c;
 
+	r = 0;
 	for(c = 0; c < set->count; c++)
 	{
 		if((r = spindle_index_membership_add_uri_(data, sql, id, set->strings[c])))
@@ -235,33 +239,32 @@ spindle_index_membership_add_uri_(SPINDLEENTRY *data, SQL *sql, const char *id, 
 		collid = spindle_db_id(uristr);
 		if(!collid)
 		{
-			r = -1;
-		}
-		if(!r && spindle_index_membership_add_(sql, id, collid))
-		{
-			r = -1;
-		}
-	}
-	else
-	{
-		spindle_cache_trigger(data, uristr, TK_MEMBERSHIP);
-		localuri = spindle_proxy_locate(data->spindle, uristr);
-		if(!localuri)
-		{
-			twine_logf(LOG_DEBUG, PLUGIN_NAME ": membership: no proxy found for <%s>\n", uristr);
+			twine_logf(LOG_WARNING, PLUGIN_NAME ": no UUID found for collection <%s>\n", uristr);
+			spindle_trigger_add(data, uristr, TK_MEMBERSHIP, NULL);
 			return 0;
-		}			   
-		collid = spindle_db_id(localuri);
-		if(!collid)
-		{
-			twine_logf(LOG_ERR, PLUGIN_NAME ": membership: failed to locate local UUID for <%s>\n", localuri);
-			r = -1;
 		}
-		if(!r && spindle_index_membership_add_(sql, id, collid))
-		{
-			r = -1;
-		}  
+		spindle_trigger_add(data, uristr, TK_MEMBERSHIP, collid);
+		r = spindle_index_membership_add_(sql, id, collid);
+		free(collid);
+		return r;
 	}
+	localuri = spindle_proxy_locate(data->spindle, uristr);
+	if(!localuri)
+	{
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": membership: no proxy found for <%s>\n", uristr);
+		spindle_trigger_add(data, uristr, TK_MEMBERSHIP, NULL);
+		return 0;
+	}
+	collid = spindle_db_id(localuri);
+	if(!collid)
+	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": membership: failed to locate local UUID for <%s>\n", localuri);
+		free(localuri);
+		spindle_trigger_add(data, uristr, TK_MEMBERSHIP, NULL);
+		return 0;
+	}
+	spindle_trigger_add(data, uristr, TK_MEMBERSHIP, collid);
+	r = spindle_index_membership_add_(sql, id, collid);
 	free(collid);
 	free(localuri);
 	return r;

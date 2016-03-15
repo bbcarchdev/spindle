@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               23
+#define DB_SCHEMA_VERSION               24
 
 static int spindle_db_migrate_(SQL *restrict, const char *identifier, int newversion, void *restrict userdata);
 
@@ -473,6 +473,26 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 			return -1;
 		}
 		if(sql_begin(sql, SQL_TXN_CONSISTENT))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 24)
+	{
+		if(sql_execute(sql, "CREATE TABLE \"licenses_audiences\" ("
+			"  \"id\" uuid NOT NULL, "
+			"  \"uri\" text NOT NULL, "
+			"  \"audienceid\" uuid default NULL"
+			")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"licenses_audiences_id\" ON \"licenses_audiences\" (\"id\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"licenses_audiences_audienceid\" ON \"licenses_audiences\" (\"audienceid\")"))
 		{
 			return -1;
 		}

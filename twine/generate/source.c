@@ -27,6 +27,7 @@ static int spindle_source_fetch_db_(SPINDLEENTRY *data);
 static int spindle_source_fetch_sparql_(SPINDLEENTRY *data);
 static int spindle_source_sameas_(SPINDLEENTRY *data);
 static int spindle_source_clean_(SPINDLEENTRY *data);
+static int spindle_source_refs_(SPINDLEENTRY *data);
 
 /* Obtain cached source data for processing */
 int
@@ -47,11 +48,19 @@ spindle_source_fetch_entry(SPINDLEENTRY *data)
 		if(r > 0)
 		{
 			/* N-Quads were retrieved from the cache */
+			if(spindle_source_refs_(data))
+			{
+				return -1;
+			}
 			return 0;
 		}
 	}
 	if(data->db)
 	{
+		if(spindle_source_refs_(data))
+		{
+			return -1;
+		}
 		if(spindle_source_fetch_db_(data))
 		{
 			return -1;
@@ -68,16 +77,16 @@ spindle_source_fetch_entry(SPINDLEENTRY *data)
 	{
 		return -1;
 	}
-	return spindle_cache_store(data, "source", data->sourcedata);
+	if(spindle_cache_store(data, "source", data->sourcedata))
+	{
+		return -1;
+	}
+	return 0;
 }
 
-/* Fetch all of the source data about the entities that relate to a particular
- * proxy using the database
- */
 static int
-spindle_source_fetch_db_(SPINDLEENTRY *data)
+spindle_source_refs_(SPINDLEENTRY *data)
 {
-	int r;
 	size_t c;
 	librdf_statement *st;
 
@@ -90,9 +99,10 @@ spindle_source_fetch_db_(SPINDLEENTRY *data)
 			return -1;
 		}
 	}
-	r = 0;
+	data->refcount = 0;
 	for(c = 0; data->refs[c]; c++)
 	{
+		data->refcount++;
 		/* Add <ref> owl:sameAs <localname> triples to the proxy model */
 		st = twine_rdf_st_create();
 		librdf_statement_set_subject(st, twine_rdf_node_createuri(data->refs[c]));
@@ -100,8 +110,23 @@ spindle_source_fetch_db_(SPINDLEENTRY *data)
 		librdf_statement_set_object(st, twine_rdf_node_createuri(data->localname));
 		librdf_model_context_add_statement(data->proxydata, data->graph, st);
 		twine_rdf_st_destroy(st);
-		/* Fetch the source data into the source model */
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": DB: fetching source data for <%s>\n", data->refs[c]);
+	}
+	return 0;
+}
+
+/* Fetch all of the source data about the entities that relate to a particular
+ * proxy using the database
+ */
+static int
+spindle_source_fetch_db_(SPINDLEENTRY *data)
+{
+	int r;
+	size_t c;
+
+	r = 0;
+	for(c = 0; data->refs[c]; c++)
+	{
+		/* Add <ref> owl:sameAs <localname> triples to the proxy model */
 		/* XXX this query is very inefficient */
 		if(sparql_queryf_model(data->sparql, data->sourcedata,
 							   "SELECT DISTINCT ?s ?p ?o ?g\n"

@@ -85,6 +85,8 @@ struct spindle_context_struct
 	int multigraph;
 	/* The rulebase */
 	SPINDLERULES *rules;
+	/* Cached information about graphs */
+	struct spindle_graphcache_struct *graphcache;
 };
 
 /* The rule-base object */
@@ -107,6 +109,12 @@ struct spindle_rulebase_struct
 	struct coref_match_struct *coref;
 	size_t corefcount;
 	size_t corefsize;
+};
+
+struct spindle_graphcache_struct
+{
+	char *uri;
+	librdf_model *model;
 };
 
 /* A set of literal strings */
@@ -257,5 +265,12 @@ int spindle_proxy_relate(SPINDLE *spindle, const char *remote, const char *proxy
 char **spindle_proxy_refs(SPINDLE *spindle, const char *uri);
 /* Destroy a list of references */
 void spindle_proxy_refs_destroy(char **refs);
+
+/* Retrieve the contents of a graph */
+librdf_model *spindle_graphcache_fetch_node(SPINDLE *spindle, librdf_node *graph);
+/* Discard a graph */
+int spindle_graphcache_discard(SPINDLE *spindle, const char *uri);
+/* Copy a description of a graph */
+int spindle_graphcache_description_node(SPINDLE *spindle, librdf_model *target, librdf_node *graph);
 
 #endif /*!SPINDLE_COMMON_H_*/

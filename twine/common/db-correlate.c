@@ -207,6 +207,8 @@ spindle_db_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, cha
 	sql_executef(spindle->db, "UPDATE \"triggers\" SET \"triggerid\" = %Q WHERE \"triggerid\" = %Q", newid, oldid);
 	sql_executef(spindle->db, "UPDATE \"triggers\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
 	sql_executef(spindle->db, "UPDATE \"audiences\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
+	sql_executef(spindle->db, "UPDATE \"licenses_audiences\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
+	sql_executef(spindle->db, "UPDATE \"licenses_audiences\" SET \"audienceid\" = %Q WHERE \"audienceid\" = %Q", newid, oldid);
 	sql_executef(spindle->db, "UPDATE \"media\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
 	sql_executef(spindle->db, "UPDATE \"membership\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
 	sql_executef(spindle->db, "UPDATE \"membership\" SET \"collection\" = %Q WHERE \"collection\" = %Q", newid, oldid);
@@ -299,6 +301,10 @@ spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict userdata)
 		return -2;
 	}
 	if(sql_executef(db, "UPDATE \"audiences\" SET \"id\" = %Q WHERE \"uri\" = %Q", data->id, data->uri))
+	{
+		return -2;
+	}
+	if(sql_executef(db, "UPDATE \"licenses_audiences\" SET \"audienceid\" = %Q WHERE \"uri\" = %Q", data->id, data->uri))
 	{
 		return -2;
 	}

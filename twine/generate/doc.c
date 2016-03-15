@@ -203,9 +203,13 @@ spindle_doc_label_(SPINDLEENTRY *cache)
 	{
 		s = cache->title_en;
 	}
-	else
+	else if(cache->title)
 	{
 		s = cache->title;
+	}
+	else
+	{
+		s = cache->id;
 	}
 	strbuf = (char *) calloc(1, strlen(s) + 32);
 	if(!strbuf)

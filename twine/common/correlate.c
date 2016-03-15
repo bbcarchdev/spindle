@@ -148,8 +148,11 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		/* Ensure that proxy state is up to date */
 		if(spindle->db)
 		{
+			/* Mark the proxy as needing to be re-generated - we don't know
+			 * if the changes were material or not
+			 */
 			id = spindle_db_id(u1);
-			spindle_db_proxy_state_(spindle, id, 0);
+			spindle_db_proxy_state_(spindle, id, 1);
 			free(id);
 		}
 		free(u1);
@@ -167,8 +170,11 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		/* Ensure that the proxy state is up to date */
 		if(spindle->db)
 		{
+			/* Mark the proxy as needing to be re-generated - we don't know
+			 * if the changes were material or not
+			 */
 			id = spindle_db_id(u1);
-			spindle_db_proxy_state_(spindle, id, 0);
+			spindle_db_proxy_state_(spindle, id, 1);
 			free(id);
 		}
 		free(u1);

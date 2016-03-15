@@ -157,8 +157,15 @@ spindle_cache_fetch(SPINDLEENTRY *data, const char *suffix, librdf_model *destmo
 		free(buf);
 		return -1;
 	}
-	/* Parse N-Quads */
-	r = twine_rdf_model_parse(destmodel, MIME_NQUADS, buf, bufsize);
+	if(bufsize)
+	{
+		/* Parse N-Quads */
+		r = twine_rdf_model_parse(destmodel, MIME_NQUADS, buf, bufsize);
+	}
+	else
+	{
+		r = 0;
+	}
 	free(buf);
 	if(r)
 	{

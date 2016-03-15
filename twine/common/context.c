@@ -74,12 +74,20 @@ spindle_init(SPINDLE *spindle)
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create URI for xsd:dateTime\n");
 		return -1;
 	}
+	spindle->graphcache = (struct spindle_graphcache_struct *) calloc(SPINDLE_GRAPHCACHE_SIZE, sizeof(struct spindle_graphcache_struct));
+	if(!spindle->graphcache)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create graph cache\n");
+		return -1;
+	}
 	return 0;
 }
 
 int
 spindle_cleanup(SPINDLE *spindle)
 {
+	size_t c;
+	
 	if(spindle->sparql)
 	{
 		sparql_destroy(spindle->sparql);
@@ -111,6 +119,19 @@ spindle_cleanup(SPINDLE *spindle)
 	if(spindle->rules)
 	{
 		spindle_rulebase_destroy(spindle->rules);
+	}
+	if(spindle->graphcache)
+	{
+		for(c = 0; spindle->graphcache && c < SPINDLE_GRAPHCACHE_SIZE; c++)
+		{
+			if(!spindle->graphcache[c].uri)
+			{
+				continue;
+			}
+			twine_rdf_model_destroy(spindle->graphcache[c].model);
+			free(spindle->graphcache[c].uri);
+		}
+		free(spindle->graphcache);
 	}
 	spindle_db_cleanup(spindle);
 	return 0;
