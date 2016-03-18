@@ -19,3 +19,5 @@
 EXTRA_DIST = README.md
 
 SUBDIRS = common strip correlate generate
+
+dist_twinemodule_DATA = rulebase.ttl
