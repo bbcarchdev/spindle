@@ -46,9 +46,10 @@ spindle_db_proxy_locate(SPINDLE *spindle, const char *uri)
 	}
 	if(sql_stmt_eof(rs))
 	{
+		sql_stmt_destroy(rs);
 		return NULL;
 	}
-    /* root + '/' + uuid + '#id' + NUL */
+	/* root + '/' + uuid + '#id' + NUL */
 	/* XXX the fragment should be configurable */
 	buf = (char *) malloc(strlen(spindle->root) + 1 + 32 + 3 + 1);
 	if(!buf)
@@ -87,6 +88,7 @@ spindle_db_proxy_locate(SPINDLE *spindle, const char *uri)
 		}
 	}
 	strcpy(p, "#id");
+	sql_stmt_destroy(rs);
 	return buf;
 }
 

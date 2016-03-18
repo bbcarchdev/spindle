@@ -353,10 +353,10 @@ spindle_index_media_license_(SPINDLEENTRY *data)
 		   (uristr = (const char *) librdf_uri_as_string(uri)))
 		{
 			license = strdup(uristr);
-			return license;
+			break;
 		}
 	}
 	librdf_free_stream(stream);
 	librdf_free_statement(query);	
-	return NULL;
+	return license;
 }
