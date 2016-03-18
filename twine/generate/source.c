@@ -140,7 +140,7 @@ spindle_source_fetch_db_(SPINDLEENTRY *data)
 			"  }\n"
 			" }\n"
 			"}",
-			data->refs[c], data->refs[c]))
+			data->refs[c], data->refs[c], data->refs[c], data->refs[c]))
 		{
 			r = -1;
 			break;
