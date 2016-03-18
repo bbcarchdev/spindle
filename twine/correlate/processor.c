@@ -36,27 +36,6 @@ struct spindle_correlate_data_struct
 static int spindle_correlate_txn_(SQL *restrict sql, void *restrict userdata);
 static int spindle_correlate_internal_(struct spindle_correlate_data_struct *cbdata);
 
-static unsigned long long
-gettimems(void)
-{
-	struct timeval tv;
-
-	gettimeofday(&tv, NULL);
-	return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-}
-
-static int
-gettimediffms(unsigned long long *start)
-{
-	struct timeval tv;
-	int r;
-
-	gettimeofday(&tv, NULL);
-	r = (int) (((tv.tv_sec * 1000) + (tv.tv_usec / 1000)) - *start);
-	*start = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-	return r;
-}
-
 /* Post-processing hook, invoked by Twine operations
  *
  * This hook is invoked once (preprocessed) RDF has been pushed into the
@@ -73,9 +52,6 @@ spindle_correlate(twine_graph *graph, void *data)
 	struct spindle_strset_struct *changes;
 	int r;
 	struct spindle_correlate_data_struct cbdata;
-
-	unsigned long long start;
-	start = gettimems();
 
 	spindle = (SPINDLE *) data;
 	twine_logf(LOG_INFO, PLUGIN_NAME ": evaluating updated graph <%s>\n", graph->uri);
