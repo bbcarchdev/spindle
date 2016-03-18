@@ -25,6 +25,8 @@
 # include <string.h>
 # include <unistd.h>
 # include <sys/stat.h>
+# include <sys/types.h>
+# include <inttypes.h>
 # include <ctype.h>
 # include <errno.h>
 # include <uuid/uuid.h>
