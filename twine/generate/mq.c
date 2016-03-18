@@ -120,6 +120,10 @@ static MQMESSAGEIMPL spindle_mqmessage_impl_ = {
 int
 spindle_mq_init(void *handle)
 {
+	if(mq_register("spindle", spindle_mq_construct_, handle))
+	{
+		return -1;
+	}
 	return sql_scheme_foreach(spindle_mq_register_, handle);
 }
 
@@ -222,6 +226,8 @@ spindle_mq_state_(MQ *self)
 static int
 spindle_mq_connect_recv_(MQ *self)
 {
+	char *t;
+	
 	RESET_ERROR(self);
 	if(self->state != MQS_DISCONNECTED)
 	{
@@ -229,7 +235,22 @@ spindle_mq_connect_recv_(MQ *self)
 		return -1;
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": MQ: establishing connection to <%s>\n", self->uri + 8);
-	self->sql = sql_connect(self->uri + 8);
+	if(!strncasecmp(self->uri, "spindle:", 8))
+	{
+		t = twine_config_geta("spindle:db", NULL);
+		if(!t)
+		{
+			twine_logf(LOG_ERR, PLUGIN_NAME ": MQ: no database connection URI (db=xxx) provided in the [spindle] configuration section\n");
+			SET_SYSERR(self, EINVAL);
+			return -1;
+		}
+		self->sql = sql_connect(t);
+		free(t);
+	}
+	else
+	{
+		self->sql = sql_connect(self->uri + 8);
+	}
 	if(!self->sql)
 	{
 		SET_ERRNO(self);
