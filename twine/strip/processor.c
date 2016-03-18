@@ -21,31 +21,13 @@
 # include "config.h"
 #endif
 
-#include "p_spindle.h"
+#include "p_spindle-strip.h"
 
-static unsigned long long
-gettimems(void)
-{
-	struct timeval tv;
-
-	gettimeofday(&tv, NULL);
-	return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-}
-
-static int
-gettimediffms(unsigned long long *start)
-{
-	struct timeval tv;
-	int r;
-
-	gettimeofday(&tv, NULL);
-	r = (int) (((tv.tv_sec * 1000) + (tv.tv_usec / 1000)) - *start);
-	*start = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-	return r;
-}
-
+/* Process a graph, stripping out triples using predicates which don't appear
+ * in the rule-base
+ */
 int
-spindle_preproc(twine_graph *graph, void *data)
+spindle_strip(twine_graph *graph, void *data)
 {
 	librdf_stream *st;
 	librdf_statement *statement;
@@ -54,13 +36,10 @@ spindle_preproc(twine_graph *graph, void *data)
 	const char *preduri;
 	int match, r;
 	size_t c;
-	SPINDLE *spindle;
+	SPINDLERULES *rules;
 
-	unsigned long long start;
+	rules = (SPINDLERULES *) data;
 
-	start = gettimems();
-
-	spindle = (SPINDLE *) data;
 	st = librdf_model_as_stream(graph->store);
 	while(!librdf_stream_end(st))
 	{
@@ -71,9 +50,9 @@ spindle_preproc(twine_graph *graph, void *data)
 		   (pred = librdf_node_get_uri(predicate)) &&
 		   (preduri = (const char *) librdf_uri_as_string(pred)))
 		{
-			for(c = 0; c < spindle->cpcount; c++)
+			for(c = 0; c < rules->cpcount; c++)
 			{
-				r = strcmp(spindle->cachepreds[c], preduri);
+				r = strcmp(rules->cachepreds[c], preduri);
 				if(!r)
 				{
 					match = 1;
@@ -83,19 +62,16 @@ spindle_preproc(twine_graph *graph, void *data)
 				{
 					/* The cachepreds list is lexigraphically sorted */
 					break;
-				}				
+				}
 			}
 			if(!match)
 			{
-				twine_logf(LOG_DEBUG, PLUGIN_NAME ": preprocessor: removing triple with predicate <%s>\n", preduri);
+				twine_logf(LOG_DEBUG, PLUGIN_NAME ": removing triple with predicate <%s>\n", preduri);
 				librdf_model_remove_statement(graph->store, statement);
 			}
 		}
 		librdf_stream_next(st);
 	}
 	librdf_free_stream(st);
-
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] pre-processing graph \n", gettimediffms(&start));
-
 	return 0;
 }

@@ -21,11 +21,11 @@
 # include "config.h"
 #endif
 
-#include "p_spindle.h"
+#include "p_spindle-generate.h"
 
 /* Determine the class of something */
 int
-spindle_class_match(SPINDLECACHE *cache, struct spindle_strset_struct *classes)
+spindle_class_match(SPINDLEENTRY *cache, struct spindle_strset_struct *classes)
 {
 	librdf_statement *query, *st;
 	librdf_node *node;
@@ -56,19 +56,19 @@ spindle_class_match(SPINDLECACHE *cache, struct spindle_strset_struct *classes)
 			{
 				spindle_strset_add(classes, (const char *) uristr);
 			}
-			for(c = 0; c < cache->spindle->classcount; c++)
+			for(c = 0; c < cache->rules->classcount; c++)
 			{
-				if(cache->spindle->classes[c].score > score)
+				if(cache->rules->classes[c].score > score)
 				{
 					continue;
 				}
-				for(d = 0; d < cache->spindle->classes[c].matchcount; d++)
+				for(d = 0; d < cache->rules->classes[c].matchcount; d++)
 				{
-					if(!strcmp((const char *) uristr, cache->spindle->classes[c].match[d].uri))
+					if(!strcmp((const char *) uristr, cache->rules->classes[c].match[d].uri))
 					{
-						mapentry = &(cache->spindle->classes[c]);
-						match = &(cache->spindle->classes[c].match[d]);
-						score = cache->spindle->classes[c].score;
+						mapentry = &(cache->rules->classes[c]);
+						match = &(cache->rules->classes[c].match[d]);
+						score = cache->rules->classes[c].score;
 						if(classes)
 						{
 							spindle_strset_add(classes, mapentry->uri);
@@ -107,7 +107,7 @@ spindle_class_match(SPINDLECACHE *cache, struct spindle_strset_struct *classes)
 
 /* Update the classes of a proxy */
 int
-spindle_class_update(SPINDLECACHE *cache)
+spindle_class_update_entry(SPINDLEENTRY *cache)
 {
 	struct spindle_strset_struct *classes;
 	size_t c;
@@ -149,10 +149,6 @@ spindle_class_update(SPINDLECACHE *cache)
 		librdf_free_statement(st);
 	}
 	librdf_free_statement(base);
-#if SPINDLE_DB_INDEX
 	cache->classes = classes;
-#else
-	spindle_strset_destroy(classes);
-#endif
 	return 0;
 }

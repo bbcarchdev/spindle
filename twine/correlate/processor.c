@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,7 +21,20 @@
 # include "config.h"
 #endif
 
-#include "p_spindle.h"
+#include "p_spindle-correlate.h"
+
+struct spindle_correlate_data_struct
+{
+	SPINDLE *spindle;
+	twine_graph *graph;
+	struct spindle_corefset_struct *oldset;
+	struct spindle_corefset_struct *newset;
+	struct spindle_strset_struct *changes;
+};
+
+
+static int spindle_correlate_txn_(SQL *restrict sql, void *restrict userdata);
+static int spindle_correlate_internal_(struct spindle_correlate_data_struct *cbdata);
 
 static unsigned long long
 gettimems(void)
@@ -53,13 +66,13 @@ gettimediffms(unsigned long long *start)
  * - caching and transforming source data and storing it with the proxies
  */
 int
-spindle_postproc(twine_graph *graph, void *data)
+spindle_correlate(twine_graph *graph, void *data)
 {
 	SPINDLE *spindle;
 	struct spindle_corefset_struct *oldset, *newset;
 	struct spindle_strset_struct *changes;
-	size_t c;
 	int r;
+	struct spindle_correlate_data_struct cbdata;
 
 	unsigned long long start;
 	start = gettimems();
@@ -78,6 +91,7 @@ spindle_postproc(twine_graph *graph, void *data)
 	if(!oldset)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to extract co-references from previous graph state\n");
+		spindle_strset_destroy(changes);
 		return -1;
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": extracting references from new graph\n");
@@ -85,35 +99,70 @@ spindle_postproc(twine_graph *graph, void *data)
 	if(!newset)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to extract co-references from new graph state\n");
+		spindle_strset_destroy(changes);
+		spindle_coref_destroy(oldset);
 		return -1;
 	}
 	/* For each co-reference in the new graph, represent that within our
 	 * local proxy graph
 	 */
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": new graph contains %d coreferences\n", (int) newset->refcount);
-	for(c = 0; c < newset->refcount; c++)
+	cbdata.spindle = spindle;
+	cbdata.graph = graph;
+	cbdata.oldset = oldset;
+	cbdata.newset = newset;
+	cbdata.changes = changes;
+	r = 0;
+	if(spindle->db)
 	{
-		if(spindle_proxy_create(spindle, newset->refs[c].left, newset->refs[c].right, changes))
+		if(sql_perform(spindle->db, spindle_correlate_txn_, &cbdata, -1, SQL_TXN_CONSISTENT))
 		{
-			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to create proxy entity\n");
-			spindle_coref_destroy(oldset);
-			spindle_coref_destroy(newset);
-			spindle_strset_destroy(changes);
-			return -1;
+			r = -1;
 		}
 	}
-	/* if oldgraph was provided, find all owl:sameAs refs in oldgraph which
-	 * don't appear in newgraph
-	 */
-	/* for each, invoke remove_coref() */
+	else
+	{
+		if(spindle_correlate_internal_(&cbdata))
+		{
+			r = -1;
+		}
+	}
 	spindle_coref_destroy(oldset);
 	spindle_coref_destroy(newset);
-	/* Re-build the metadata for any related proxies */
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": updating caches for <%s>\n", graph->uri);
-	r  = spindle_cache_update_set(spindle, changes);
 	spindle_strset_destroy(changes);
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] post-processing graph \n", gettimediffms(&start));
-	twine_logf(LOG_INFO, PLUGIN_NAME ": processing complete for graph <%s>\n", graph->uri);
-
+	if(r)
+	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to create proxy entities for graph <%s>\n", graph->uri);
+	}
+	else
+	{
+		twine_logf(LOG_INFO, PLUGIN_NAME ": processing complete for graph <%s>\n", graph->uri);
+	}
 	return r;
+}
+
+static int
+spindle_correlate_txn_(SQL *restrict sql, void *restrict userdata)
+{
+	struct spindle_correlate_data_struct *cbdata;
+	
+	(void) sql;
+	
+	cbdata = (struct spindle_correlate_data_struct *) userdata;
+	return spindle_correlate_internal_(cbdata);
+}
+
+static int
+spindle_correlate_internal_(struct spindle_correlate_data_struct *cbdata)
+{
+	size_t c;
+	
+	for(c = 0; c < cbdata->newset->refcount; c++)
+	{
+		if(spindle_proxy_create(cbdata->spindle, cbdata->newset->refs[c].left, cbdata->newset->refs[c].right, cbdata->changes))
+		{
+			return -2;
+		}
+	}
+	return 1;
 }

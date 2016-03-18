@@ -21,24 +21,24 @@
 # include "config.h"
 #endif
 
-#include "p_spindle.h"
+#include "p_spindle-generate.h"
 
-static int spindle_doc_modified_(SPINDLECACHE *data);
-static int spindle_doc_type_(SPINDLECACHE *data);
-static int spindle_doc_label_(SPINDLECACHE *data);
-static int spindle_doc_topic_(SPINDLECACHE *data);
-static int spindle_doc_score_(SPINDLECACHE *data);
+static int spindle_doc_modified_(SPINDLEENTRY *data);
+static int spindle_doc_type_(SPINDLEENTRY *data);
+static int spindle_doc_label_(SPINDLEENTRY *data);
+static int spindle_doc_topic_(SPINDLEENTRY *data);
+static int spindle_doc_score_(SPINDLEENTRY *data);
 
 int
-spindle_doc_init(SPINDLE *spindle)
+spindle_doc_init(SPINDLEGENERATE *generate)
 {
-	spindle->titlepred = twine_config_geta("spindle:predicates:title", NS_RDFS "label");
+	generate->titlepred = twine_config_geta("spindle:predicates:title", NS_RDFS "label");
 	return 0;
 }
 
 /* Cache information about the document containing the proxy */
 int 
-spindle_doc_apply(SPINDLECACHE *cache)
+spindle_doc_apply(SPINDLEENTRY *cache)
 {
 	if(spindle_doc_modified_(cache))
 	{
@@ -64,7 +64,7 @@ spindle_doc_apply(SPINDLECACHE *cache)
 }
 
 static int
-spindle_doc_modified_(SPINDLECACHE *cache)
+spindle_doc_modified_(SPINDLEENTRY *cache)
 {
 	librdf_node *obj;
 	librdf_statement *st;
@@ -111,7 +111,7 @@ spindle_doc_modified_(SPINDLECACHE *cache)
 }
 
 static int
-spindle_doc_topic_(SPINDLECACHE *cache)
+spindle_doc_topic_(SPINDLEENTRY *cache)
 {
 	librdf_node *obj;
 	librdf_statement *st;
@@ -151,7 +151,7 @@ spindle_doc_topic_(SPINDLECACHE *cache)
 }
 
 static int
-spindle_doc_type_(SPINDLECACHE *cache)
+spindle_doc_type_(SPINDLEENTRY *cache)
 {
 	librdf_node *obj;
 	librdf_statement *st;
@@ -191,7 +191,7 @@ spindle_doc_type_(SPINDLECACHE *cache)
 }
 
 static int
-spindle_doc_label_(SPINDLECACHE *cache)
+spindle_doc_label_(SPINDLEENTRY *cache)
 {
 	librdf_node *obj;
 	librdf_statement *st;
@@ -203,9 +203,13 @@ spindle_doc_label_(SPINDLECACHE *cache)
 	{
 		s = cache->title_en;
 	}
-	else
+	else if(cache->title)
 	{
 		s = cache->title;
+	}
+	else
+	{
+		s = cache->id;
 	}
 	strbuf = (char *) calloc(1, strlen(s) + 32);
 	if(!strbuf)
@@ -255,7 +259,7 @@ spindle_doc_label_(SPINDLECACHE *cache)
 }
 
 static int
-spindle_doc_score_(SPINDLECACHE *data)
+spindle_doc_score_(SPINDLEENTRY *data)
 {
 	char scorebuf[64];
 	librdf_world *world;
