@@ -1,2 +1,4 @@
-usr/lib/twine/spindle.so
+usr/lib/twine/spindle-strip.so
+usr/lib/twine/spindle-correlate.so
+usr/lib/twine/spindle-merge.so
 usr/lib/twine/rulebase.ttl
