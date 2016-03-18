@@ -127,16 +127,20 @@ spindle_source_fetch_db_(SPINDLEENTRY *data)
 	for(c = 0; data->refs[c]; c++)
 	{
 		/* Add <ref> owl:sameAs <localname> triples to the proxy model */
-		/* XXX this query is very inefficient */
 		if(sparql_queryf_model(data->sparql, data->sourcedata,
-							   "SELECT DISTINCT ?s ?p ?o ?g\n"
-							   " WHERE {\n"
-							   "  GRAPH ?g {\n"
-							   "   ?s ?p ?o .\n"
-							   "   FILTER(?s = <%s> || ?o = <%s>)\n"
-							   "  }\n"
-							   "}",
-							   data->refs[c], data->refs[c]))
+			"SELECT DISTINCT ?s ?p ?o ?g\n"
+			" WHERE {\n"
+			"  GRAPH ?g {\n"
+			"  { <%s> ?p ?o .\n"
+			"   BIND(<%s> as ?s)\n"
+			"  }\n"
+			"  UNION\n"
+			"  { ?s ?p <%s> .\n"
+			"   BIND(<%s> as ?o)\n"
+			"  }\n"
+			" }\n"
+			"}",
+			data->refs[c], data->refs[c]))
 		{
 			r = -1;
 			break;
