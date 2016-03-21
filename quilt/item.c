@@ -48,6 +48,10 @@ spindle_item(QUILTREQ *request)
 	{
 		r = spindle_item_s3(request);
 	}
+	else if(spindle_cachepath)
+	{
+		r = spindle_item_file(request);
+	}
 	else
 	{
 		r = spindle_item_sparql(request);

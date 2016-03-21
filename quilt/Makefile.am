@@ -2,7 +2,7 @@
 ##
 ## Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
 ##
-## Copyright (c) 2014-2015 BBC
+## Copyright (c) 2014-2016 BBC
 ##
 ##  Licensed under the Apache License, Version 2.0 (the "License");
 ##  you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ quiltmodule_LTLIBRARIES = spindle.la
 
 spindle_la_SOURCES = p_spindle.h \
 	module.c request.c home.c index.c item.c sparql.c db.c s3.c \
-	query.c
+	file.c query.c
 
 spindle_la_LDFLAGS = -no-undefined -module -avoid-version
 
