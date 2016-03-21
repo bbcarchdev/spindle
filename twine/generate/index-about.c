@@ -53,6 +53,13 @@ spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data)
 		NULL
 	};
 	
+	/* Force an entity to always 'about' itself, so that queries match both
+	 * topics and the things about those topics
+	 */
+	if(sql_executef(sql, "INSERT INTO \"about\" (\"id\", \"about\") VALUES (%Q, %Q)", id, id))
+	{
+		return -1;
+	}
 	if(!(query = librdf_new_statement(data->spindle->world)))
 	{
 		return -1;
@@ -101,13 +108,18 @@ spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data)
 			{
 				continue;
 			}
+			if(strcasecmp(id, tid))
+			{
+				free(tid);
+				continue;
+			}
 			if(sql_executef(sql, "INSERT INTO \"about\" (\"id\", \"about\") VALUES (%Q, %Q)", id, tid))
 			{
 				free(tid);
 				r = -1;
 				break;
 			}
-			free(tid);			
+			free(tid);
 		}
 	}
 	librdf_free_stream(stream);
