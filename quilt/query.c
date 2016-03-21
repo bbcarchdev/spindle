@@ -85,7 +85,7 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 	{
 		dest->explicit = 1;
 	}
-	if(dest->audience && strcmp(dest->audience, "any"))
+	if(dest->audience && strcmp(dest->audience, "all"))
 	{
 		quilt_canon_set_param(request->canonical, "for", dest->audience);
 	}
@@ -145,7 +145,7 @@ spindle_query(QUILTREQ *request, struct query_struct *query)
 	}
 	if(spindle_db)
 	{
-	    r = spindle_query_db(request, query);
+		r = spindle_query_db(request, query);
 	}
 	else
 	{
