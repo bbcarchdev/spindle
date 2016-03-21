@@ -41,6 +41,8 @@ static char *spindle_index_media_license_(SPINDLEENTRY *data);
 
 /* If this entity is a digital object, store information about it the "media"
  * database table.
+ *
+ * Invoked when TK_MEDIA is set
  */
 int
 spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data)
@@ -105,12 +107,16 @@ spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data)
 	else
 	{
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": media: <%s> has no license associated with it\n", refs[0]);
+		r = 0;
 	}
-	r = sql_executef(sql, "INSERT INTO \"index_media\" (\"id\", \"media\") VALUES (%Q, %Q)", id, id);
 	if(r == 0)
 	{
-		sql_executef(sql, "INSERT INTO \"media\" (\"id\", \"uri\", \"class\", \"type\", \"audience\") VALUES (%Q, %Q, %Q, %Q, %Q)",
+		r = sql_executef(sql, "INSERT INTO \"media\" (\"id\", \"uri\", \"class\", \"type\", \"audience\") VALUES (%Q, %Q, %Q, %Q, %Q)",
 			id, refs[0], kind, type, NULL);
+	}
+	if(r >= 0)
+	{
+		r = sql_executef(sql, "INSERT INTO \"index_media\" (\"id\", \"media\") VALUES (%Q, %Q)", id, id);
 	}
 	free(refs[0]);
 	free(refs);

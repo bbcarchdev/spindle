@@ -29,7 +29,7 @@ static int spindle_index_audiences_permission_(SPINDLEGENERATE *generate, librdf
 static int spindle_index_audiences_action_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject);
 static int spindle_index_audiences_assignee_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject, struct spindle_strset_struct *audiences);
 
-/* Determine who can access a digital object based upon data about licenses */
+/* Determine who can access a digital object based upon data about licenses; invoked by spindle_index_media() */
 int
 spindle_index_audiences(SPINDLEGENERATE *generate, const char *license, const char *mediaid, const char *mediauri, const char *mediakind, const char *mediatype)
 {
@@ -69,6 +69,8 @@ spindle_index_audiences(SPINDLEGENERATE *generate, const char *license, const ch
 
 /* Interpet ODRL descriptions in source data to determine who can access
  * digital objects associated with this licence
+ *
+ * Invoked when TK_PROXY is set
  */
 int
 spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data)
