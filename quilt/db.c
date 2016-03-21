@@ -213,10 +213,14 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	}
 	if(collection && !query->media)
 	{
-		appendf(&qbuf, " INNER JOIN \"membership\" \"cm\"");
+		/* Collection (but no media): the item must be within the specified collection */
+		appendf(&qbuf, " INNER JOIN \"membership\" \"cm\" ON \"cm\".\"id\" = \"i\".\"id\" AND \"cm\".\"collection\" = %%Q");
+		qbuf.args[qbuf.n] = collection;
+		qbuf.n++;
 	}
 	else if(collection && query->media)
 	{
+		/* Collection with media */
 		appendf(&qbuf, " LEFT JOIN \"membership\" \"cm1\" ON (\"i\".\"id\" = \"cm1\".\"id\" AND \"cm1\".\"collection\" = %%Q)");
 		qbuf.args[qbuf.n] = collection;
 		qbuf.n++;
@@ -266,13 +270,6 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		{
 			appendf(&qbuf, ") )");
 		}
-	}
-	/* Collection (but no media): the item must be within the specified collection */
-	else if(collection)
-	{
-		appendf(&qbuf, " AND \"cm\".\"id\" = \"i\".\"id\" AND \"cm\".\"collection\" = %%Q");
-		qbuf.args[qbuf.n] = collection;
-		qbuf.n++;
 	}
 	/* ORDER BY */
 	if(query->text)
