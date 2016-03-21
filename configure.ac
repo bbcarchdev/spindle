@@ -75,6 +75,7 @@ twine/strip/Makefile
 twine/correlate/Makefile
 twine/generate/Makefile
 quilt/Makefile
+migrate/Makefile
 docbook-html5/Makefile
 docs/Makefile
 ])
