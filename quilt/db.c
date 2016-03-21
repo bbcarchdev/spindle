@@ -690,6 +690,11 @@ process_membership_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, con
 
 	/* <item> dct:isPartOf <self> */
 	uri = quilt_canon_str(item, QCO_SUBJECT);
+	if(!strcasecmp(self, uri))
+	{
+		free(uri);
+		return 0;
+	}
 	st = quilt_st_create_uri(self, NS_DCTERMS "isPartOf", uri);
 	librdf_model_add_statement(request->model, st);
 	librdf_free_statement(st);
