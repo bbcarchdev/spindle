@@ -192,15 +192,20 @@ spindle_db_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, cha
 		free(newid);
 		return -1;
 	}
-	/* Transaction */
-	rs = sql_queryf(spindle->db, "SELECT * FROM \"moved\" WHERE \"from\" = %Q", from);
+	rs = sql_queryf(spindle->db, "SELECT * FROM \"moved\" WHERE \"from\" = %Q", oldid);
+	if(!rs)
+	{
+		free(oldid);
+		free(newid);
+		return -1;
+	}
 	if(sql_stmt_eof(rs))
 	{
-		sql_executef(spindle->db, "INSERT INTO \"moved\" (\"from\", \"to\") VALUES (%Q, %Q)", from, to);
+		sql_executef(spindle->db, "INSERT INTO \"moved\" (\"from\", \"to\") VALUES (%Q, %Q)", oldid, newid);
 	}
 	else
 	{
-		sql_executef(spindle->db, "UPDATE \"moved\" SET \"to\" = %Q WHERE \"from\" = %Q", to, from);
+		sql_executef(spindle->db, "UPDATE \"moved\" SET \"to\" = %Q WHERE \"from\" = %Q", oldid, newid);
 	}
 	sql_stmt_destroy(rs);
 	sql_executef(spindle->db, "UPDATE \"proxy\" SET \"sameas\" = \"sameas\" || ( SELECT \"sameas\" FROM \"proxy\" WHERE \"id\" = %Q ) WHERE \"id\" = %Q", oldid, newid); 
