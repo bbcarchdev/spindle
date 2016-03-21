@@ -121,11 +121,18 @@ static int
 spindle_correlate_txn_(SQL *restrict sql, void *restrict userdata)
 {
 	struct spindle_correlate_data_struct *cbdata;
+	int r;
 	
 	(void) sql;
 	
 	cbdata = (struct spindle_correlate_data_struct *) userdata;
-	return spindle_correlate_internal_(cbdata);
+	r = spindle_correlate_internal_(cbdata);
+	if(r == -2 && sql_deadlocked(sql))
+	{
+		/* Force a retry in the event of a deadlock */
+		return -1;
+	}
+	return r;
 }
 
 static int

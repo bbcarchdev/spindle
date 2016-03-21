@@ -213,6 +213,11 @@ spindle_generate_txn_(SQL *restrict sql, void *restrict userdata)
 	entry = (SPINDLEENTRY *) userdata;
 	if(spindle_generate_entry_(entry))
 	{
+		if(sql_deadlocked(sql))
+		{
+			/* Retry in the event of a deadlock */
+			return -1;
+		}
 		return -2;
 	}
 	return 1;
