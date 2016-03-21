@@ -53,6 +53,7 @@ spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data)
 	r = 0;
 	if(!data->classname || strcmp(data->classname, NS_FOAF "Document"))
 	{
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": item is not a digital asset\n");
 		/* This isn't a digital asset */
 		return spindle_index_media_refs_(sql, id, data);
 	}
@@ -77,6 +78,7 @@ spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data)
 	kind = spindle_index_media_kind_(data);
 	if(!kind)
 	{
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": media: cannot determine media kind\n");
 		free(refs[0]);
 		free(refs);
 		return -1;
@@ -85,10 +87,9 @@ spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data)
 	
 	/* TODO: handle multiple licenses */
 	license = spindle_index_media_license_(data);
-	r = 0;
 	if(license)
 	{
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": license URI for <%s> is <%s>\n", refs[0], license);
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": media: license URI for <%s> is <%s>\n", refs[0], license);
 		spindle_trigger_add(data, license, TK_MEDIA, NULL);
 		r = spindle_index_audiences(data->generate, license, id, refs[0], kind, type);
 		if(r < 0)
@@ -103,10 +104,10 @@ spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data)
 	}
 	else
 	{
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": media object <%s> has no license\n", refs[0]);
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": media: <%s> has no license associated with it\n", refs[0]);
 	}
 	r = sql_executef(sql, "INSERT INTO \"index_media\" (\"id\", \"media\") VALUES (%Q, %Q)", id, id);
-	if(r > 0)
+	if(r == 0)
 	{
 		sql_executef(sql, "INSERT INTO \"media\" (\"id\", \"uri\", \"class\", \"type\", \"audience\") VALUES (%Q, %Q, %Q, %Q, %Q)",
 			id, refs[0], kind, type, NULL);

@@ -54,6 +54,7 @@ spindle_index_audiences(SPINDLEGENERATE *generate, const char *license, const ch
 	free(id);
 	if(sql_stmt_eof(rs))
 	{
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": audiences: license <%s> has no associated audiences\n", license);
 		sql_stmt_destroy(rs);
 		return 0;
 	}
