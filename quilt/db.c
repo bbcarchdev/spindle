@@ -24,14 +24,25 @@
 
 #include "p_spindle.h"
 
+struct qbuf_struct
+{
+	char *buf;
+	char *bp;
+	size_t size;
+	ssize_t remaining;
+	const void *args[8];
+	size_t n;
+};
+
 static int process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs);
 static int process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item, int index);
 static const char *checklang(QUILTREQ *request, const char *lang);
 static int add_langvector(librdf_model *model, const char *vector, const char *subject, const char *predicate);
 static int add_array(librdf_model *model, const char *array, const char *subject, const char *predicate);
 static int add_point(librdf_model *model, const char *array, const char *subject);
-static char *appendf(char *buf, size_t *buflen, const char *fmt, ...);
+static int appendf(struct qbuf_struct *qbuf, const char *fmt, ...);
 static int process_membership_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item);
+static int spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query);
 
 /* Short names for media classes which can be used for convenience */
 struct mediamatch_struct spindle_mediamatch[] = {
@@ -50,16 +61,13 @@ struct mediamatch_struct spindle_mediamatch[] = {
 int
 spindle_query_db(QUILTREQ *request, struct query_struct *query)
 {
-	size_t qbuflen, n, c;
-	char *qbuf, *t;
+	struct qbuf_struct qbuf;
+	size_t c;
 	SQL_STATEMENT *rs;
-	const void *args[8];
 	const char *related, *collection;
 	int rankflags;
 
-	memset(args, 0, sizeof(args));
-	qbuflen = 1024;
-	n = 0;
+	memset(&qbuf, 0, sizeof(struct qbuf_struct));
 	related = NULL;
 	collection = NULL;
 	if(query->related)
@@ -119,7 +127,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	{
 		if(!query->audience)
 		{
-			query->audience = "any";
+			query->audience = "all";
 		}
 		if(!query->type)
 		{
@@ -148,22 +156,16 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		}
 		if(!query->audience)
 		{
-			query->audience = "any";
+			query->audience = "all";
 		}
 		if(!query->type)
 		{
 			query->type = "any";
 		}
-	}
-	qbuf = (char *) malloc(qbuflen + 1);
-	t = qbuf;
-	if(!qbuf)
-	{
-		quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": failed to allocate SQL query buffer\n");
-		return 500;
+		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db: media='%s', audience='%s', type='%s'\n", query->media, query->audience, query->type);
 	}
 	/* SELECT */
-	t = appendf(t, &qbuflen, "SELECT \"i\".\"id\", \"i\".\"classes\", \"i\".\"title\", \"i\".\"description\", \"i\".\"coordinates\", \"i\".\"modified\"");
+	appendf(&qbuf, "SELECT \"i\".\"id\", \"i\".\"classes\", \"i\".\"title\", \"i\".\"description\", \"i\".\"coordinates\", \"i\".\"modified\"");
 	if(query->text)
 	{
 		/* Rank flags:
@@ -181,156 +183,160 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		if(query->mode == QM_AUTOCOMPLETE)
 		{
 			rankflags = 32;
-			t = appendf(t, &qbuflen, ", ts_rank_cd(ARRAY[0, 0, 0, 1.0], \"i\".\"index_%s\", \"query\", %d) AS \"rank\"", query->lang, rankflags);
+			appendf(&qbuf, ", ts_rank_cd(ARRAY[0, 0, 0, 1.0], \"i\".\"index_%s\", \"query\", %d) AS \"rank\"", query->lang, rankflags);
 		}
 		else
 		{
 			rankflags = 32;
-			t = appendf(t, &qbuflen, ", ts_rank_cd(\"i\".\"index_%s\", \"query\", %d) AS \"rank\"", query->lang, rankflags);
+			appendf(&qbuf, ", ts_rank_cd(\"i\".\"index_%s\", \"query\", %d) AS \"rank\"", query->lang, rankflags);
 		}
 	}
 	/* FROM */
-	t = appendf(t, &qbuflen, " FROM \"index\" \"i\"");
+	appendf(&qbuf, " FROM \"index\" \"i\"");
 	if(query->text)
 	{
-		t = appendf(t, &qbuflen, ", plainto_tsquery(%Q) \"query\"");
-		args[n] = query->text;
-		n++;
+		appendf(&qbuf, " INNER JOIN plainto_tsquery(%%Q) \"query\" ON \"query\" @@ \"i\".\"index_%s\"", query->lang);
+		qbuf.args[qbuf.n] = query->text;
+		qbuf.n++;
 	}
 	if(related)
 	{
 		/* IS related and MAY have media query (no subquery) */
-		t = appendf(t, &qbuflen, ", \"about\" \"a\"");
+		appendf(&qbuf, " INNER JOIN \"about\" \"a\" ON \"a\".\"about\" = %%Q AND \"a\".\"id\" = \"i\".\"id\"");
+		qbuf.args[qbuf.n] = related;
+		qbuf.n++;
 		if(query->media)
 		{
-			t = appendf(t, &qbuflen, ", \"media\" \"m\"");
-		}	
+			appendf(&qbuf, " INNER JOIN \"media\" \"m\" ON \"m\".\"id\" = \"i\".\"id\"");
+			spindle_query_db_media_(&qbuf, query);
+		}
 	}
 	if(collection && !query->media)
-	{	   
-		t = appendf(t, &qbuflen, ", \"membership\" \"cm\"");
+	{
+		/* Collection (but no media): the item must be within the specified collection */
+		appendf(&qbuf, " INNER JOIN \"membership\" \"cm\" ON \"cm\".\"id\" = \"i\".\"id\" AND \"cm\".\"collection\" = %%Q");
+		qbuf.args[qbuf.n] = collection;
+		qbuf.n++;
 	}
 	else if(collection && query->media)
 	{
-		t = appendf(t, &qbuflen, " LEFT JOIN \"membership\" \"cm1\" ON (\"i\".\"id\" = \"cm1\".\"id\" AND \"cm1\".\"collection\" = %Q)");
-		args[n] = collection;
-		n++;
+		/* Collection with media */
+		appendf(&qbuf, " LEFT JOIN \"membership\" \"cm1\" ON (\"i\".\"id\" = \"cm1\".\"id\" AND \"cm1\".\"collection\" = %%Q)");
+		qbuf.args[qbuf.n] = collection;
+		qbuf.n++;
 	}
 	/* WHERE */
 	if(query->score > 0)
 	{
-		t = appendf(t, &qbuflen, " WHERE \"i\".\"score\" <= %d", query->score);
+		appendf(&qbuf, " WHERE \"i\".\"score\" <= %d", query->score);
 	}
 	else
 	{
-		t = appendf(t, &qbuflen, " WHERE \"i\".\"score\" IS NOT NULL");
-	}
-	if(query->text)
-	{
-		t = appendf(t, &qbuflen, " AND \"query\" @@ \"index_%s\"", query->lang);
+		appendf(&qbuf, " WHERE \"i\".\"score\" IS NOT NULL");
 	}
 	if(query->qclass)
 	{
-		t = appendf(t, &qbuflen, " AND %%Q = ANY(\"i\".\"classes\")");
-		args[n] = query->qclass;
-		n++;
+		appendf(&qbuf, " AND %%Q = ANY(\"i\".\"classes\")");
+		qbuf.args[qbuf.n] = query->qclass;
+		qbuf.n++;
 	}
 	if(related)
 	{	
 		/* IS related and MAY have media query (no subquery) */
-		t = appendf(t, &qbuflen, " AND \"a\".\"about\" = %Q AND \"a\".\"id\" = \"i\".\"id\"");
-		args[n] = related;
-		n++;
-		if(query->media)
-		{
-			t = appendf(t, &qbuflen, " AND \"m\".\"id\" = \"i\".\"id\"");
-		}
 	}
 	else if(query->media)
 	{
 		/* NOT related but HAS media query (subquery) */
-		t = appendf(t, &qbuflen, " AND \"i\".\"id\" IN ( "
+		appendf(&qbuf, " AND \"i\".\"id\" IN ( "
 					"SELECT \"a\".\"about\" "
 					" FROM \"about\" \"a\" "
 					" INNER JOIN \"index_media\" \"im\" ON (\"a\".\"id\" = \"im\".\"id\")"
 					" INNER JOIN \"media\" \"m\" ON (\"im\".\"media\" = \"m\".\"id\"");
-	}
-	if(query->media)
-	{
-		/* Any media query */
-		if(!strcmp(query->audience, "all"))
-		{
-			t = appendf(t, &qbuflen, " AND \"m\".\"audience\" IS NULL");
-		}
-		else if(strcmp(query->audience, "any"))
-		{
-			t = appendf(t, &qbuflen, " AND (\"m\".\"audience\" IS NULL OR \"m\".\"audience\" = %Q)");
-			args[n] = query->audience;
-			n++;
-		}
-		if(strcmp(query->media, "any"))
-		{
-			t = appendf(t, &qbuflen, " AND \"m\".\"class\" = %Q");
-			args[n] = query->media;
-			n++;
-		}
-		if(strcmp(query->type, "any"))
-		{
-			t = appendf(t, &qbuflen, " AND \"m\".\"type\" = %Q");
-			args[n] = query->type;
-			n++;
-		}
+		spindle_query_db_media_(&qbuf, query);
 	}
 	if(!related && query->media)
 	{
-		/* NOT related and HAS media query (subquery) */	   
+		/* NOT related and HAS media query (subquery) */
 		if(collection)
 		{
-			t = appendf(t, &qbuflen, ")"
-					   " LEFT JOIN \"membership\" \"cm2\" ON (\"im\".\"id\" = \"cm2\".\"id\" AND \"cm2\".\"collection\" = %Q)"
+			appendf(&qbuf, ")"
+					   " LEFT JOIN \"membership\" \"cm2\" ON (\"im\".\"id\" = \"cm2\".\"id\" AND \"cm2\".\"collection\" = %%Q)"
 					   " WHERE (\"cm1\".\"collection\" IS NOT NULL OR \"cm2\".\"collection\" IS NOT NULL)"
 					   ")");
-			args[n] = collection;
-			n++;
+			qbuf.args[qbuf.n] = collection;
+			qbuf.n++;
 		}
 		else
 		{
-			t = appendf(t, &qbuflen, ") )");
+			appendf(&qbuf, ") )");
 		}
-	}
-	/* Collection (but no media): the item must be within the specified collection */
-	else if(collection)
-	{
-		t = appendf(t, &qbuflen, " AND \"cm\".\"id\" = \"i\".\"id\" AND \"cm\".\"collection\" = %Q");
-		args[n] = collection;
-		n++;
 	}
 	/* ORDER BY */
 	if(query->text)
 	{
-		t = appendf(t, &qbuflen, " ORDER BY \"rank\" DESC, \"i\".\"score\" ASC, \"modified\" DESC");
+		appendf(&qbuf, " ORDER BY \"rank\" DESC, \"i\".\"score\" ASC, \"modified\" DESC");
 	}
 	else
 	{
-		t = appendf(t, &qbuflen, " ORDER BY \"modified\" DESC");
+		appendf(&qbuf, " ORDER BY \"modified\" DESC");
 	}
 	/* LIMIT ... OFFSET ... */
 	if(request->offset)
 	{
-		t = appendf(t, &qbuflen, " LIMIT %d OFFSET %d", request->limit + 1, request->offset);
+		appendf(&qbuf, " LIMIT %d OFFSET %d", request->limit + 1, request->offset);
 	}
 	else
 	{
-		t = appendf(t, &qbuflen, " LIMIT %d", request->limit + 1);
+		appendf(&qbuf, " LIMIT %d", request->limit + 1);
 	}
-	rs = sql_queryf(spindle_db, qbuf, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
-	free(qbuf);
+	rs = sql_queryf(spindle_db, qbuf.buf, qbuf.args[0], qbuf.args[1], qbuf.args[2], qbuf.args[3], qbuf.args[4], qbuf.args[5], qbuf.args[6], qbuf.args[7]);
+	free(qbuf.buf);
 	if(!rs)
 	{
 		quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": query execution failed\n");
 		return 500;
 	}
 	return process_rs(request, query, rs);	
+}
+
+static int
+spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query)
+{
+	if(query->media)
+	{
+		/* Any media query */
+		if(!strcmp(query->audience, "all"))
+		{
+			/* If the audience is 'all' (the default), we only return media
+			 * available to the public.
+			 */
+			appendf(qbuf, " AND \"m\".\"audience\" IS NULL");
+		}
+		else if(strcmp(query->audience, "any"))
+		{
+			/* If the audience is not 'all' and is not 'any', then we filter by
+			 * media available to the public, or to the specified audience
+			 */
+			appendf(qbuf, " AND (\"m\".\"audience\" IS NULL OR \"m\".\"audience\" = %%Q)");
+			qbuf->args[qbuf->n] = query->audience;
+			qbuf->n++;
+		}
+		/* If the media class is not 'any', then filter by the class URI */
+		if(strcmp(query->media, "any"))
+		{
+			appendf(qbuf, " AND \"m\".\"class\" = %%Q");
+			qbuf->args[qbuf->n] = query->media;
+			qbuf->n++;
+		}
+		/* If the MIME type is not 'any', then filter by media type */
+		if(strcmp(query->type, "any"))
+		{
+			appendf(qbuf, " AND \"m\".\"type\" = %%Q");
+			qbuf->args[qbuf->n] = query->type;
+			qbuf->n++;
+		}
+	}
+	return 0;
 }
 
 /* For a given item, determine what collections (if any) this item is part
@@ -456,7 +462,7 @@ spindle_audiences_db(QUILTREQ *request, struct query_struct *query)
 	int limit, offset;
 	QUILTCANON *dest;
 	char *self, *deststr;
-	const char *audience;
+	const char *audience, *id;
 	librdf_statement *st;
 	const char *title;
 
@@ -480,11 +486,15 @@ spindle_audiences_db(QUILTREQ *request, struct query_struct *query)
 	}
 	if(offset)
 	{
-		rs = sql_queryf(spindle_db, "SELECT DISTINCT \"m\".\"audience\", \"i\".\"title\" FROM \"media\" \"m\" LEFT JOIN \"proxy\" \"p\" ON \"m\".\"audience\" = ANY(\"p\".\"sameas\") LEFT JOIN \"index\" \"i\" ON \"i\".\"id\" = \"p\".\"id\" LIMIT %d OFFSET %d", limit + 1, offset);
+		rs = sql_queryf(spindle_db, "SELECT \"a\".\"uri\", \"a\".\"id\", \"i\".\"title\" FROM \"audiences\" \"a\" LEFT JOIN \"index\" \"i\" ON \"i\".\"id\" = \"a\".\"id\" LIMIT %d OFFSET %d", limit + 1, offset);
 	}
 	else
 	{
-		rs = sql_queryf(spindle_db, "SELECT DISTINCT \"m\".\"audience\", \"i\".\"title\" FROM \"media\" \"m\" LEFT JOIN \"proxy\" \"p\" ON \"m\".\"audience\" = ANY(\"p\".\"sameas\") LEFT JOIN \"index\" \"i\" ON \"i\".\"id\" = \"p\".\"id\" LIMIT %d", limit + 1);
+		rs = sql_queryf(spindle_db, "SELECT \"a\".\"uri\", \"a\".\"id\", \"i\".\"title\" FROM \"audiences\" \"a\" LEFT JOIN \"index\" \"i\" ON \"i\".\"id\" = \"a\".\"id\" LIMIT %d", limit + 1);
+	}
+	if(!rs)
+	{
+		return 500;
 	}
 	self = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
 	dest = quilt_canon_create(request->canonical);
@@ -495,7 +505,8 @@ spindle_audiences_db(QUILTREQ *request, struct query_struct *query)
 	{
 		limit--;
 		audience = sql_stmt_str(rs, 0);
-		title = sql_stmt_str(rs, 1);
+		id = sql_stmt_str(rs, 1);
+		title = sql_stmt_str(rs, 2);
 		quilt_canon_set_param(dest, "for", audience);
 		deststr = quilt_canon_str(dest, QCO_DEFAULT);
 		st = quilt_st_create_uri(audience, NS_RDF "type", NS_ODRL "Group");
@@ -675,6 +686,11 @@ process_membership_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, con
 
 	/* <item> dct:isPartOf <self> */
 	uri = quilt_canon_str(item, QCO_SUBJECT);
+	if(!strcasecmp(self, uri))
+	{
+		free(uri);
+		return 0;
+	}
 	st = quilt_st_create_uri(self, NS_DCTERMS "isPartOf", uri);
 	librdf_model_add_statement(request->model, st);
 	librdf_free_statement(st);
@@ -1023,34 +1039,50 @@ add_langvector(librdf_model *model, const char *vector, const char *subject, con
 	return 0;
 }
 
-static char *
-appendf(char *buf, size_t *buflen, const char *fmt, ...)
+static int
+appendf(struct qbuf_struct *qbuf, const char *fmt, ...)
 {
+	char *p;
 	va_list ap;
 	int l;
 	
-	if(!*buflen)
-	{
-		return 0;
-	}
 	va_start(ap, fmt);
-	l = vsnprintf(buf, (*buflen) - 1, fmt, ap);
+	l = vsnprintf(qbuf->bp, qbuf->remaining, fmt, ap);
 	va_end(ap);
 	if(l == -1)
 	{
-		return NULL;
+		return -1;
 	}
-	buf[*buflen] = 0;
-	buf += l;
-	if(l > (ssize_t) *buflen)
+	if(!l)
 	{
-		*buflen = 0;
+		return 0;
 	}
-	else
+	if(l >= qbuf->remaining)
 	{
-		*buflen -= l;
+		p = (char *) realloc(qbuf->buf, qbuf->size + l + 1);
+		if(!p)
+		{
+			return -1;
+		}
+		if(qbuf->buf)
+		{
+			qbuf->bp = p + (qbuf->bp - qbuf->buf);
+			qbuf->buf = p;
+		}
+		else
+		{
+			qbuf->buf = p;
+			qbuf->bp = p;
+		}
+		qbuf->size += l + 1;
+		qbuf->remaining += l + 1;
+		va_start(ap, fmt);
+		l = vsnprintf(qbuf->bp, qbuf->remaining, fmt, ap);
+		va_end(ap);
 	}
-	return buf;
+	qbuf->bp += l;
+	qbuf->remaining -= l;
+	return 0;
 }
 
 static const char *
