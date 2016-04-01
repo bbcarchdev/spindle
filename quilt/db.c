@@ -201,29 +201,60 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	}
 	if(related)
 	{
-		/* IS related and MAY have media query (no subquery) */
+		/* IS related */
 		appendf(&qbuf, " INNER JOIN \"about\" \"a\" ON \"a\".\"about\" = %%Q AND \"a\".\"id\" = \"i\".\"id\"");
 		qbuf.args[qbuf.n] = related;
 		qbuf.n++;
+	}
+	if(collection)
+	{
 		if(query->media)
 		{
-			appendf(&qbuf, " INNER JOIN \"media\" \"m\" ON \"m\".\"id\" = \"i\".\"id\"");
-			spindle_query_db_media_(&qbuf, query);
+			/* When we have a media query, either the topic OR the media may
+			 * be a member of the collection, so we perform a LEFT JOIN and
+			 * add a filter to the WHERE clause
+			 */
+			appendf(&qbuf, " LEFT JOIN \"membership\" \"cm\" ON (\"i\".\"id\" = \"cm\".\"id\" AND \"cm\".\"collection\" = %%Q)");
 		}
-	}
-	if(collection && !query->media)
-	{
-		/* Collection (but no media): the item must be within the specified collection */
-		appendf(&qbuf, " INNER JOIN \"membership\" \"cm\" ON \"cm\".\"id\" = \"i\".\"id\" AND \"cm\".\"collection\" = %%Q");
+		else
+		{
+			/* Otherwise, just perform an INNER JOIN */
+			appendf(&qbuf, " INNER JOIN \"membership\" \"cm\" ON (\"i\".\"id\" = \"cm\".\"id\" AND \"cm\".\"collection\" = %%Q)");
+		}
 		qbuf.args[qbuf.n] = collection;
 		qbuf.n++;
 	}
-	else if(collection && query->media)
+	if(query->media)
 	{
-		/* Collection with media */
-		appendf(&qbuf, " LEFT JOIN \"membership\" \"cm1\" ON (\"i\".\"id\" = \"cm1\".\"id\" AND \"cm1\".\"collection\" = %%Q)");
-		qbuf.args[qbuf.n] = collection;
-		qbuf.n++;
+		/* We're querying for things with associated media */
+		if(related)
+		{
+			/* If it was a 'related' query, we're already joined to the 'about'
+			 * table and should use that for our join with the media table
+			 */
+			appendf(&qbuf, " INNER JOIN \"media\" \"m\" ON (\"i\".\"id\" = \"m\".\"id\"");
+		}
+		else
+		{
+			/* This is not a 'related' query, so join 'about' and 'index_about'
+			 * to find related media
+			 */
+			appendf(&qbuf, " INNER JOIN \"about\" \"a\" ON (\"i\".\"id\" = \"a\".\"about\")");
+			appendf(&qbuf, " INNER JOIN \"index_media\" \"im\" ON (\"a\".\"id\" = \"im\".\"id\")");
+			appendf(&qbuf, " INNER JOIN \"media\" \"m\" ON (\"im\".\"media\" = \"m\".\"id\"");
+		}
+		spindle_query_db_media_(&qbuf, query);
+		appendf(&qbuf, ")");		
+		if(collection)
+		{
+			/* We're performing a collection-scoped media query; we want to
+			 * return results where the media is a member of the collection,
+			 * not just the topic
+			 */
+			appendf(&qbuf, " LEFT JOIN \"membership\" \"cm2\" ON (\"im\".\"id\" = \"cm2\".\"id\" AND \"cm2\".\"collection\" = %%Q)");
+			qbuf.args[qbuf.n] = collection;
+			qbuf.n++;
+		}
 	}
 	/* WHERE */
 	if(query->score > 0)
@@ -240,36 +271,13 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		qbuf.args[qbuf.n] = query->qclass;
 		qbuf.n++;
 	}
-	if(related)
-	{	
-		/* IS related and MAY have media query (no subquery) */
-	}
-	else if(query->media)
+	if(query->media && collection)
 	{
-		/* NOT related but HAS media query (subquery) */
-		appendf(&qbuf, " AND \"i\".\"id\" IN ( "
-					"SELECT \"a\".\"about\" "
-					" FROM \"about\" \"a\" "
-					" INNER JOIN \"index_media\" \"im\" ON (\"a\".\"id\" = \"im\".\"id\")"
-					" INNER JOIN \"media\" \"m\" ON (\"im\".\"media\" = \"m\".\"id\"");
-		spindle_query_db_media_(&qbuf, query);
-	}
-	if(!related && query->media)
-	{
-		/* NOT related and HAS media query (subquery) */
-		if(collection)
-		{
-			appendf(&qbuf, ")"
-					   " LEFT JOIN \"membership\" \"cm2\" ON (\"im\".\"id\" = \"cm2\".\"id\" AND \"cm2\".\"collection\" = %%Q)"
-					   " WHERE (\"cm1\".\"collection\" IS NOT NULL OR \"cm2\".\"collection\" IS NOT NULL)"
-					   ")");
-			qbuf.args[qbuf.n] = collection;
-			qbuf.n++;
-		}
-		else
-		{
-			appendf(&qbuf, ") )");
-		}
+		/* If there's a collection-scoped media query, either the topic or
+		 * the media may be members of the collection to match, so apply
+		 * a filter appropriately
+		 */
+		appendf(&qbuf, " AND (\"cm\".\"collection\" IS NOT NULL OR \"cm2\".\"collection\" IS NOT NULL)");
 	}
 	/* ORDER BY */
 	if(query->text)
