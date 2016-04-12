@@ -1,0 +1,10 @@
+FROM vm-10-100-0-25.ch.bbcarchdev.net/twine
+MAINTAINER Simeon van der Steen <simeon.vandersteen@bbc.co.uk>
+
+# Take care of Spindle
+COPY . /usr/local/src-spindle
+WORKDIR /usr/local/src-spindle
+RUN autoreconf -i && \
+	./configure --prefix=/usr --enable-debug && \
+	make && \
+	make install
