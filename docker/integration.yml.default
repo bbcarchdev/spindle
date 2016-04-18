@@ -1,0 +1,43 @@
+twine:
+  image: vm-10-100-0-25.ch.bbcarchdev.net/twine-spindle
+  environment:
+   - HOST_NAME=acropolis.localhost
+   - ENGINE=spindle
+  links:
+   - postgres
+   - 4store:fourstore
+   - s3
+   - qpid
+
+quilt:
+  image: vm-10-100-0-25.ch.bbcarchdev.net/quilt-spindle
+  environment:
+   - HOST_NAME=acropolis.localhost
+   - ENGINE=spindle
+  links:
+   - postgres
+   - 4store:fourstore
+   - s3:s3
+
+postgres:
+  image: vm-10-100-0-25.ch.bbcarchdev.net/postgres
+  environment:
+   - POSTGRES_PASSWORD=postgres
+
+4store:
+  image: vm-10-100-0-25.ch.bbcarchdev.net/4store
+
+s3:
+  image: vm-10-100-0-25.ch.bbcarchdev.net/s3
+
+qpid:
+  image: vm-10-100-0-25.ch.bbcarchdev.net/qpid
+
+cucumber:
+  image: vm-10-100-0-25.ch.bbcarchdev.net/cucumber
+  links:
+   - quilt
+   - twine
+   - postgres
+  volumes:
+   - ./cucumber:/data

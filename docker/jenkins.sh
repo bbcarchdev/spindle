@@ -22,31 +22,24 @@ fi
 
 if [ -f "${INTEGRATION}.default" ]
 then
-        if [ ! -f "${INTEGRATION}" ]
+        if [ ! -f "${INTEGRATION}" ] || [ "${INTEGRATION}.default" -nt "${INTEGRATION}" ]
         then
-        	cp ${INTEGRATION}.default ${INTEGRATION}
+                cp "${INTEGRATION}.default" "${INTEGRATION}"
+                if [ ! "${JENKINS_HOME}" = '' ]
+                then
+                        # Change "in-container" mount path to host mount path
+                        sed -i -e "s|- \./|- ${HOST_DATADIR}jobs/${JOB_NAME}/workspace/docker/|" "${INTEGRATION}"
+                fi
         fi
 
 	# Tear down integration from previous run if it was still running
-	# FIXME
-	docker-compose -p ${PROJECT_NAME}-test -f ${INTEGRATION} stop
-	docker-compose -p ${PROJECT_NAME}-test -f ${INTEGRATION} rm -f
+	docker-compose -p ${JOB_NAME}-test -f ${INTEGRATION} stop
+	docker-compose -p ${JOB_NAME}-test -f ${INTEGRATION} rm -f
 
         # Start project integration
-        docker-compose -p ${PROJECT_NAME} -f docker/integration.yml up -d
-
-        # Is the main subject running?
-        test `docker ps -a | grep ${PROJECT_NAME//-}_${PROJECT_NAME} | wc -l` -eq 1 \
-        	|| (docker logs ${PROJECT_NAME//-}_${PROJECT_NAME}_1 && exit 1)
-
-        # Build and run integration tester
-        docker build -t ${PROJECT_NAME}-test -f docker/Dockerfile-test .
-        docker run --rm=true \
-        --link=${PROJECT_NAME//-}_${PROJECT_NAME}_1:${PROJECT_NAME} \
-        ${PROJECT_NAME}-test
+        docker-compose -p ${JOB_NAME}-test -f ${INTEGRATION} run cucumber
 
         # Tear down integration
-        # FIXME
         docker-compose -p ${PROJECT_NAME} -f docker/integration.yml stop
         docker-compose -p ${PROJECT_NAME} -f docker/integration.yml rm -f
 fi
