@@ -44,6 +44,6 @@ then
     docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} run cucumber
 
     # Tear down integration
-	# docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} stop
-    # docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} rm -f
+	docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} stop
+    docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} rm -f
 fi
