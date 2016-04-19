@@ -6,7 +6,6 @@ PROJECT_NAME="spindle"
 PROJECT_NAME_TWINE="twine-${PROJECT_NAME}"
 PROJECT_NAME_QUILT="quilt-${PROJECT_NAME}"
 INTEGRATION="docker/integration.yml"
-LOCALINTEGRATION="docker/${PROJECT_NAME}-integration.yml"
 CURRENTDIR=`pwd`
 
 # Build the project (in dev mode for now)
@@ -24,26 +23,26 @@ then
         docker push ${DOCKER_REGISTRY}/${PROJECT_NAME_QUILT}
 fi
 
-if [ -f "${INTEGRATION}" ]
+if [ -f "${INTEGRATION}.default" ]
 then
 	# Copy the YML script and adjust the paths
-	cp ${INTEGRATION} ${LOCALINTEGRATION}
+	cp ${INTEGRATION}.default ${INTEGRATION}
 	if [ ! "${JENKINS_HOME}" = '' ]
 	then
 		# Change "in-container" mount path to host mount path
     	sed -i -e "s|- \./|- ${HOST_DATADIR}jobs/${JOB_NAME}/workspace/docker/|" "${LOCALINTEGRATION}"
 	else
-	    sed -i -e "s|- \./|- ${CURRENTDIR}/|" ${LOCALINTEGRATION}    	
+	    sed -i -e "s|- \./|- ${CURRENTDIR}/|" ${INTEGRATION}    	
 	fi
 
 	# Tear down integration from previous run if it was still running
-	docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} stop
-	docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} rm -f
+	docker-compose -p ${PROJECT_NAME}-test -f ${INTEGRATION} stop
+	docker-compose -p ${PROJECT_NAME}-test -f ${INTEGRATION} rm -f
 
     # Start project integration
-    docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} run cucumber
+    docker-compose -p ${PROJECT_NAME}-test -f ${INTEGRATION} run cucumber
 
     # Tear down integration
-	docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} stop
-    docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} rm -f
+	docker-compose -p ${PROJECT_NAME}-test -f ${INTEGRATION} stop
+    docker-compose -p ${PROJECT_NAME}-test -f ${INTEGRATION} rm -f
 fi
