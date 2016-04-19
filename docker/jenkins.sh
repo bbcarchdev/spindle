@@ -1,10 +1,13 @@
 #!/bin/bash -ex
 
+# Set some variables
 DOCKER_REGISTRY="vm-10-100-0-25.ch.bbcarchdev.net"
 PROJECT_NAME="spindle"
-PROJECT_NAME_TWINE="twine-spindle"
-PROJECT_NAME_QUILT="quilt-spindle"
+PROJECT_NAME_TWINE="twine-${PROJECT_NAME}"
+PROJECT_NAME_QUILT="quilt-${PROJECT_NAME}"
 INTEGRATION="docker/integration.yml"
+LOCALINTEGRATION="docker/${PROJECT_NAME}-integration.yml"
+CURRENTDIR=`pwd`
 
 # Build the project (in dev mode for now)
 docker build -t ${PROJECT_NAME_TWINE} -f docker/Dockerfile-twine-build .
@@ -21,26 +24,26 @@ then
         docker push ${DOCKER_REGISTRY}/${PROJECT_NAME_QUILT}
 fi
 
-if [ -f "${INTEGRATION}.default" ]
+if [ -f "${INTEGRATION}" ]
 then
-        if [ ! -f "${INTEGRATION}" ] || [ "${INTEGRATION}.default" -nt "${INTEGRATION}" ]
-        then
-                cp "${INTEGRATION}.default" "${INTEGRATION}"
-                if [ ! "${JENKINS_HOME}" = '' ]
-                then
-                        # Change "in-container" mount path to host mount path
-                        sed -i -e "s|- \./|- ${HOST_DATADIR}jobs/${JOB_NAME}/workspace/docker/|" "${INTEGRATION}"
-                fi
-        fi
+	# Copy the YML script and adjust the paths
+	cp ${INTEGRATION} ${LOCALINTEGRATION}
+	if [ ! "${JENKINS_HOME}" = '' ]
+	then
+		# Change "in-container" mount path to host mount path
+    	sed -i -e "s|- \./|- ${HOST_DATADIR}jobs/${JOB_NAME}/workspace/docker/|" "${LOCALINTEGRATION}"
+	else
+	    sed -i -e "s|- \./|- ${CURRENTDIR}/|" ${LOCALINTEGRATION}    	
+	fi
 
 	# Tear down integration from previous run if it was still running
-	docker-compose -p ${PROJECT_NAME} -f ${INTEGRATION} stop
-	docker-compose -p ${PROJECT_NAME} -f ${INTEGRATION} rm -f
+	docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} stop
+	docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} rm -f
 
-        # Start project integration
-        docker-compose -p ${PROJECT_NAME} -f ${INTEGRATION} run cucumber
+    # Start project integration
+    docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} run cucumber
 
-        # Tear down integration
-        docker-compose -p ${PROJECT_NAME} -f ${INTEGRATION} stop
-        docker-compose -p ${PROJECT_NAME} -f ${INTEGRATION} rm -f
+    # Tear down integration
+	# docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} stop
+    # docker-compose -p ${PROJECT_NAME}-test -f ${LOCALINTEGRATION} rm -f
 fi
