@@ -30,7 +30,7 @@ then
 	if [ ! "${JENKINS_HOME}" = '' ]
 	then
 		# Change "in-container" mount path to host mount path
-    	sed -i -e "s|- \./|- ${HOST_DATADIR}jobs/${JOB_NAME}/workspace/docker/|" "${LOCALINTEGRATION}"
+    	sed -i -e "s|- \./|- ${HOST_DATADIR}jobs/${JOB_NAME}/workspace/docker/|" "${INTEGRATION}"
 	else
 	    sed -i -e "s|- \./|- ${CURRENTDIR}/|" ${INTEGRATION}    	
 	fi
