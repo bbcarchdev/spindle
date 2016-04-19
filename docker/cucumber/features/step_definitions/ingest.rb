@@ -1,11 +1,8 @@
-Given(/^a running instance of "([^"]*)" at port (\d+)$/) do |service, port|
-  # Try to just open a TCP connection and wait a bit
-  http = Net::HTTP.new(service.downcase, port)
-  http.read_timeout = 120 # Wait for 120 seconds
-  http.start()
-  ok = http.started?()
-  http.finish()
 
-  # Was it ok ?
-  expect(ok).to be(true)
+When(/^"([^"]*)" is ingested into Twine$/) do |file|
+  pending # Write code here that turns the phrase above into concrete actions
+end
+
+Then(/^"([^"]*)" proxies should exist in the database$/) do |proxies|
+  pending # Write code here that turns the phrase above into concrete actions
 end
