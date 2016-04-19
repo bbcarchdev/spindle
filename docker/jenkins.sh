@@ -1,6 +1,7 @@
 #!/bin/bash -ex
 
 DOCKER_REGISTRY="vm-10-100-0-25.ch.bbcarchdev.net"
+PROJECT_NAME="spindle"
 PROJECT_NAME_TWINE="twine-spindle"
 PROJECT_NAME_QUILT="quilt-spindle"
 INTEGRATION="docker/integration.yml"
@@ -33,13 +34,13 @@ then
         fi
 
 	# Tear down integration from previous run if it was still running
-	docker-compose -p ${JOB_NAME} -f ${INTEGRATION} stop
-	docker-compose -p ${JOB_NAME} -f ${INTEGRATION} rm -f
+	docker-compose -p ${PROJECT_NAME} -f ${INTEGRATION} stop
+	docker-compose -p ${PROJECT_NAME} -f ${INTEGRATION} rm -f
 
         # Start project integration
-        docker-compose -p ${JOB_NAME} -f ${INTEGRATION} run cucumber
+        docker-compose -p ${PROJECT_NAME} -f ${INTEGRATION} run cucumber
 
         # Tear down integration
-        docker-compose -p ${JOB_NAME} -f ${INTEGRATION} stop
-        docker-compose -p ${JOB_NAME} -f ${INTEGRATION} rm -f
+        docker-compose -p ${PROJECT_NAME} -f ${INTEGRATION} stop
+        docker-compose -p ${PROJECT_NAME} -f ${INTEGRATION} rm -f
 fi
