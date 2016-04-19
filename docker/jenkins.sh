@@ -33,13 +33,13 @@ then
         fi
 
 	# Tear down integration from previous run if it was still running
-	docker-compose -p ${JOB_NAME}-test -f ${INTEGRATION} stop
-	docker-compose -p ${JOB_NAME}-test -f ${INTEGRATION} rm -f
+	docker-compose -p ${JOB_NAME} -f ${INTEGRATION} stop
+	docker-compose -p ${JOB_NAME} -f ${INTEGRATION} rm -f
 
         # Start project integration
-        docker-compose -p ${JOB_NAME}-test -f ${INTEGRATION} run cucumber
+        docker-compose -p ${JOB_NAME} -f ${INTEGRATION} run cucumber
 
         # Tear down integration
-        docker-compose -p ${PROJECT_NAME} -f docker/integration.yml stop
-        docker-compose -p ${PROJECT_NAME} -f docker/integration.yml rm -f
+        docker-compose -p ${JOB_NAME} -f ${INTEGRATION} stop
+        docker-compose -p ${JOB_NAME} -f ${INTEGRATION} rm -f
 fi
