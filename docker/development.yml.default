@@ -1,0 +1,13 @@
+# Extends integration.yml.default; run with `docker-compose -f integration.yml.default -f development.yml.default ...`
+
+twine:
+  build: ../
+  dockerfile: docker/Dockerfile-twine-build
+  volumes:
+   - ../:/usr/local/src-spindle
+
+quilt:
+  build: ../
+  dockerfile: docker/Dockerfile-quilt-build
+  volumes:
+   - ../:/usr/local/src-spindle
