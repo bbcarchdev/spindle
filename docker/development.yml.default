@@ -9,5 +9,7 @@ twine:
 quilt:
   build: ../
   dockerfile: docker/Dockerfile-quilt-build
+  ports:
+   - "80:80"
   volumes:
    - ../:/usr/local/src-spindle
