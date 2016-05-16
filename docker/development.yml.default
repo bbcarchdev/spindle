@@ -1,15 +1,15 @@
 # Extends integration.yml.default; run with `docker-compose -f integration.yml.default -f development.yml.default ...`
 
 twine:
-  build: ../../twine/
-  dockerfile: docker/Dockerfile-build
+  build: ../
+  dockerfile: docker/Dockerfile-twine-build
   volumes:
-   - ../twine:/usr/local/src-spindle
+   - ../:/usr/local/src-spindle
 
 quilt:
-  build: ../../quilt/
-  dockerfile: docker/Dockerfile-build
+  build: ../
+  dockerfile: docker/Dockerfile-quilt-build
   ports:
    - "80:80"
   volumes:
-   - ../spindle:/usr/local/src-spindle
+   - ../:/usr/local/src-spindle
