@@ -540,16 +540,6 @@ void:subset spindle:inverseProperty [
 	spindle:expressedAs dct:isPartOf
 ] .
 
-foaf:depicts spindle:inverseProperty [
-	olo:index 0 ;
-	spindle:expressedAs dct:isPartOf
-] .
-
-dct:subject spindle:inverseProperty [
-	olo:index 0 ;
-	spindle:expressedAs dct:isPartOf
-] .
-
 rdfs:seeAlso spindle:inverseProperty [
 	olo:index 0 ;
 	rdfs:domain dcmitype:Collection ;
