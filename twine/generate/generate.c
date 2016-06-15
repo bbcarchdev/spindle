@@ -334,6 +334,7 @@ spindle_generate_state_fetch_(SPINDLEENTRY *cache)
 	{
 		twine_logf(LOG_WARNING, PLUGIN_NAME ": no state entry exists for <%s>\n", cache->localname);
 		cache->flags = -1;
+		sql_stmt_destroy(rs);
 		return 0;
 	}
 	state = sql_stmt_str(rs, 0);
@@ -355,6 +356,7 @@ spindle_generate_state_fetch_(SPINDLEENTRY *cache)
 	cache->flags = flags;
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": {%s} has state %s, last modified %s, flags %ld\n",
 		cache->id, state, modified, flags);
+	sql_stmt_destroy(rs);
 	return 0;
 }
 

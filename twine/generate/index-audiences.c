@@ -261,6 +261,7 @@ spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data)
 		free(bases[c]);
 	}
 	free(bases);
+	librdf_free_iterator(iter);
 	return r;
 }
 
@@ -336,6 +337,8 @@ spindle_index_audiences_origin_(const char *uristr)
 	*p = '/';
 	p++;
 	*p = 0;
+	uri_info_destroy(info);
+	uri_destroy(uri);
 	return base;
 }
 
