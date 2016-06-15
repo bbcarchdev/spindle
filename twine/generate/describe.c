@@ -32,8 +32,6 @@ spindle_describe_entry(SPINDLEENTRY *data)
 	librdf_stream *stream;
 	librdf_node *node, *subject;
 	librdf_statement *st, *statement;
-	librdf_uri *nodeuri;
-	const char *nodeuristr;
 	const char *uri;
 	int r;
 	
@@ -101,17 +99,6 @@ spindle_describe_entry(SPINDLEENTRY *data)
 				{
 					continue;
 				}
-				nodeuri = librdf_node_get_uri(node);
-				if(!nodeuri)
-				{
-					continue;
-				}
-				nodeuristr = (const char *) librdf_uri_as_string(nodeuri);
-				if(!nodeuristr)
-				{
-					continue;
-				}
-				spindle_strset_add(data->sources, nodeuristr);
 				st = twine_rdf_st_create();
 				librdf_statement_set_subject(st, librdf_new_node_from_node(subject));
 				librdf_statement_set_predicate(st, twine_rdf_node_createuri(NS_POWDER "describedBy"));

@@ -28,6 +28,7 @@ static int spindle_source_fetch_sparql_(SPINDLEENTRY *data);
 static int spindle_source_sameas_(SPINDLEENTRY *data);
 static int spindle_source_clean_(SPINDLEENTRY *data);
 static int spindle_source_refs_(SPINDLEENTRY *data);
+static int spindle_source_graphs_(SPINDLEENTRY *data);
 
 /* Obtain cached source data for processing */
 int
@@ -49,6 +50,10 @@ spindle_source_fetch_entry(SPINDLEENTRY *data)
 		{
 			/* N-Quads were retrieved from the cache */
 			if(spindle_source_refs_(data))
+			{
+				return -1;
+			}
+			if (spindle_source_graphs_(data))
 			{
 				return -1;
 			}
@@ -74,6 +79,10 @@ spindle_source_fetch_entry(SPINDLEENTRY *data)
 		}
 	}
 	if(spindle_source_clean_(data))
+	{
+		return -1;
+	}
+	if (spindle_source_graphs_(data))
 	{
 		return -1;
 	}
@@ -111,6 +120,40 @@ spindle_source_refs_(SPINDLEENTRY *data)
 		librdf_model_context_add_statement(data->proxydata, data->graph, st);
 		twine_rdf_st_destroy(st);
 	}
+	return 0;
+}
+
+/* Add the graph URIs in the source data to the sources list, assuming there
+ * are no internal graph URIs in the source data (so spindle_source_clean_() was
+ * called first)
+ */
+static int
+spindle_source_graphs_(SPINDLEENTRY *data)
+{
+	librdf_iterator *iter;
+	librdf_node *node;
+	librdf_uri *nodeuri;
+	const char *nodeuristr;
+
+	iter = librdf_model_get_contexts(data->sourcedata);
+	while(!librdf_iterator_end(iter))
+	{
+		node = librdf_iterator_get_object(iter);
+		nodeuri = librdf_node_get_uri(node);
+		if(!nodeuri)
+		{
+			continue;
+		}
+		nodeuristr = (const char *) librdf_uri_as_string(nodeuri);
+		if(!nodeuristr)
+		{
+			continue;
+		}
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding graph <%s> to sources list\n", nodeuristr);
+		spindle_strset_add(data->sources, nodeuristr);
+		librdf_iterator_next(iter);
+	}
+	librdf_free_iterator(iter);
 	return 0;
 }
 
