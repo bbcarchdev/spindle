@@ -108,7 +108,7 @@ spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data)
 			{
 				continue;
 			}
-			if(strcasecmp(id, tid))
+			if(!strcasecmp(id, tid))
 			{
 				free(tid);
 				continue;
