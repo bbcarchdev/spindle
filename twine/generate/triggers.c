@@ -87,7 +87,12 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 	for(; !sql_stmt_eof(rs); sql_stmt_next(rs))
 	{
 		flags = (int) sql_stmt_long(rs, 1);
-		sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = \"flags\" | %d WHERE \"id\" = %Q", "DIRTY", flags, sql_stmt_str(rs, 0));
+		/* -1 can trigger any kind of update
+		 * Others can only trigger updates of the same type */
+		if (entry->flags == -1 || entry->flags == flags)
+		{
+			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = \"flags\" | %d WHERE \"id\" = %Q", "DIRTY", flags, sql_stmt_str(rs, 0));
+		}
 	}
 	
 	sql_stmt_destroy(rs);
