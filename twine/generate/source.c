@@ -167,28 +167,55 @@ spindle_source_fetch_db_(SPINDLEENTRY *data)
 	size_t c;
 
 	r = 0;
-	for(c = 0; data->refs[c]; c++)
+
+	if (data->flags == TK_MEDIA)
 	{
-		/* Add <ref> owl:sameAs <localname> triples to the proxy model */
-		if(sparql_queryf_model(data->sparql, data->sourcedata,
-			"SELECT DISTINCT ?s ?p ?o ?g\n"
-			" WHERE {\n"
-			"  GRAPH ?g {\n"
-			"  { <%s> ?p ?o .\n"
-			"   BIND(<%s> as ?s)\n"
-			"  }\n"
-			"  UNION\n"
-			"  { ?s ?p <%s> .\n"
-			"   BIND(<%s> as ?o)\n"
-			"  }\n"
-			" }\n"
-			"}",
-			data->refs[c], data->refs[c], data->refs[c], data->refs[c]))
+		for(c = 0; data->refs[c]; c++)
 		{
-			r = -1;
-			break;
+			/* Add <ref> owl:sameAs <localname> triples to the proxy model */
+			if(sparql_queryf_model(data->sparql, data->sourcedata,
+				"SELECT DISTINCT ?s ?p ?o ?g\n"
+				" WHERE {\n"
+				"  GRAPH ?g {\n"
+				"  { <%s> ?p ?o .\n"
+				"   BIND(<%s> as ?s)\n"
+				"  }\n"
+				" }\n"
+				"}",
+				data->refs[c], data->refs[c]))
+			{
+				r = -1;
+				break;
+			}
 		}
 	}
+
+	else
+	{
+		for(c = 0; data->refs[c]; c++)
+		{
+			/* Add <ref> owl:sameAs <localname> triples to the proxy model */
+			if(sparql_queryf_model(data->sparql, data->sourcedata,
+				"SELECT DISTINCT ?s ?p ?o ?g\n"
+				" WHERE {\n"
+				"  GRAPH ?g {\n"
+				"  { <%s> ?p ?o .\n"
+				"   BIND(<%s> as ?s)\n"
+				"  }\n"
+				"  UNION\n"
+				"  { ?s ?p <%s> .\n"
+				"   BIND(<%s> as ?o)\n"
+				"  }\n"
+				" }\n"
+				"}",
+				data->refs[c], data->refs[c], data->refs[c], data->refs[c]))
+			{
+				r = -1;
+				break;
+			}
+		}
+	}
+
 	return r;
 }
 
