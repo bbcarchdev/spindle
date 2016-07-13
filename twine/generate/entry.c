@@ -23,6 +23,8 @@
 
 #include "p_spindle-generate.h"
 
+static int spindle_entry_init_models_(SPINDLEENTRY *data);
+static int spindle_entry_cleanup_models_(SPINDLEENTRY *data);
 static int spindle_entry_cleanup_literalset_(struct spindle_literalset_struct *set);
 
 /* Initialise a data structure used to hold state while an individual proxy
@@ -80,7 +82,22 @@ spindle_entry_init(SPINDLEENTRY *data, SPINDLEGENERATE *generate, const char *lo
 		data->graphname = strdup(generate->spindle->root);
 		data->graph = generate->spindle->rootgraph;
 	}
+	/* Initialise all models */
+	if(spindle_entry_init_models_(data))
+	{
+		return -1;
+	}
+	if(!(data->sources = spindle_strset_create()))
+	{
+		return -1;
+	}
+	return 0;
+}
 
+/* Initialise the librdf models in the proxy entity update state data structure */
+static int
+spindle_entry_init_models_(SPINDLEENTRY *data)
+{
 	/* The rootdata model holds proxy data which is stored in the root
 	 * graph for convenience
 	 */
@@ -105,7 +122,22 @@ spindle_entry_init(SPINDLEENTRY *data, SPINDLEGENERATE *generate, const char *lo
 	{
 		return -1;
 	}
-	if(!(data->sources = spindle_strset_create()))
+	return 0;
+}
+
+/* Reset the proxy entity update state data structure, so that it can be used
+ * again without initialising it (for example, when a db transaction fails) */
+int
+spindle_entry_reset(SPINDLEENTRY *data)
+{
+	spindle_entry_cleanup_models_(data);
+	/* Clean up classes before they're recreated in classes.c */
+	if(data->classes)
+	{
+		spindle_strset_destroy(data->classes);
+	}
+	/* Initialise all models */
+	if(spindle_entry_init_models_(data))
 	{
 		return -1;
 	}
@@ -121,7 +153,10 @@ spindle_entry_cleanup(SPINDLEENTRY *data)
 	twine_logf(LOG_DEBUG, PLUGIN_NAME " ---------------------------------------\n");
 	spindle_entry_cleanup_literalset_(&(data->titleset));
 	spindle_entry_cleanup_literalset_(&(data->descset));
-	spindle_strset_destroy(data->sources);
+	if(data->sources)
+	{
+		spindle_strset_destroy(data->sources);
+	}
 	if(data->refs)
 	{
 		spindle_proxy_refs_destroy(data->refs);
@@ -134,6 +169,30 @@ spindle_entry_cleanup(SPINDLEENTRY *data)
 	{
 		librdf_free_node(data->self);
 	}
+	/* Cleanup all librdf models */
+	spindle_entry_cleanup_models_(data);
+	if(data->classes)
+	{
+		spindle_strset_destroy(data->classes);
+	}
+	for(c = 0; c < data->ntriggers; c++)
+	{
+		free(data->triggers[c].uri);
+	}
+	free(data->triggers);
+	/* Never free data->graph - it is a pointer to data->doc or spindle->rootgraph */
+	free(data->id);
+	free(data->title);
+	free(data->title_en);
+	free(data->docname);
+	free(data->graphname);
+	return 0;
+}
+
+/* Cleanup the librdf models in the proxy entity update state data structure */
+static int
+spindle_entry_cleanup_models_(SPINDLEENTRY *data)
+{
 	if(data->rootdata)
 	{
 		twine_rdf_model_destroy(data->rootdata);
@@ -150,21 +209,6 @@ spindle_entry_cleanup(SPINDLEENTRY *data)
 	{
 		twine_rdf_model_destroy(data->extradata);
 	}
-	if(data->classes)
-	{
-		spindle_strset_destroy(data->classes);
-	}
-	for(c = 0; c < data->ntriggers; c++)
-	{
-		free(data->triggers[c].uri);
-	}
-	free(data->triggers);
-	/* Never free data->graph - it is a pointer to data->doc or spindle->rootgraph */
-	free(data->id);
-	free(data->title);
-	free(data->title_en);
-	free(data->docname);
-	free(data->graphname);
 	return 0;
 }
 

@@ -154,6 +154,7 @@ int spindle_generate_update(const char *name, const char *identifier, void *data
 
 /* Initialise and release an entry's data structure */
 int spindle_entry_init(SPINDLEENTRY *data, SPINDLEGENERATE *generate, const char *localname);
+int spindle_entry_reset(SPINDLEENTRY *data);
 int spindle_entry_cleanup(SPINDLEENTRY *data);
 
 /* Fetch source data about an entry */

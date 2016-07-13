@@ -215,6 +215,11 @@ spindle_generate_txn_(SQL *restrict sql, void *restrict userdata)
 	{
 		if(sql_deadlocked(sql))
 		{
+			/* Reset the models before retrying */
+			if (spindle_entry_reset(entry))
+			{
+				return -2;
+			}
 			/* Retry in the event of a deadlock */
 			return -1;
 		}
@@ -225,6 +230,8 @@ spindle_generate_txn_(SQL *restrict sql, void *restrict userdata)
 
 /* Re-build the data for the proxy entity identified by cache->localname;
  * if no references exist any more, the cached data will be removed.
+ *
+ * Note: this method can be called twice with the same entry data!
  */
 static int
 spindle_generate_entry_(SPINDLEENTRY *entry)
