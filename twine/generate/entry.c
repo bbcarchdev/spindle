@@ -135,6 +135,7 @@ spindle_entry_reset(SPINDLEENTRY *data)
 	if(data->classes)
 	{
 		spindle_strset_destroy(data->classes);
+		data->classes = NULL;
 	}
 	/* Initialise all models */
 	if(spindle_entry_init_models_(data))
