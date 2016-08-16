@@ -36,8 +36,7 @@ spindle_source_fetch_entry(SPINDLEENTRY *data)
 {
 	int r;
 	
-	/* If the co-references haven't changed, we can use cached
-	 * source data if it's available.
+	/* Always try to get the cache
 	 */
 	r = spindle_cache_fetch(data, "source", data->sourcedata);
 	if(r < 0)
