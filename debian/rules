@@ -12,10 +12,10 @@ override_dh_auto_configure: configure
 
 override_dh_auto_install:
 	dh_auto_install
-	rm -f debian/twine-processor-spindle/usr/lib/twine/spindle.a
-	rm -f debian/twine-processor-spindle/usr/lib/twine/spindle.la
-	rm -f debian/quilt-engine-spindle/usr/lib/quilt/spindle.a
-	rm -f debian/quilt-engine-spindle/usr/lib/quilt/spindle.la	
+	rm -f debian/twine-processor-spindle/usr/lib/twine/spindle*.a
+	rm -f debian/twine-processor-spindle/usr/lib/twine/spindle*.la
+	rm -f debian/quilt-engine-spindle/usr/lib/quilt/spindle*.a
+	rm -f debian/quilt-engine-spindle/usr/lib/quilt/spindle*.la	
 
 override_dh_strip:
 	true

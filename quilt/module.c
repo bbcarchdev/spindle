@@ -3,7 +3,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,9 +25,13 @@
 #include "p_spindle.h"
 
 AWSS3BUCKET *spindle_bucket;
+char *spindle_cachepath;
 SQL *spindle_db;
 int spindle_s3_verbose;
 
+static int spindle_cache_init_(void);
+static int spindle_cache_init_s3_(const char *bucket);
+static int spindle_cache_init_file_(const char *path);
 static int spindle_db_querylog_(SQL *restrict sql, const char *query);
 static int spindle_db_noticelog_(SQL *restrict sql, const char *notice);
 static int spindle_db_errorlog_(SQL *restrict sql, const char *sqlstate, const char *message);
@@ -44,6 +48,7 @@ quilt_plugin_init(void)
 	}
 	spindle_bucket = NULL;
 	spindle_db = NULL;
+	spindle_cachepath = NULL;
 	if((t = quilt_config_geta(QUILT_PLUGIN_NAME ":db", NULL)))
 	{
 		spindle_db = sql_connect(t);
@@ -58,32 +63,115 @@ quilt_plugin_init(void)
 		sql_set_errorlog(spindle_db, spindle_db_errorlog_);
 		sql_set_noticelog(spindle_db, spindle_db_noticelog_);
 	}
-	if((t = quilt_config_geta(QUILT_PLUGIN_NAME ":bucket", NULL)))
+	if(spindle_cache_init_())
 	{
-		spindle_bucket = aws_s3_create(t);
-		if(!spindle_bucket)
+		return -1;
+	}
+	return 0;
+}
+
+static int
+spindle_cache_init_(void)
+{
+	URI *base, *uri;
+	URI_INFO *info;
+	char *t;
+	int r;
+	
+	if((t = quilt_config_geta(QUILT_PLUGIN_NAME ":cache", NULL)))
+	{
+		base = uri_create_cwd();
+		uri = uri_create_str(t, base);
+		info = uri_info(uri);
+		uri_destroy(uri);
+		uri_destroy(base);
+		if(!strcmp(info->scheme, "s3"))
 		{
-			quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": failed to initialise S3 bucket '%s'\n", t);
-			free(t);
-			return -1;
+			r = spindle_cache_init_s3_(info->host);
 		}
+		else if(!strcmp(info->scheme, "file"))
+		{
+			r = spindle_cache_init_file_(info->path);
+		}
+		else
+		{
+			quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": cache scheme '%s' is not supported in URI <%s>\n", info->scheme, t);
+			r = -1;
+		}
+		uri_info_destroy(info);
 		free(t);
-		if((t = quilt_config_geta("s3:endpoint", NULL)))
+		
+	}
+	else if((t = quilt_config_geta(QUILT_PLUGIN_NAME ":bucket", NULL)))
+	{
+		quilt_logf(LOG_WARNING, QUILT_PLUGIN_NAME ": the 'bucket' configuration option is deprecated; you should specify an S3 bucket URI as the value of the 'cache' option instead\n");
+		r = spindle_cache_init_s3_(t);
+		free(t);
+	}
+	else
+	{
+		r = 0;
+	}
+	return r;
+}
+
+static int
+spindle_cache_init_s3_(const char *bucket)
+{
+	char *t;
+	
+	spindle_bucket = aws_s3_create(bucket);
+	if(!spindle_bucket)
+	{
+		quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": failed to initialise S3 bucket '%s'\n", bucket);
+		return -1;
+	}
+	if((t = quilt_config_geta("s3:endpoint", NULL)))
+	{
+		aws_s3_set_endpoint(spindle_bucket, t);
+		free(t);
+	}
+	if((t = quilt_config_geta("s3:access", NULL)))
+	{
+		aws_s3_set_access(spindle_bucket, t);
+		free(t);
+	}
+	if((t = quilt_config_geta("s3:secret", NULL)))
+	{
+		aws_s3_set_secret(spindle_bucket, t);
+		free(t);
+	}
+	spindle_s3_verbose = quilt_config_get_bool("s3:verbose", 0);
+	return 0;
+}
+
+static int
+spindle_cache_init_file_(const char *path)
+{
+	char *t;
+	
+	if(!path || !path[0])
+	{
+		return 0;
+	}
+	spindle_cachepath = (char *) calloc(1, strlen(path) + 2);
+	if(!spindle_cachepath)
+	{
+		quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": failed to allocate memory for cache path buffer\n");
+		return -1;
+	}
+	strcpy(spindle_cachepath, path);
+	if(path[0])
+	{
+		t = strchr(spindle_cachepath, 0);
+		t--;
+		if(*t != '/')
 		{
-			aws_s3_set_endpoint(spindle_bucket, t);
-			free(t);
+			t++;
+			*t = '/';
+			t++;
+			*t = 0;
 		}
-		if((t = quilt_config_geta("s3:access", NULL)))
-		{
-			aws_s3_set_access(spindle_bucket, t);
-			free(t);
-		}
-		if((t = quilt_config_geta("s3:secret", NULL)))
-		{
-			aws_s3_set_secret(spindle_bucket, t);
-			free(t);
-		}
-		spindle_s3_verbose = quilt_config_get_bool("s3:verbose", 0);
 	}
 	return 0;
 }

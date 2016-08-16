@@ -21,7 +21,7 @@
 # include "config.h"
 #endif
 
-#include "p_spindle.h"
+#include "p_spindle-generate.h"
 
 struct licenseentry_struct
 {
@@ -39,37 +39,37 @@ struct licenselist_struct
 	size_t nentries;
 };
 
-static int spindle_license_apply_context_(SPINDLECACHE *cache, struct licenselist_struct *list, librdf_node *context, librdf_node *licenseentry, const char *licenseentryname);
-static int spindle_license_apply_st_(SPINDLECACHE *cache, librdf_node *graph, const char *graphname, librdf_statement *statement, librdf_node *source, const char *sourcename, struct licenselist_struct *list);
+static int spindle_license_apply_context_(SPINDLEENTRY *cache, struct licenselist_struct *list, librdf_node *context, librdf_node *licenseentry, const char *licenseentryname);
+static int spindle_license_apply_st_(SPINDLEENTRY *cache, librdf_node *graph, const char *graphname, librdf_statement *statement, librdf_node *source, const char *sourcename, struct licenselist_struct *list);
 static int spindle_license_cb_(const char *section, const char *key, void *data);
-static struct spindle_license_struct *spindle_license_add_(SPINDLE *spindle, const char *name, size_t namelen);
+static struct spindle_license_struct *spindle_license_add_(SPINDLEGENERATE *generate, const char *name, size_t namelen);
 static int spindle_license_add_uri_(struct spindle_license_struct *license, const char *uri);
 static struct licenseentry_struct *spindle_license_list_add_(struct licenselist_struct *list, const char *uri, const char *source, struct spindle_license_struct *license);
 static int spindle_license_list_free_(struct licenselist_struct *list);
-static int spindle_license_label_(SPINDLECACHE *cache, librdf_node *subject);
-static int spindle_license_apply_list_(SPINDLECACHE *cache, struct licenselist_struct *list, librdf_node *subject);
+static int spindle_license_label_(SPINDLEENTRY *cache, librdf_node *subject);
+static int spindle_license_apply_list_(SPINDLEENTRY *cache, struct licenselist_struct *list, librdf_node *subject);
 
 int
-spindle_license_init(SPINDLE *spindle)
+spindle_license_init(SPINDLEGENERATE *generate)
 {
 	char *pred;
 	size_t c;
 
 	pred = twine_config_geta("spindle:predicates:license", NS_DCTERMS "rights");
-	for(c = 0; c < spindle->predcount; c++)
+	for(c = 0; c < generate->rules->predcount; c++)
 	{
-		if(!strcmp(spindle->predicates[c].target, pred))
+		if(!strcmp(generate->rules->predicates[c].target, pred))
 		{
-			spindle->licensepred = &(spindle->predicates[c]);
+			generate->licensepred = &(generate->rules->predicates[c]);
 			break;
 		}
 	}
-	if(!spindle->licensepred)
+	if(!generate->licensepred)
 	{
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": failed to locate licensing predicate <%s> in rulebase\n", spindle->licensepred);
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": failed to locate licensing predicate <%s> in rulebase\n", generate->licensepred);
 	}
 	free(pred);
-	twine_config_get_all(NULL, NULL, spindle_license_cb_, (void *) spindle);
+	twine_config_get_all(NULL, NULL, spindle_license_cb_, (void *) generate);
 	return 0;
 }
 
@@ -79,9 +79,10 @@ spindle_license_cb_(const char *key, const char *value, void *data)
 {
 	struct spindle_license_struct *entry;
 	const char *section;
-	SPINDLE *spindle;
+	SPINDLEGENERATE *generate;
 	int i;
 
+	generate = (SPINDLEGENERATE *) data;
 	if(!value || strncmp(key, "spindle:licenses:", 17))
 	{
 		return 0;
@@ -89,11 +90,10 @@ spindle_license_cb_(const char *key, const char *value, void *data)
 	section = key + 17;
 	key = strchr(section, ':');
 	if(!key)
-	{	
+	{
 		return 0;
 	}
-	spindle = (SPINDLE *) data;
-	entry = spindle_license_add_(spindle, section, key - section);
+	entry = spindle_license_add_(generate, section, key - section);
 	if(!entry)
 	{
 		return -1;
@@ -143,27 +143,27 @@ spindle_license_cb_(const char *key, const char *value, void *data)
 
 /* Add a license entry to the context */
 static struct spindle_license_struct *
-spindle_license_add_(SPINDLE *spindle, const char *name, size_t namelen)
+spindle_license_add_(SPINDLEGENERATE *generate, const char *name, size_t namelen)
 {
 	size_t c;
 	struct spindle_license_struct *p;
 
-	for(c = 0; c < spindle->nlicenses; c++)
+	for(c = 0; c < generate->nlicenses; c++)
 	{
-		if(strlen(spindle->licenses[c].name) == namelen &&
-		   !strncmp(spindle->licenses[c].name, name, namelen))
+		if(strlen(generate->licenses[c].name) == namelen &&
+		   !strncmp(generate->licenses[c].name, name, namelen))
 		{
-			return &(spindle->licenses[c]);
+			return &(generate->licenses[c]);
 		}
 	}
-	p = (struct spindle_license_struct *) realloc(spindle->licenses, sizeof(struct spindle_license_struct) * (spindle->nlicenses + 1));
+	p = (struct spindle_license_struct *) realloc(generate->licenses, sizeof(struct spindle_license_struct) * (generate->nlicenses + 1));
 	if(!p)
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to expand license list\n");
 		return NULL;
 	}
-	spindle->licenses = p;
-	p = &(spindle->licenses[spindle->nlicenses]);
+	generate->licenses = p;
+	p = &(generate->licenses[generate->nlicenses]);
 	memset(p, 0, sizeof(struct spindle_license_struct));
 	p->name = (char *) malloc(namelen + 1);
 	if(!p)
@@ -175,7 +175,7 @@ spindle_license_add_(SPINDLE *spindle, const char *name, size_t namelen)
 	p->name[namelen] = 0;
 	/* A known license will always have a non-zero score */
 	p->score = 1;
-	spindle->nlicenses++;
+	generate->nlicenses++;
 	return p;
 }
 
@@ -205,7 +205,7 @@ spindle_license_add_uri_(struct spindle_license_struct *license, const char *uri
  * add information about them to a licensing entry related to the proxy
  */
 int
-spindle_license_apply(SPINDLECACHE *cache)
+spindle_license_apply(SPINDLEENTRY *cache)
 {	
 	librdf_iterator *iter;
 	librdf_node *node, *licenseentry;
@@ -243,7 +243,7 @@ spindle_license_apply(SPINDLECACHE *cache)
 
 /* Look for licensing triples within an individual named graph */
 static int
-spindle_license_apply_context_(SPINDLECACHE *cache, struct licenselist_struct *list, librdf_node *context, librdf_node *licenseentry, const char *licenseentryname)
+spindle_license_apply_context_(SPINDLEENTRY *cache, struct licenselist_struct *list, librdf_node *context, librdf_node *licenseentry, const char *licenseentryname)
 {
 	librdf_node *predicate, *object;
 	librdf_uri *uri, *pred;	
@@ -268,15 +268,15 @@ spindle_license_apply_context_(SPINDLECACHE *cache, struct licenselist_struct *l
 		}
 		pred = librdf_node_get_uri(predicate);
 		preduri = (const char *) librdf_uri_as_string(pred);
-		for(c = 0; c < cache->spindle->licensepred->matchcount; c++)
+		for(c = 0; c < cache->generate->licensepred->matchcount; c++)
 		{
-			if(cache->spindle->licensepred->matches[c].onlyfor &&
-			   strcmp(cache->spindle->licensepred->matches[c].onlyfor,
+			if(cache->generate->licensepred->matches[c].onlyfor &&
+			   strcmp(cache->generate->licensepred->matches[c].onlyfor,
 					  NS_FOAF "Document"))
 			{
 				continue;
 			}
-			if(!strcmp(preduri, cache->spindle->licensepred->matches[c].predicate))
+			if(!strcmp(preduri, cache->generate->licensepred->matches[c].predicate))
 			{
 				if(spindle_license_apply_st_(cache, licenseentry, licenseentryname, statement, context, uristr, list))
 				{
@@ -295,7 +295,7 @@ spindle_license_apply_context_(SPINDLECACHE *cache, struct licenselist_struct *l
 
 /* Take a list of licensing information and reflect it in the licensing graph */
 static int
-spindle_license_apply_list_(SPINDLECACHE *cache, struct licenselist_struct *list, librdf_node *subject)
+spindle_license_apply_list_(SPINDLEENTRY *cache, struct licenselist_struct *list, librdf_node *subject)
 {
 	size_t c, buflen;
 	char *buf, *p;
@@ -356,7 +356,7 @@ spindle_license_apply_list_(SPINDLECACHE *cache, struct licenselist_struct *list
 
 /* Add a label to the licensing graph */
 static int
-spindle_license_label_(SPINDLECACHE *cache, librdf_node *subject)
+spindle_license_label_(SPINDLEENTRY *cache, librdf_node *subject)
 {
 	librdf_node *obj;
 	librdf_statement *st;
@@ -417,7 +417,7 @@ spindle_license_label_(SPINDLECACHE *cache, librdf_node *subject)
  * graph.
  */
 static int
-spindle_license_apply_st_(SPINDLECACHE *cache, librdf_node *graph, const char *graphname, librdf_statement *statement, librdf_node *source, const char *sourcename, struct licenselist_struct *list)
+spindle_license_apply_st_(SPINDLEENTRY *cache, librdf_node *graph, const char *graphname, librdf_statement *statement, librdf_node *source, const char *sourcename, struct licenselist_struct *list)
 {
 	librdf_node *object;
 	librdf_uri *obj;
@@ -458,13 +458,13 @@ spindle_license_apply_st_(SPINDLECACHE *cache, librdf_node *graph, const char *g
 	objuri = (const char *) librdf_uri_as_string(obj);
 
 	license = NULL;
-	for(c = 0; c < cache->spindle->nlicenses; c++)
+	for(c = 0; c < cache->generate->nlicenses; c++)
 	{
-		for(d = 0; d < cache->spindle->licenses[c].uricount; d++)
+		for(d = 0; d < cache->generate->licenses[c].uricount; d++)
 		{
-			if(!strcmp(objuri, cache->spindle->licenses[c].uris[d]))
+			if(!strcmp(objuri, cache->generate->licenses[c].uris[d]))
 			{
-				license = &(cache->spindle->licenses[c]);
+				license = &(cache->generate->licenses[c]);
 				break;
 			}
 		}

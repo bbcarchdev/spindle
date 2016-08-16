@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -79,12 +79,10 @@ spindle_proxy_locate(SPINDLE *spindle, const char *uri)
 	librdf_node *node;
 	librdf_uri *ruri;
 
-#if SPINDLE_DB_PROXIES
 	if(spindle->db)
 	{
 		return spindle_db_proxy_locate(spindle, uri);
 	}
-#endif
 	/* TODO: if uri is within our namespace and is valid, return it as-is */
 	errno = 0;
 	localname = NULL;
@@ -127,7 +125,7 @@ spindle_proxy_locate(SPINDLE *spindle, const char *uri)
 int
 spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struct spindle_strset_struct *changeset)
 {
-	char *u1, *u2, *uu;
+	char *u1, *u2, *uu, *id;
 	unsigned flags = SF_REFRESHED;
 
 	u1 = spindle_proxy_locate(spindle, uri1);
@@ -147,6 +145,16 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		{
 			spindle_strset_add_flags(changeset, u1, flags);
 		}
+		/* Ensure that proxy state is up to date */
+		if(spindle->db)
+		{
+			/* Mark the proxy as needing to be re-generated - we don't know
+			 * if the changes were material or not
+			 */
+			id = spindle_db_id(u1);
+			spindle_db_proxy_state_(spindle, id, 1);
+			free(id);
+		}
 		free(u1);
 		free(u2);
 		return 0;
@@ -158,6 +166,16 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		if(changeset)
 		{
 			spindle_strset_add_flags(changeset, u1, flags);
+		}
+		/* Ensure that the proxy state is up to date */
+		if(spindle->db)
+		{
+			/* Mark the proxy as needing to be re-generated - we don't know
+			 * if the changes were material or not
+			 */
+			id = spindle_db_id(u1);
+			spindle_db_proxy_state_(spindle, id, 1);
+			free(id);
 		}
 		free(u1);
 		free(u2);
@@ -193,7 +211,16 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 	if(!u1)
 	{
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": relating %s to %s\n", uri1, uu);
-		spindle_proxy_relate(spindle, uri1, uu);
+		if(spindle_proxy_relate(spindle, uri1, uu))
+		{
+			free(u1);
+			free(u2);
+			if(uu != u1 && uu != u2)
+			{
+				free(uu);
+			}
+			return -1;
+		}
 		flags |= SF_MOVED;
 	}
 	/* If the second entity didn't previously have a local proxy, attach it */
@@ -202,7 +229,16 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		if(uri2)
 		{
 			twine_logf(LOG_DEBUG, PLUGIN_NAME ": relating %s to %s\n", uri2, uu);
-			spindle_proxy_relate(spindle, uri2, uu);
+			if(spindle_proxy_relate(spindle, uri2, uu))
+			{
+				free(u1);
+				free(u2);
+				if(uu != u1 && uu != u2)
+				{
+					free(uu);
+				}
+				return -1;
+			}
 		}
 	}
 	else if(strcmp(u2, uu))
@@ -212,7 +248,16 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		 * unified proxy.
 		 */
 		twine_logf(LOG_INFO, PLUGIN_NAME ": relocating references from <%s> to <%s>\n", u2, uu);
-		spindle_proxy_migrate(spindle, u2, uu, NULL);
+		if(spindle_proxy_migrate(spindle, u2, uu, NULL))
+		{
+			free(u1);
+			free(u2);
+			if(uu != u1 && uu != u2)
+			{
+				free(uu);
+			}
+			return -1;
+		}
 		flags |= SF_MOVED;
 		if(changeset)
 		{
@@ -240,12 +285,10 @@ spindle_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, char *
 	int allocated;
 	char *qbuf, *qp;
 
-#if SPINDLE_DB_PROXIES
 	if(spindle->db)
 	{
 		return spindle_db_proxy_migrate(spindle, from, to, refs);
 	}
-#endif
 	if(refs)
 	{
 		allocated = 0;
@@ -327,12 +370,10 @@ spindle_proxy_refs(SPINDLE *spindle, const char *uri)
 	size_t count, size;
 	const char *str;
 
-#if SPINDLE_DB_PROXIES
 	if(spindle->db)
 	{
 		return spindle_db_proxy_refs(spindle, uri);
 	}
-#endif
 	refs = NULL;
 	count = 0;
 	size = 0;
@@ -417,12 +458,10 @@ spindle_proxy_relate(SPINDLE *spindle, const char *remote, const char *local)
 	char *qbuf;
 	int r;
 
-#if SPINDLE_DB_PROXIES
 	if(spindle->db)
 	{
 		return spindle_db_proxy_relate(spindle, remote, local);
 	}
-#endif
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding <%s> (remote) owl:sameAs <%s> (local)\n", remote, local);
 	l = strlen(spindle->root) + strlen(remote) + strlen(local) + 127;
 	qbuf = (char *) calloc(1, l + 1);

@@ -339,7 +339,7 @@ spindle_request_audiences_(QUILTREQ *req, struct spindle_dynamic_endpoint *endpo
 		quilt_canon_reset_path(entry);
 		quilt_canon_reset_params(entry);
 		quilt_canon_add_path(entry, endpoint->path);
-		quilt_canon_set_fragment(entry, "any");
+		quilt_canon_set_fragment(entry, "all");
 		entrystr = quilt_canon_str(entry, QCO_SUBJECT);
 		dest = quilt_canon_create(req->canonical);
 		quilt_canon_reset_path(dest);
@@ -350,7 +350,10 @@ spindle_request_audiences_(QUILTREQ *req, struct spindle_dynamic_endpoint *endpo
 		st = quilt_st_create_uri(entrystr, NS_RDF "type", NS_ODRL "Group");
 		librdf_model_add_statement(req->model, st);
 		librdf_free_statement(st);
-		st = quilt_st_create_literal(entrystr, NS_RDFS "label", "Anyone", "en-gb");
+		st = quilt_st_create_literal(entrystr, NS_RDFS "label", "Everyone", "en-gb");
+		librdf_model_add_statement(req->model, st);
+		librdf_free_statement(st);
+		st = quilt_st_create_literal(entrystr, NS_RDFS "comment", "Resources which are generally-accessible to the public", "en-gb");
 		librdf_model_add_statement(req->model, st);
 		librdf_free_statement(st);
 		st = quilt_st_create_uri(entrystr, NS_RDFS "seeAlso", deststr);

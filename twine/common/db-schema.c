@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,14 +27,12 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               15
-
-#if SPINDLE_DB_INDEX || SPINDLE_DB_PROXIES
+#define DB_SCHEMA_VERSION               24
 
 static int spindle_db_migrate_(SQL *restrict, const char *identifier, int newversion, void *restrict userdata);
 
 int
-spindle_db_schema_update(SPINDLE *spindle)
+spindle_db_schema_update_(SPINDLE *spindle)
 {
 	if(sql_migrate(spindle->db, "com.github.bbcarchdev.spindle.twine", spindle_db_migrate_, NULL))
 	{
@@ -363,8 +361,143 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 		}
 		return 0;
 	}
+	if(newversion == 16)
+	{
+		if(sql_execute(sql, "DROP TYPE IF EXISTS \"state_status\""))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE TYPE \"state_status\" AS ENUM('DIRTY', 'COMPLETE')"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 17)
+	{
+		if(sql_execute(sql, "CREATE TABLE \"state\" ("
+			"\"id\" uuid NOT NULL, "
+			"\"shorthash\" BIGINT NOT NULL, "
+			"\"tinyhash\" INTEGER NOT NULL, "
+			"\"status\" \"state_status\" NOT NULL, "
+			"\"modified\" TIMESTAMP NOT NULL, "
+			"\"flags\" INTEGER NOT NULL, "
+			"PRIMARY KEY (\"id\")"
+			")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 18)
+	{
+		if(sql_execute(sql, "CREATE TABLE \"audiences\" ("
+			"  \"id\" uuid NOT NULL, "
+			"  \"uri\" text NOT NULL, "
+			"  PRIMARY KEY(\"id\")"
+			")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"audiences_id\" ON \"audiences\" (\"id\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"audiences_uri\" ON \"audiences\" (\"uri\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 19)
+	{
+		if(sql_execute(sql, "CREATE INDEX \"state_id\" ON \"state\" (\"id\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"state_shorthash\" ON \"state\" (\"shorthash\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"state_tinyhash\" ON \"state\" (\"tinyhash\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"state_status\" ON \"state\" (\"status\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 20)
+	{
+		if(sql_execute(sql, "ALTER TABLE \"media\" ADD COLUMN \"audienceid\" uuid default NULL"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"media_audienceid\" ON \"media\" (\"audienceid\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 21)
+	{
+		if(sql_execute(sql, "ALTER TABLE \"triggers\" ADD COLUMN \"triggerid\" uuid default NULL"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"triggers_triggerid\" ON \"triggers\" (\"triggerid\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 22)
+	{
+		if(sql_execute(sql, "ALTER TABLE \"triggers\" ADD COLUMN \"flags\" INTEGER NOT NULL default 0"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 23)
+	{
+		/* This can't be executed within the transaction */
+		if(sql_commit(sql))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "ALTER TYPE \"state_status\" ADD VALUE 'REJECTED'"))
+		{
+			return -1;
+		}
+		if(sql_begin(sql, SQL_TXN_CONSISTENT))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 24)
+	{
+		if(sql_execute(sql, "CREATE TABLE \"licenses_audiences\" ("
+			"  \"id\" uuid NOT NULL, "
+			"  \"uri\" text NOT NULL, "
+			"  \"audienceid\" uuid default NULL"
+			")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"licenses_audiences_id\" ON \"licenses_audiences\" (\"id\")"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"licenses_audiences_audienceid\" ON \"licenses_audiences\" (\"audienceid\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
 	twine_logf(LOG_NOTICE, PLUGIN_NAME ": unsupported database schema version %d\n", newversion);
 	return -1;
 }
-
-#endif /*SPINDLE_DB_INDEX*/
