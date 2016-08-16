@@ -73,14 +73,35 @@ twine_plugin_done(void)
 
 /* Discard cached information about a graph */
 int
-spindle_graph_discard(SPINDLE *spindle, const char *uri)
+spindle_graph_discard(SPINDLE *spindle, const twine_graph *graph)
 {
+	librdf_stream *st;
+	librdf_statement *statement;
+	librdf_node *subject;
+	librdf_uri *subj;
+	const char *subjuri;
+
 	/* This is a no-op in the stand-alone post-processor; it can be
 	 * removed when we no longer have a monolithic module.
 	 */
-
 	(void) spindle;
-	(void) uri;
+
+	// We need to find all the subjects in the graph and delete the
+	// corresponding cached entry
+	st = librdf_model_as_stream(graph->store);
+	while(!librdf_stream_end(st))
+	{
+		statement = librdf_stream_get_object(st);
+		subject = librdf_statement_get_subject(statement);
+		if(librdf_node_is_resource(subject) &&
+		   (subj = librdf_node_get_uri(subject)) &&
+		   (subjuri = (const char *) librdf_uri_as_string(subj)))
+		{
+			twine_logf(LOG_DEBUG, PLUGIN_NAME ": removing cached data about <%s>\n", subjuri);
+		}
+		librdf_stream_next(st);
+	}
+	librdf_free_stream(st);
 
 	return 0;
 }
