@@ -75,19 +75,27 @@ twine_plugin_done(void)
 int
 spindle_graph_discard(SPINDLE *spindle, const twine_graph *graph)
 {
+	/* This is a no-op in the stand-alone post-processor; it can be
+	 * removed when we no longer have a monolithic module.
+	 */
+	(void) spindle;
+
+	size_t c;
 	librdf_stream *st;
 	librdf_statement *statement;
 	librdf_node *subject;
 	librdf_uri *subj;
 	const char *subjuri;
 
-	/* This is a no-op in the stand-alone post-processor; it can be
-	 * removed when we no longer have a monolithic module.
-	 */
-	(void) spindle;
+	// This will old the list of URIs to remove from the cache
+	struct spindle_strset_struct *subjects;
+	subjects = spindle_strset_create();
+	if(!subjects)
+	{
+		return -1;
+	}
 
-	// We need to find all the subjects in the graph and delete the
-	// corresponding cached entry
+	// Find all the subjects in the graph
 	st = librdf_model_as_stream(graph->store);
 	while(!librdf_stream_end(st))
 	{
@@ -97,12 +105,20 @@ spindle_graph_discard(SPINDLE *spindle, const twine_graph *graph)
 		   (subj = librdf_node_get_uri(subject)) &&
 		   (subjuri = (const char *) librdf_uri_as_string(subj)))
 		{
-			twine_logf(LOG_DEBUG, PLUGIN_NAME ": removing cached data about <%s>\n", subjuri);
+			spindle_strset_add(subjects, subjuri);
 		}
 		librdf_stream_next(st);
 	}
 	librdf_free_stream(st);
 
+	// Delete all the subjects
+	for(c = 0; c < subjects->count; c++)
+	{
+		subjuri = subjects->strings[c];
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": removing cached data about <%s>\n", subjuri);
+	}
+
+	spindle_strset_destroy(subjects);
 	return 0;
 }
 
