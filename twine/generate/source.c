@@ -36,29 +36,26 @@ spindle_source_fetch_entry(SPINDLEENTRY *data)
 {
 	int r;
 	
-	if(!(data->flags & TK_PROXY))
+	/* If the co-references haven't changed, we can use cached
+	 * source data if it's available.
+	 */
+	r = spindle_cache_fetch(data, "source", data->sourcedata);
+	if(r < 0)
 	{
-		/* If the co-references haven't changed, we can use cached
-		 * source data if it's available.
-		 */
-		r = spindle_cache_fetch(data, "source", data->sourcedata);
-		if(r < 0)
+		return -1;
+	}
+	if(r > 0)
+	{
+		/* N-Quads were retrieved from the cache */
+		if(spindle_source_refs_(data))
 		{
 			return -1;
 		}
-		if(r > 0)
+		if(spindle_source_graphs_(data))
 		{
-			/* N-Quads were retrieved from the cache */
-			if(spindle_source_refs_(data))
-			{
-				return -1;
-			}
-			if (spindle_source_graphs_(data))
-			{
-				return -1;
-			}
-			return 0;
+			return -1;
 		}
+		return 0;
 	}
 	if(data->db)
 	{
@@ -82,7 +79,7 @@ spindle_source_fetch_entry(SPINDLEENTRY *data)
 	{
 		return -1;
 	}
-	if (spindle_source_graphs_(data))
+	if(spindle_source_graphs_(data))
 	{
 		return -1;
 	}
