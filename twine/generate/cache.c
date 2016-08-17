@@ -164,7 +164,7 @@ spindle_cache_fetch(SPINDLEENTRY *data, const char *suffix, librdf_model *destmo
 	}
 	else
 	{
-		return 0;
+		r = 0;
 	}
 	free(buf);
 	if(r)

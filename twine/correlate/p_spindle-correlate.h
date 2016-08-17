@@ -43,7 +43,7 @@ struct spindle_corefset_struct *spindle_coref_extract(SPINDLE *spindle, librdf_m
 /* Free the resources used by a co-reference set */
 int spindle_coref_destroy(struct spindle_corefset_struct *set);
 
-int spindle_graph_discard(SPINDLE *spindle, const twine_graph *uri);
+int spindle_graph_discard(SPINDLE *spindle, const char *uri);
 int spindle_cache_update_set(SPINDLE *spindle, struct spindle_strset_struct *set);
 
 #endif /*!P_SPINDLE_CORRELATE_H_*/
