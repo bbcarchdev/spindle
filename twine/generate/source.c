@@ -189,7 +189,6 @@ spindle_source_fetch_db_(SPINDLEENTRY *data)
 			}
 		}
 	}
-
 	else
 	{
 		for(c = 0; data->refs[c]; c++)
