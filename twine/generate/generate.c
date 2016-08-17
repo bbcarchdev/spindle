@@ -347,7 +347,7 @@ spindle_generate_state_fetch_(SPINDLEENTRY *cache)
 	state = sql_stmt_str(rs, 0);
 	modified = sql_stmt_str(rs, 1);
 	flags = (int) sql_stmt_long(rs, 2);
-	if(!state || !strcmp(state, "CLEAN") || !flags)
+	if(!state || !strcmp(state, "CLEAN"))
 	{
 		flags = -1;
 	}
@@ -370,6 +370,7 @@ spindle_generate_state_fetch_(SPINDLEENTRY *cache)
 static int
 spindle_generate_state_update_(SPINDLEENTRY *cache)
 {
+	/* Set flags to 0, meaning, nothing needs to be updated */
 	return sql_executef(cache->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = '%d' WHERE \"id\" = %Q", "COMPLETE", 0, cache->id);
 }
 

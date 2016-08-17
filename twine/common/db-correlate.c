@@ -254,7 +254,8 @@ spindle_db_proxy_state_(SPINDLE *spindle, const char *id, int changed)
 	strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S", &tm);
 	if(sql_stmt_eof(rs))
 	{
-		if(sql_executef(spindle->db, "INSERT INTO \"state\" (\"id\", \"shorthash\", \"tinyhash\", \"status\", \"modified\", \"flags\") VALUES (%Q, '%lu', '%d', %Q, %Q, 0)",
+		/* Set flags to -1 so that a full update will occur */
+		if(sql_executef(spindle->db, "INSERT INTO \"state\" (\"id\", \"shorthash\", \"tinyhash\", \"status\", \"modified\", \"flags\") VALUES (%Q, '%lu', '%d', %Q, %Q, -1)",
 			id, (unsigned long) shortkey, (int) (shortkey % 256), "DIRTY", tbuf
 			))
 		{
@@ -266,7 +267,8 @@ spindle_db_proxy_state_(SPINDLE *spindle, const char *id, int changed)
 	}
 	if(changed)
 	{
-		if(sql_executef(spindle->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = 0, \"modified\" = %Q WHERE \"id\" = %Q",
+		/* Set flags to -1 so that a full update will occur, we don't know which part exactly has changed */
+		if(sql_executef(spindle->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = -1, \"modified\" = %Q WHERE \"id\" = %Q",
 			"DIRTY", tbuf, id))
 		{
 			return -2;
