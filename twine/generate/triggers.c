@@ -73,7 +73,9 @@ int
 spindle_trigger_apply(SPINDLEENTRY *entry)
 {
 	SQL_STATEMENT *rs;
+	SQL_STATEMENT *rs_trigger;
 	int flags;
+	int state_flags;
 	
 	if(!entry->generate->db)
 	{
@@ -87,10 +89,32 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 	for(; !sql_stmt_eof(rs); sql_stmt_next(rs))
 	{
 		flags = (int) sql_stmt_long(rs, 1);
+
 		/* Trigger updates that have this entry's flag in scope */
 		if (entry->flags & flags)
 		{
-			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = \"flags\" | %d WHERE \"id\" = %Q", "DIRTY", flags, sql_stmt_str(rs, 0));
+			rs_trigger = sql_queryf(entry->generate->db, "SELECT \"flags\" FROM \"state\" WHERE \"id\" = %Q", sql_stmt_str(rs, 0));
+			if (rs_trigger)
+			{
+				/* get the current flags */
+				sql_stmt_next(rs_trigger);
+
+				/* compute the update (-1 are stored as 0 in the DB) */
+				state_flags = (int) sql_stmt_long(rs_trigger, 0);
+				if (!state_flags)
+				{
+					state_flags = -1;
+				}
+				state_flags = state_flags | flags;
+				if (state_flags == -1)
+				{
+					state_flags = 0;
+				}
+
+				sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = %d WHERE \"id\" = %Q", "DIRTY", state_flags, sql_stmt_str(rs, 0));
+
+				sql_stmt_destroy(rs_trigger);
+			}
 		}
 	}
 	

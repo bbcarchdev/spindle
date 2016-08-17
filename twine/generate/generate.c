@@ -347,6 +347,11 @@ spindle_generate_state_fetch_(SPINDLEENTRY *cache)
 	state = sql_stmt_str(rs, 0);
 	modified = sql_stmt_str(rs, 1);
 	flags = (int) sql_stmt_long(rs, 2);
+	// -1 are stored as 0 in the DB
+	if (!flags)
+	{
+		flags = -1;
+	}
 	if(!state || !strcmp(state, "CLEAN"))
 	{
 		flags = -1;
