@@ -2,7 +2,7 @@
 ##
 ## Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
 ##
-## Copyright (c) 2014-2015 BBC
+## Copyright (c) 2014-2016 BBC
 ##
 ##  Licensed under the Apache License, Version 2.0 (the "License");
 ##  you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 ##  See the License for the specific language governing permissions and
 ##  limitations under the License.
 
-EXTRA_DIST = README.md
+sbin_PROGRAMS = spindle-migrate
 
-SUBDIRS = common strip correlate generate
+spindle_migrate_SOURCES = migrate.c
 
-dist_twinemodule_DATA = rulebase.ttl
+spindle_migrate_LDADD = $(LIBSQL_LOCAL_LIBS) $(LIBSQL_LIBS)

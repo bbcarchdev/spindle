@@ -16,8 +16,16 @@
 ##  See the License for the specific language governing permissions and
 ##  limitations under the License.
 
-EXTRA_DIST = README.md
+AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ -I$(srcdir)/../common
 
-SUBDIRS = common strip correlate generate
+twinemodule_LTLIBRARIES = spindle-strip.la
 
-dist_twinemodule_DATA = rulebase.ttl
+# The spindle-strip module is a processor which removes triples that the
+# rulebase does not indicate should be retained.
+
+spindle_strip_la_SOURCES = p_spindle-strip.h \
+	strip-module.c processor.c
+
+spindle_strip_la_LDFLAGS = -no-undefined -module -avoid-version
+
+spindle_strip_la_LIBADD = ../common/libspindle-common.la

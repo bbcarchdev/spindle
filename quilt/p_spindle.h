@@ -24,9 +24,11 @@
 # define _BSD_SOURCE                   1
 # define QUILT_LEGACY_REQUEST_STRUCT   1
 
+# include <stdio.h>
 # include <stdlib.h>
 # include <string.h>
 # include <ctype.h>
+# include <errno.h>
 # include <libsparqlclient.h>
 # include <libawsclient.h>
 # include <libsql.h>
@@ -36,6 +38,8 @@
 # define QUILT_PLUGIN_NAME              "spindle"
 
 # define SPINDLE_THRESHOLD              40
+
+# define MIME_NQUADS                    "application/n-quads"
 
 /* Namespaces */
 # define NS_RDF                         "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -119,6 +123,7 @@ struct spindle_dynamic_endpoint
 
 extern SQL *spindle_db;
 extern AWSS3BUCKET *spindle_bucket;
+extern char *spindle_cachepath;
 extern int spindle_s3_verbose;
 extern struct index_struct spindle_indices[];
 extern struct mediamatch_struct spindle_mediamatch[];
@@ -157,7 +162,11 @@ int spindle_query_sparql(QUILTREQ *request, struct query_struct *query);
 int spindle_lookup_sparql(QUILTREQ *request, const char *target);
 int spindle_item_sparql(QUILTREQ *req);
 
-/* S3 back-end */
+/* S3 cache back-end */
 int spindle_item_s3(QUILTREQ *req);
+
+/* File cache back-end */
+int spindle_item_file(QUILTREQ *request);
+
 
 #endif /*!P_SPINDLE_H_*/

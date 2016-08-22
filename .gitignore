@@ -11,6 +11,9 @@
 .deps
 .libs
 .release
+*.trig
+*.nq
+*.rdf
 core
 Makefile.in
 Makefile

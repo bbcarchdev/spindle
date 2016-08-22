@@ -16,8 +16,18 @@
 ##  See the License for the specific language governing permissions and
 ##  limitations under the License.
 
-EXTRA_DIST = README.md
+AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ @LIBMQ_CPPFLAGS@ -I$(srcdir)/../common
 
-SUBDIRS = common strip correlate generate
+twinemodule_LTLIBRARIES = spindle-correlate.la
 
-dist_twinemodule_DATA = rulebase.ttl
+# The spindle-correlate module is a graph processor which evaluates updated
+# graphs to determine co-references, and obtains (generating if needed) a
+# local identifier for each known subject.
+
+spindle_correlate_la_SOURCES = p_spindle-correlate.h \
+	module.c processor.c coref.c
+
+spindle_correlate_la_LDFLAGS = -no-undefined -module -avoid-version
+
+spindle_correlate_la_LIBADD = ../common/libspindle-common.la
+
