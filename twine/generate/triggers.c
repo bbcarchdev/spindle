@@ -94,7 +94,7 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 		/* Trigger updates that have this entry's flag in scope */
 		if (entry->flags & flags)
 		{
-			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = \"flags\" | %d WHERE \"id\" = %Q", "DIRTY", flags, sql_stmt_str(rs, 0));
+			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = \"flags\" | %d WHERE \"id\" = %Q AND \"flags\" <> 0", "DIRTY", flags, sql_stmt_str(rs, 0));
 		}
 	}
 	
