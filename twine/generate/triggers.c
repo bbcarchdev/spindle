@@ -87,6 +87,10 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 	for(; !sql_stmt_eof(rs); sql_stmt_next(rs))
 	{
 		flags = (int) sql_stmt_long(rs, 1);
+		if(!flags)
+		{
+			flags = -1;
+		}
 		/* Trigger updates that have this entry's flag in scope */
 		if (entry->flags & flags)
 		{
