@@ -283,7 +283,7 @@ static int
 spindle_mq_next_(MQ *self, MQMESSAGE **msg)
 {
 	SQL_STATEMENT *rs;
-	int nodeid, nodecount;
+	int nodeid, nodecount, logged;
 	MQMESSAGE *p;
 	
 	if(!self->sql)
@@ -294,8 +294,26 @@ spindle_mq_next_(MQ *self, MQMESSAGE **msg)
 	*msg = NULL;
 	if(self->cluster)
 	{
-		nodeid = cluster_index(self->cluster, 0);
-		nodecount = cluster_total(self->cluster);
+		logged = 0;
+		do
+		{
+			nodeid = cluster_index(self->cluster, 0);
+			nodecount = cluster_total(self->cluster);
+			if(!nodecount)
+			{
+				if(!logged)
+				{
+					twine_logf(LOG_NOTICE, PLUGIN_NAME ": MQ: waiting until we join the cluster\n");
+					logged = 1;
+				}
+				sleep(2);
+			}
+		}
+		while(!nodecount);
+		if(logged)
+		{
+			twine_logf(LOG_NOTICE, PLUGIN_NAME ": MQ: cluster connection established\n");
+		}
 	}
 	else
 	{
