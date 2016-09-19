@@ -3,7 +3,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -319,6 +319,10 @@ spindle_query_osd(QUILTREQ *request)
 	if(request->home)
 	{
 		/* Add VoID descriptive metadata */	
+		st = quilt_st_create_uri(self, NS_RDF "type", NS_VOID "Dataset");
+		librdf_model_context_add_statement(request->model, request->basegraph, st);
+		librdf_free_statement(st);
+		
 		link = quilt_canon_create(request->canonical);
 		quilt_canon_reset_params(link);
 		quilt_canon_add_param(link, "uri", "");
