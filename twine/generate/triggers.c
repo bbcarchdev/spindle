@@ -130,7 +130,17 @@ spindle_triggers_update(SPINDLEENTRY *data)
 	return 0;
 }
 
-/* Add the set of trigger URIs to the database */
+/* Add the set of trigger URIs to the database
+ * Checks the trigger doesnt already exist to prevent trigger loop.
+ * Adds an entry to triggers for id, uri, flags, triggerid
+ * args:
+ *   sql - libsql handle
+ *   id
+ *   data - Spindle Entry
+ * Returns:
+ *   0 on success
+ *   -1 on failure
+ */
 int
 spindle_triggers_index(SQL *sql, const char *id, SPINDLEENTRY *data)
 {
@@ -146,6 +156,7 @@ spindle_triggers_index(SQL *sql, const char *id, SPINDLEENTRY *data)
 			return -1;
 		}
 		if (sql_stmt_eof(rs)) {
+      // no existing trigger, so create new trigger for id
 			if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\", \"flags\", \"triggerid\""") VALUES (%Q, %Q, '%d', %Q)",
 				id, data->triggers[c].uri, data->triggers[c].kind, data->triggers[c].id))
 			{
