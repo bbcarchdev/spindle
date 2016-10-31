@@ -325,7 +325,7 @@ spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query)
 			/* If the audience is not 'all' and is not 'any', then we filter by
 			 * media available to the public, or to the specified audience
 			 */
-			appendf(qbuf, " AND (\"m\".\"audience\" IS NULL OR \"m\".\"audience\" = %%Q)");
+			appendf(qbuf, " AND \"m\".\"audience\" = %%Q");
 			qbuf->args[qbuf->n] = query->audience;
 			qbuf->n++;
 		}
