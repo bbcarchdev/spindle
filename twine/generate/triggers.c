@@ -79,13 +79,18 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 	{
 		return 0;
 	}
-	rs = sql_queryf(entry->generate->db, "SELECT \"id\", \"flags\" FROM \"triggers\" WHERE \"triggerid\" = %Q", entry->id);
+	rs = sql_queryf(entry->generate->db, "SELECT \"id\", \"flags\", \"triggerid\" FROM \"triggers\" WHERE \"triggerid\" = %Q", entry->id);
 	if(!rs)
 	{
 		return -1;
 	}
 	for(; !sql_stmt_eof(rs); sql_stmt_next(rs))
 	{
+		/* Never apply a trigger to the entry itself */
+		if(!strcmp(sql_stmt_str(rs, 0), sql_stmt_str(rs, 2)))
+		{
+			continue;
+		}
 		flags = (int) sql_stmt_long(rs, 1);
 		if(!flags)
 		{
