@@ -231,6 +231,7 @@ dcmitype:InteractiveResource spindle:expressedAs foaf:Document .
 schema:Article spindle:expressedAs foaf:Document .
 schema:Painting spindle:expressedAs foaf:Document .
 schema:Book spindle:expressedAs foaf:Document .
+schema:VideoObject spindle:expressedAs foaf:Document .
 
 #### Property rules
 
@@ -523,17 +524,17 @@ foaf:depicts spindle:property [
 # --
 
 ## void:inDataset
+## We currently express is as a partOf in order to make items appear in the collection
+#void:inDataset
+#	a spindle:Property ;
+#	olo:index 9 ;
+#	spindle:expect rdfs:Resource ;
+#	spindle:proxyOnly true .
 
-void:inDataset
-	a spindle:Property ;
-	olo:index 9 ;
-	spindle:expect rdfs:Resource ;
-	spindle:proxyOnly true .
-
-void:inDataset spindle:property [
-	olo:index 0 ;
-	spindle:expressedAs void:inDataset
-] .
+#void:inDataset spindle:property [
+#	olo:index 0 ;
+#	spindle:expressedAs void:inDataset
+#] .
 
 ## We don't current support range restrictions in the rule-base, which would
 ## only make sense when spindle:proxyOnly is true, so we can't use this rule
@@ -574,6 +575,11 @@ po:broadcast_on spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs dct:isPartOf ;
 	rdfs:domain event:Event
+] .
+
+void:inDataset spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs dct:isPartOf
 ] .
 
 ## dct:hasVersion
@@ -785,6 +791,11 @@ mrss:player
 	spindle:proxyOnly false .
 
 mrss:player spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs mrss:player
+] .
+
+<http://purl.org/media#download> spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs mrss:player
 ] .
