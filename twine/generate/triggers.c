@@ -79,7 +79,7 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 	{
 		return 0;
 	}
-	rs = sql_queryf(entry->generate->db, "SELECT \"id\", \"flags\" FROM \"triggers\" WHERE \"triggerid\" = %Q", entry->id);
+	rs = sql_queryf(entry->generate->db, "SELECT \"id\", \"flags\", \"triggerid\" FROM \"triggers\" WHERE \"triggerid\" = %Q AND \"triggerid\" <> \"id\"", entry->id);
 	if(!rs)
 	{
 		return -1;
@@ -145,26 +145,14 @@ int
 spindle_triggers_index(SQL *sql, const char *id, SPINDLEENTRY *data)
 {
 	size_t c;
-	SQL_STATEMENT *rs;
 
 	for(c = 0; c < data->ntriggers; c++)
 	{
-		// Check if we are about to create a loop
-		rs = sql_queryf(sql, "SELECT \"id\" FROM \"triggers\" WHERE \"id\" = %Q AND \"triggerid\" = %Q", data->triggers[c].id, id);
-		if(!rs)
+		if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\", \"flags\", \"triggerid\""") VALUES (%Q, %Q, '%d', %Q)",
+			id, data->triggers[c].uri, data->triggers[c].kind, data->triggers[c].id))
 		{
 			return -1;
 		}
-		if (sql_stmt_eof(rs)) {
-      // no existing trigger, so create new trigger for id
-			if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\", \"flags\", \"triggerid\""") VALUES (%Q, %Q, '%d', %Q)",
-				id, data->triggers[c].uri, data->triggers[c].kind, data->triggers[c].id))
-			{
-				sql_stmt_destroy(rs);
-				return -1;
-			}
-		}
-		sql_stmt_destroy(rs);
 	}
 	return 0;
 }
