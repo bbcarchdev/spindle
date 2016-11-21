@@ -57,6 +57,9 @@ struct mediamatch_struct spindle_mediamatch[] = {
 	{ NULL, NULL }
 };
 
+/* Const for audience defaults */
+const char default_audience[][2] = {"all", NULL};
+
 /* Peform a query using the SQL database back-end */
 int
 spindle_query_db(QUILTREQ *request, struct query_struct *query)
@@ -127,7 +130,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	{
 		if(!query->audience)
 		{
-			query->audience = "all";
+			query->audience = default_audience;
 		}
 		if(!query->type)
 		{
@@ -156,13 +159,19 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		}
 		if(!query->audience)
 		{
-			query->audience = "all";
+			query->audience = default_audience;
 		}
 		if(!query->type)
 		{
 			query->type = "any";
 		}
-		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db: media='%s', audience='%s', type='%s'\n", query->media, query->audience, query->type);
+		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db: media='%s', type='%s'\n", query->media, query->type);
+		// audiences log
+		size_t i=0;
+		while (query->audience[i]) {
+			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db: audience='%s'\n", query->audience[i]);
+			i++;
+		}
 	}
 	/* SELECT */
 	appendf(&qbuf, "SELECT \"i\".\"id\", \"i\".\"classes\", \"i\".\"title\", \"i\".\"description\", \"i\".\"coordinates\", \"i\".\"modified\"");
@@ -304,8 +313,27 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		quilt_logf(LOG_CRIT, QUILT_PLUGIN_NAME ": query execution failed\n");
 		return 500;
 	}
-	return process_rs(request, query, rs);	
+	return process_rs(request, query, rs);
 }
+
+/* array_contains(array, string);
+ * Returns 1 if the array contains the string
+ * Otherwise 0
+ */
+int array_contains(char **array, const char *string)
+{
+	size_t i=0;
+	while(array[i] != NULL) {
+		if(!strcmp(array[i++], string))
+		{
+			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s TRUE\n", string);
+			return 1;
+		}
+	}
+	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s FALSE\n", string);
+	return 0;
+}
+
 
 static int
 spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query)
@@ -313,21 +341,29 @@ spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query)
 	if(query->media)
 	{
 		/* Any media query */
-		if(!strcmp(query->audience, "all"))
+		if(array_contains(query->audience, "all"))
 		{
 			/* If the audience is 'all' (the default), we only return media
 			 * available to the public.
 			 */
 			appendf(qbuf, " AND \"m\".\"audience\" IS NULL");
 		}
-		else if(strcmp(query->audience, "any"))
+		else if(!array_contains(query->audience, "any"))
 		{
 			/* If the audience is not 'all' and is not 'any', then we filter by
-			 * media available to the public, or to the specified audience
+			 * media available to the public, or to the specified audiences
+			 * Handling multi value parameters for audience
 			 */
-			appendf(qbuf, " AND (\"m\".\"audience\" IS NULL OR \"m\".\"audience\" = %%Q)");
-			qbuf->args[qbuf->n] = query->audience;
-			qbuf->n++;
+			appendf(qbuf, " AND (\"m\".\"audience\" IS NULL");
+			size_t i=0;
+			while(query->audience[i]) {
+				quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db_media_ adding audience %s'\n", query->audience[i]);
+				appendf(qbuf, " OR \"m\".\"audience\" = %%Q");
+				qbuf->args[qbuf->n] = query->audience[i];
+				qbuf->n++;
+				i++;
+			}
+			appendf(qbuf, " )");
 		}
 		/* If the media class is not 'any', then filter by the class URI */
 		if(strcmp(query->media, "any"))
@@ -476,7 +512,7 @@ spindle_audiences_db(QUILTREQ *request, struct query_struct *query)
 
 	limit = request->limit;
 	offset = request->offset;
-	
+
 	/* We synthesise an entry at the start of the list, so adjust our
 	 * limits and offsets accordingly
 	 */
@@ -597,16 +633,16 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	char *slotstr, *uri, *related;
 	char nbuf[64];
 	librdf_node *node;
-	
+
 	(void) id;
 
 	slot = quilt_canon_create(request->canonical);
 	quilt_canon_set_fragment(slot, id);
 	slotstr = quilt_canon_str(slot, QCO_FRAGMENT);
-	
+
 	uri = quilt_canon_str(item, QCO_SUBJECT);
 	quilt_logf(LOG_DEBUG, "adding row <%s>\n", uri);
-	
+
 	/* rdfs:seeAlso */
 	st = quilt_st_create_uri(self, NS_RDFS "seeAlso", uri);
 	librdf_model_add_statement(request->model, st);
@@ -978,7 +1014,7 @@ add_langvector(librdf_model *model, const char *vector, const char *subject, con
 		if(!*vector || vector[0] != '=' || vector[1] != '>')
 		{
 			break;
-		}	   
+		}		 
 		vector += 2;
 		while(isspace(*vector))
 		{
@@ -1101,30 +1137,30 @@ checklang(QUILTREQ *req, const char *lang)
 		return "en_gb";
 	}
 	if(!strcasecmp(lang, "en") ||
-	   !strcasecmp(lang, "en-gb") ||
-	   !strcasecmp(lang, "en_gb") ||
-	   !strcasecmp(lang, "en-us"))
+		 !strcasecmp(lang, "en-gb") ||
+		 !strcasecmp(lang, "en_gb") ||
+		 !strcasecmp(lang, "en-us"))
 	{
 		quilt_canon_set_param(req->canonical, "lang", "en_gb");
 		return "en_gb";
 	}
 	if(!strcasecmp(lang, "ga") ||
-	   !strcasecmp(lang, "ga-gb") ||
-	   !strcasecmp(lang, "ga_gb"))
+		 !strcasecmp(lang, "ga-gb") ||
+		 !strcasecmp(lang, "ga_gb"))
 	{
 		quilt_canon_set_param(req->canonical, "lang", "ga_gb");
 		return "ga_gb";
 	}
 	if(!strcasecmp(lang, "cy") ||
-	   !strcasecmp(lang, "en-cy") ||
-	   !strcasecmp(lang, "en_cy"))
+		 !strcasecmp(lang, "en-cy") ||
+		 !strcasecmp(lang, "en_cy"))
 	{
 		quilt_canon_set_param(req->canonical, "lang", "cy_gb");
 		return "cy_gb";
 	}
 	if(!strcasecmp(lang, "gd") ||
-	   !strcasecmp(lang, "gd-gb") ||
-	   !strcasecmp(lang, "gd_gb"))
+		 !strcasecmp(lang, "gd-gb") ||
+		 !strcasecmp(lang, "gd_gb"))
 	{
 		quilt_canon_set_param(req->canonical, "lang", "gd_gb");
 		return "gd_gb";

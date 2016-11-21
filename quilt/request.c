@@ -52,11 +52,11 @@ spindle_process(QUILTREQ *request)
 	 * - Requests for partitions (look-up against our static list)
 	 * - Requests for items (pattern match)
 	 * - Requests for endpoints that are generated on the fly
-	 *   (such as /audiences)
+	 *	 (such as /audiences)
 	 * - URI lookup queries
 	 * - Queries at the index, if no path parameters
 	 */
-	
+
 	qclass = NULL;
 	if(spindle_request_is_partition_(request, &qclass))
 	{
@@ -103,7 +103,7 @@ spindle_add_concrete(QUILTREQ *request)
 	abstract = quilt_canon_str(request->canonical, (explicit ? QCO_ABSTRACT : QCO_REQUEST));
 	concrete = quilt_canon_str(request->canonical, (explicit ? QCO_REQUEST : QCO_CONCRETE));
 	subject = quilt_canon_str(request->canonical, QCO_NOEXT|QCO_FRAGMENT);
-	
+
 	/* abstract foaf:primaryTopic subject */
 	if(strchr(subject, '#'))
 	{
@@ -171,9 +171,9 @@ spindle_request_is_query_(QUILTREQ *request)
 		return 0;
 	}
 	if(quilt_request_getparam(request, "q") ||
-	   quilt_request_getparam(request, "media") ||
-	   quilt_request_getparam(request, "for") ||
-	   quilt_request_getparam(request, "type"))
+		 quilt_request_getparam(request, "media") ||
+		 quilt_request_getparam(request, "for") ||
+		 quilt_request_getparam(request, "type"))
 	{
 		request->index = 1;
 		request->home = 0;
@@ -215,7 +215,7 @@ spindle_request_is_partition_(QUILTREQ *request, char **qclass)
 {
 	const char *t;
 	size_t c;
-	
+
 	*qclass = NULL;
 	/* First check to determine whether there's a match against the list */
 	for(c = 0; spindle_indices[c].uri; c++)
@@ -234,7 +234,7 @@ spindle_request_is_partition_(QUILTREQ *request, char **qclass)
 					sprintf(*qclass, "FILTER ( ?class = <%s> )", spindle_indices[c].qclass);
 				}
 			}
-			request->indextitle = spindle_indices[c].title;		   
+			request->indextitle = spindle_indices[c].title;
 			request->index = 1;
 			request->home = 0;
 			quilt_canon_add_path(request->canonical, spindle_indices[c].uri);
@@ -286,7 +286,7 @@ spindle_request_is_dynamic_(QUILTREQ *req)
 		if(!strncmp(req->path, spindle_endpoints[c].path, spindle_endpoints[c].pathlen))
 		{
 			if(!req->path[spindle_endpoints[c].pathlen] ||
-			   req->path[spindle_endpoints[c].pathlen] == '/')
+				 req->path[spindle_endpoints[c].pathlen] == '/')
 			{
 				return &(spindle_endpoints[c]);
 			}
@@ -331,7 +331,7 @@ spindle_request_audiences_(QUILTREQ *req, struct spindle_dynamic_endpoint *endpo
 	st = quilt_st_create_uri(self, NS_RDF "type", NS_VOID "Dataset");
 	librdf_model_add_statement(req->model, st);
 	librdf_free_statement(st);	 */
-	
+
 	if(!req->offset)
 	{		
 		/* Generate a magic entry for 'any' */
@@ -372,7 +372,7 @@ spindle_request_audiences_(QUILTREQ *req, struct spindle_dynamic_endpoint *endpo
 		if((r = spindle_audiences_db(req, &query)) != 200)
 		{
 			return r;
-		}	   
+		}
 	}
 	if((r = spindle_add_concrete(req)) != 200)
 	{
