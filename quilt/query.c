@@ -602,7 +602,6 @@ spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struc
 		}
 		if(query->audience && !array_contains(query->audience, "any"))
 		{
-      quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": NO\n");
 			if(array_contains(query->audience, "all"))
 			{
 				strcpy(p, " available to everyone");
