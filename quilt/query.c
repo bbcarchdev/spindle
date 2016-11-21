@@ -481,11 +481,8 @@ spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struc
 		if(query->audience)
 		{
 			/* available to [everyone | <audience>] */
-      // TODO 970 multi value audience
-      quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": appending audiences to len\n");
       size_t i=0;
       while(query->audience && (query->audience[i] != NULL)) {
-        quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": appending audiences to len=%s\n", query->audience[i]);
         len += strlen(query->audience[i]) + 22;
         i++;
       }
