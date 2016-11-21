@@ -97,7 +97,7 @@ struct query_struct
 	const char *lang;
 	/* Related media query */
 	const char *media;
-	const char *audience;
+	const char **audience;
 	const char *type;
 	/* Query bounds */   
 	int limit;

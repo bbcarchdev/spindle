@@ -103,7 +103,7 @@ spindle_add_concrete(QUILTREQ *request)
 	abstract = quilt_canon_str(request->canonical, (explicit ? QCO_ABSTRACT : QCO_REQUEST));
 	concrete = quilt_canon_str(request->canonical, (explicit ? QCO_REQUEST : QCO_CONCRETE));
 	subject = quilt_canon_str(request->canonical, QCO_NOEXT|QCO_FRAGMENT);
-	
+
 	/* abstract foaf:primaryTopic subject */
 	if(strchr(subject, '#'))
 	{
