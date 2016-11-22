@@ -74,6 +74,7 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 {
 	SQL_STATEMENT *rs;
 	int flags;
+	char *id;
 	
 	if(!entry->generate->db)
 	{
@@ -86,20 +87,23 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 	}
 	for(; !sql_stmt_eof(rs); sql_stmt_next(rs))
 	{
+		// Get the id of the target
+		id = sql_stmt_str(rs, 0);
+
+		// Get the flags to apply
 		flags = (int) sql_stmt_long(rs, 1);
-		if(!flags)
-		{
-			flags = -1;
-		}
+
 		/* Trigger updates that have this entry's flag in scope */
 		if (entry->flags & flags)
 		{
 			// Do a logical OR if there is already a trigger scheduled (status = DIRTY and flags <> 0)
-			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"flags\" = \"flags\" | %d WHERE \"id\" = %Q AND \"flags\" <> 0 AND \"status\" = 'DIRTY'", flags, sql_stmt_str(rs, 0));
+			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"flags\" = \"flags\" | %d WHERE \"id\" = %Q AND \"flags\" <> 0 AND \"status\" = 'DIRTY'", flags, id);
+
 			// Set the flag in case we set a previously completed or rejected resource (status != DIRTY)
-			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"flags\" = %d WHERE \"id\" = %Q AND \"status\" <> 'DIRTY'", flags, sql_stmt_str(rs, 0));
+			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"flags\" = %d WHERE \"id\" = %Q AND \"status\" <> 'DIRTY'", flags, id);
+
 			// Set the target as DIRTY
-			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q WHERE \"id\" = %Q", "DIRTY", sql_stmt_str(rs, 0));
+			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q WHERE \"id\" = %Q", "DIRTY", id);
 		}
 	}
 	
