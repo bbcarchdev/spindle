@@ -243,9 +243,19 @@ spindle_index_membership_add_uri_(SPINDLEENTRY *data, SQL *sql, const char *id, 
 			spindle_trigger_add(data, uristr, TK_MEMBERSHIP, NULL);
 			return 0;
 		}
-		spindle_trigger_add(data, uristr, TK_MEMBERSHIP, collid);
+
+		// Add the membership relation
 		r = spindle_index_membership_add_(sql, id, collid);
+
+		// If the link was freshly added (r=0) add a matching trigger
+		// r=1 if the link was already there or would have created a loop
+		// r=-1 in case of error trying to add the link
+		if (!r)
+		{
+			spindle_trigger_add(data, uristr, TK_MEMBERSHIP, collid);
+		}
 		free(collid);
+
 		return r;
 	}
 	localuri = spindle_proxy_locate(data->spindle, uristr);
@@ -275,6 +285,7 @@ spindle_index_membership_add_(SQL *sql, const char *id, const char *collid)
 {
 	SQL_STATEMENT *rs;
 
+	// Check if the relation is already there
 	rs = sql_queryf(sql, "SELECT \"id\" FROM \"membership\" WHERE \"id\" = %Q AND \"collection\" = %Q", id, collid);
 	if(!rs)
 	{
@@ -283,13 +294,31 @@ spindle_index_membership_add_(SQL *sql, const char *id, const char *collid)
 	if(!sql_stmt_eof(rs))
 	{
 		sql_stmt_destroy(rs);
-		return 0;
+		return 1;
 	}
 	sql_stmt_destroy(rs);
+
+	// Ensure we won't create a loop by adding it. If the loop was to be
+	// created don't add the link and return a 1
+	rs = sql_queryf(sql, "SELECT \"id\" FROM \"membership\" WHERE \"id\" = %Q AND \"collection\" = %Q", collid, id);
+	if(!rs)
+	{
+		return -1;
+	}
+	if(!sql_stmt_eof(rs))
+	{
+		sql_stmt_destroy(rs);
+		return 1;
+	}
+	sql_stmt_destroy(rs);
+
+	// Add the direct relation
 	if(sql_executef(sql, "INSERT INTO \"membership\" (\"id\", \"collection\") VALUES (%Q, %Q)", id, collid))
 	{
 		return -1;
 	}
+
+	// Recursively add all the membership
 	rs = sql_queryf(sql, "SELECT \"collection\" FROM \"membership\" WHERE \"id\" = %Q", collid);
 	if(!rs)
 	{
@@ -300,6 +329,7 @@ spindle_index_membership_add_(SQL *sql, const char *id, const char *collid)
 		spindle_index_membership_add_(sql, id, sql_stmt_str(rs, 0));
 	}
 	sql_stmt_destroy(rs);
+
 	return 0;
 }
 
