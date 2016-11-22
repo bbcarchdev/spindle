@@ -94,8 +94,12 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 		/* Trigger updates that have this entry's flag in scope */
 		if (entry->flags & flags)
 		{
+			// Do a logical OR if there is already a trigger scheduled (status = DIRTY and flags <> 0)
+			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"flags\" = \"flags\" | %d WHERE \"id\" = %Q AND \"flags\" <> 0 AND \"status\" = 'DIRTY'", flags, sql_stmt_str(rs, 0));
+			// Set the flag in case we set a previously completed or rejected resource (status != DIRTY)
+			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"flags\" = %d WHERE \"id\" = %Q AND \"status\" <> 'DIRTY'", flags, sql_stmt_str(rs, 0));
+			// Set the target as DIRTY
 			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q WHERE \"id\" = %Q", "DIRTY", sql_stmt_str(rs, 0));
-			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"flags\" = \"flags\" | %d WHERE \"id\" = %Q AND \"flags\" <> 0", flags, sql_stmt_str(rs, 0));
 		}
 	}
 	
