@@ -82,19 +82,12 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 		quilt_canon_set_param(request->canonical, "media", dest->media);
 	}
 
-  // Process for= parameters
+	// Process for= parameters
 	dest->audience = quilt_request_getparam_multi(request, "for");
 	if(dest->audience)
 	{
-    // Put the array of for= params in the request
-    quilt_canon_set_param_multi(request->canonical, "for", dest->audience);
-    size_t i=0;
-    while(dest->audience[i])
-    {
-      quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_request dest->audience=%s\n", dest->audience[i]);
-      i++;
-    }
-
+		// Put the array of for= params in the request
+		quilt_canon_set_param_multi(request->canonical, "for", dest->audience);
 		dest->explicit = 1;
 	}
 
@@ -481,11 +474,11 @@ spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struc
 		if(query->audience)
 		{
 			/* available to [everyone | <audience>] */
-      size_t i=0;
-      while(query->audience && (query->audience[i] != NULL)) {
-        len += strlen(query->audience[i]) + 22;
-        i++;
-      }
+			size_t i=0;
+			while(query->audience && (query->audience[i] != NULL)) {
+				len += strlen(query->audience[i]) + 22;
+				i++;
+			}
 		}
 	}
 	buf = (char *) malloc(len + 1);
@@ -607,16 +600,16 @@ spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struc
 			else
 			{
 				strcpy(p, " available to <");
-        size_t i=0;
-        while(query->audience[i] != NULL)
-        {
-          strcat(p, query->audience[i++]);
-          if (query->audience[i] != NULL)
-          {
-            strcat(p, ", ");
-          }
-        }
-        strcat(p, ">");
+				size_t i=0;
+				while(query->audience[i] != NULL)
+				{
+					strcat(p, query->audience[i++]);
+					if (query->audience[i] != NULL)
+					{
+						strcat(p, ", ");
+					}
+				}
+				strcat(p, ">");
 			}
 		}
 	}

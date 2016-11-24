@@ -166,12 +166,12 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 			query->type = "any";
 		}
 		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db: media='%s', type='%s'\n", query->media, query->type);
-    // TODO 970 audiences log
-    size_t i=0;
-    while (query->audience[i]) {
-      quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db: audience='%s'\n", query->audience[i]);
-      i++;
-    }
+		// audiences log
+		size_t i=0;
+		while (query->audience[i]) {
+			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db: audience='%s'\n", query->audience[i]);
+			i++;
+		}
 	}
 	/* SELECT */
 	appendf(&qbuf, "SELECT \"i\".\"id\", \"i\".\"classes\", \"i\".\"title\", \"i\".\"description\", \"i\".\"coordinates\", \"i\".\"modified\"");
@@ -322,16 +322,16 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
  */
 int array_contains(char **array, const char *string)
 {
-  size_t i=0;
-  while(array[i] != NULL) {
-    if(!strcmp(array[i++], string))
-    {
-      quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s TRUE\n", string);
-      return 1;
-    }
-  }
-  quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s FALSE\n", string);
-  return 0;
+	size_t i=0;
+	while(array[i] != NULL) {
+		if(!strcmp(array[i++], string))
+		{
+			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s TRUE\n", string);
+			return 1;
+		}
+	}
+	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s FALSE\n", string);
+	return 0;
 }
 
 
@@ -352,18 +352,18 @@ spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query)
 		{
 			/* If the audience is not 'all' and is not 'any', then we filter by
 			 * media available to the public, or to the specified audiences
-       * Handling multi value parameters for audience
+			 * Handling multi value parameters for audience
 			 */
 			appendf(qbuf, " AND (\"m\".\"audience\" IS NULL");
-      size_t i=0;
-      while(query->audience[i]) {
-        quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db_media_ adding audience %s'\n", query->audience[i]);
-        appendf(qbuf, " OR \"m\".\"audience\" = %%Q");
-        qbuf->args[qbuf->n] = query->audience[i];
-        qbuf->n++;
-        i++;
-      }
-      appendf(qbuf, " )");
+			size_t i=0;
+			while(query->audience[i]) {
+				quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db_media_ adding audience %s'\n", query->audience[i]);
+				appendf(qbuf, " OR \"m\".\"audience\" = %%Q");
+				qbuf->args[qbuf->n] = query->audience[i];
+				qbuf->n++;
+				i++;
+			}
+			appendf(qbuf, " )");
 		}
 		/* If the media class is not 'any', then filter by the class URI */
 		if(strcmp(query->media, "any"))
@@ -1014,7 +1014,7 @@ add_langvector(librdf_model *model, const char *vector, const char *subject, con
 		if(!*vector || vector[0] != '=' || vector[1] != '>')
 		{
 			break;
-		}	   
+		}		 
 		vector += 2;
 		while(isspace(*vector))
 		{
@@ -1137,30 +1137,30 @@ checklang(QUILTREQ *req, const char *lang)
 		return "en_gb";
 	}
 	if(!strcasecmp(lang, "en") ||
-	   !strcasecmp(lang, "en-gb") ||
-	   !strcasecmp(lang, "en_gb") ||
-	   !strcasecmp(lang, "en-us"))
+		 !strcasecmp(lang, "en-gb") ||
+		 !strcasecmp(lang, "en_gb") ||
+		 !strcasecmp(lang, "en-us"))
 	{
 		quilt_canon_set_param(req->canonical, "lang", "en_gb");
 		return "en_gb";
 	}
 	if(!strcasecmp(lang, "ga") ||
-	   !strcasecmp(lang, "ga-gb") ||
-	   !strcasecmp(lang, "ga_gb"))
+		 !strcasecmp(lang, "ga-gb") ||
+		 !strcasecmp(lang, "ga_gb"))
 	{
 		quilt_canon_set_param(req->canonical, "lang", "ga_gb");
 		return "ga_gb";
 	}
 	if(!strcasecmp(lang, "cy") ||
-	   !strcasecmp(lang, "en-cy") ||
-	   !strcasecmp(lang, "en_cy"))
+		 !strcasecmp(lang, "en-cy") ||
+		 !strcasecmp(lang, "en_cy"))
 	{
 		quilt_canon_set_param(req->canonical, "lang", "cy_gb");
 		return "cy_gb";
 	}
 	if(!strcasecmp(lang, "gd") ||
-	   !strcasecmp(lang, "gd-gb") ||
-	   !strcasecmp(lang, "gd_gb"))
+		 !strcasecmp(lang, "gd-gb") ||
+		 !strcasecmp(lang, "gd_gb"))
 	{
 		quilt_canon_set_param(req->canonical, "lang", "gd_gb");
 		return "gd_gb";
