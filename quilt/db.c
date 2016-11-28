@@ -58,7 +58,7 @@ struct mediamatch_struct spindle_mediamatch[] = {
 };
 
 /* Const for audience defaults */
-const char default_audience[][2] = {"all", NULL};
+const char *default_audience[2] = {"all", NULL};
 
 /* Peform a query using the SQL database back-end */
 int
@@ -168,7 +168,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db: media='%s', type='%s'\n", query->media, query->type);
 		// audiences log
 		size_t i=0;
-		while (query->audience[i]) {
+		while(query->audience && query->audience[i]) {
 			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db: audience='%s'\n", query->audience[i]);
 			i++;
 		}
@@ -323,7 +323,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 int array_contains(char **array, const char *string)
 {
 	size_t i=0;
-	while(array[i] != NULL) {
+	while(array && array[i] != NULL) {
 		if(!strcmp(array[i++], string))
 		{
 			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s TRUE\n", string);
@@ -356,7 +356,7 @@ spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query)
 			 */
 			appendf(qbuf, " AND (\"m\".\"audience\" IS NULL");
 			size_t i=0;
-			while(query->audience[i]) {
+			while(query->audience && query->audience[i]) {
 				quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db_media_ adding audience %s'\n", query->audience[i]);
 				appendf(qbuf, " OR \"m\".\"audience\" = %%Q");
 				qbuf->args[qbuf->n] = query->audience[i];
