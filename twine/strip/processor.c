@@ -73,5 +73,7 @@ spindle_strip(twine_graph *graph, void *data)
 		librdf_stream_next(st);
 	}
 	librdf_free_stream(st);
+
 	return 0;
 }
+
