@@ -163,17 +163,11 @@ int
 spindle_triggers_index(SQL *sql, const char *id, SPINDLEENTRY *data)
 {
 	size_t c;
-	char nextactivationstr[32];
-	time_t now;
-	struct tm tm;
 
 	for(c = 0; c < data->ntriggers; c++)
 	{
-		now = time(NULL);
-		gmtime_r(&now, &tm);
-		strftime(nextactivationstr, 32, "%Y-%m-%d %H:%M:%S", &tm);
-		if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\", \"flags\", \"triggerid\", \"earliest_activation\""") VALUES (%Q, %Q, '%d', %Q, %Q)",
-			id, data->triggers[c].uri, data->triggers[c].kind, data->triggers[c].id, nextactivationstr))
+		if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\", \"flags\", \"triggerid\", \"earliest_activation\""") VALUES (%Q, %Q, '%d', %Q, NOW())",
+			id, data->triggers[c].uri, data->triggers[c].kind, data->triggers[c].id))
 		{
 			return -1;
 		}

@@ -501,7 +501,7 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 	// Version 25 introduces a timestamp to delay the execution of the triggers
 	if(newversion == 25)
 	{
-		if(sql_execute(sql, "ALTER TABLE \"triggers\" ADD COLUMN \"earliest_activation\" TIMESTAMP DEFAULT NULL"))
+		if(sql_execute(sql, "ALTER TABLE \"triggers\" ADD COLUMN \"earliest_activation\" TIMESTAMP DEFAULT NOW()"))
 		{
 			return -1;
 		}
