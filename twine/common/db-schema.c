@@ -505,6 +505,10 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 		{
 			return -1;
 		}
+		if(sql_execute(sql, "CREATE INDEX \"triggers_earliest_activation\" ON \"triggers\" (\"earliest_activation\")"))
+		{
+			return -1;
+		}
 		return 0;
 	}
 	twine_logf(LOG_NOTICE, PLUGIN_NAME ": unsupported database schema version %d\n", newversion);
