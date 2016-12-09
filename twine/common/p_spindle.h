@@ -66,10 +66,6 @@ int spindle_rulebase_coref_add_node(SPINDLERULES *rules, const char *predicate, 
 int spindle_db_schema_update_(SPINDLE *spindle);
 
 /* RDBMS-based correlation */
-char *spindle_db_proxy_locate(SPINDLE *spindle, const char *uri);
-int spindle_db_proxy_relate(SPINDLE *spindle, const char *remote, const char *local);
-char **spindle_db_proxy_refs(SPINDLE *spindle, const char *uri);
-int spindle_db_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, char **refs);
 int spindle_db_proxy_state_(SPINDLE *spindle, const char *id, int changed);
 
 #endif /*!P_SPINDLE_H_*/
