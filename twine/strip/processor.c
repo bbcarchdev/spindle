@@ -46,52 +46,71 @@ spindle_strip(twine_graph *graph, void *data)
 	st = librdf_model_as_stream(graph->store);
 	while(!librdf_stream_end(st))
 	{
-
+		// Get the current statement from the stream
 		statement = librdf_stream_get_object(st);
-		predicate = librdf_statement_get_predicate(statement);
-		if(librdf_node_is_resource(predicate) &&
-		   (pred = librdf_node_get_uri(predicate)) &&
-		   (preduri = (const char *) librdf_uri_as_string(pred)))
-		{
-			// Check all the predicates to see if that one is one we want
-			// to keep
-			match = 0;
-			for(c = 0; c < rules->cpcount; c++)
-			{
-				r = strcmp(rules->cachepreds[c], preduri);
-				if(!r)
-				{
-					match = 1;
-					break;
-				}
-				if(r > 0)
-				{
-					/* The cachepreds list is lexigraphically sorted */
-					break;
-				}
-			}
 
-			// If the object is a literal we need to ensure it is using either
-			// no language or one that we use for the indexing
-			literal_ok = 1;
-			object = librdf_statement_get_object(statement);
-			if(librdf_node_is_literal(object) &&
-			  (lang = librdf_node_get_literal_value_language(object)))
+		// Skip all statements that do not use a URI for predicate
+		predicate = librdf_statement_get_predicate(statement);
+		if(!librdf_node_is_resource(predicate))
+			continue;
+
+		// Get the char* version of the URI, if that fails exit with an error
+		pred = librdf_node_get_uri(predicate);
+		if (!pred)
+		{
+			librdf_free_stream(st);
+			return -1;
+		}
+		preduri = (const char *) librdf_uri_as_string(pred);
+		if (!preduri)
+		{
+			librdf_free_stream(st);
+			return -1;
+		}
+
+		// Check all the predicates in the rulebase to see if that one is one
+		// we want to keep
+		match = 0;
+		for(c = 0; c < rules->cpcount; c++)
+		{
+			r = strcmp(rules->cachepreds[c], preduri);
+			if(!r)
+			{
+				match = 1;
+				break;
+			}
+			if(r > 0)
+			{
+				/* The cachepreds list is lexigraphically sorted */
+				break;
+			}
+		}
+
+		// If the object is a literal we need to ensure it is using either
+		// no language or one that we use for the indexing
+		literal_ok = 1;
+		object = librdf_statement_get_object(statement);
+		if(librdf_node_is_literal(object))
+		{
+			lang = librdf_node_get_literal_value_language(object);
+			if (lang)
 			{
 				literal_ok = !strncmp(lang, "en", 2) ||
-						     !strncmp(lang, "cy", 2) ||
+							 !strncmp(lang, "cy", 2) ||
 							 !strncmp(lang, "ga", 2) ||
 							 !strncmp(lang, "gd", 2);
 			}
-
-			// If the predicate is acceptable and the eventual literal is too
-			// we add that statement to the filtered model
-			if(match && literal_ok)
-			{
-				twine_logf(LOG_DEBUG, PLUGIN_NAME ": keeping a triple with predicate <%s>\n", preduri);
-				librdf_model_add_statement(filtered_model, statement);
-			}
 		}
+
+		// If the predicate is acceptable and the eventual literal is too
+		// we add that statement to the filtered model
+		if(match && literal_ok)
+		{
+			twine_logf(LOG_DEBUG, PLUGIN_NAME ": keeping a triple with predicate <%s>\n", preduri);
+			librdf_model_add_statement(filtered_model, statement);
+		}
+
+		// Move to the next statement
 		librdf_stream_next(st);
 	}
 	librdf_free_stream(st);
