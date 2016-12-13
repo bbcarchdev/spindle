@@ -71,13 +71,14 @@ spindle_graphcache_fetch_node(SPINDLE *spindle, librdf_node *graph)
 		spindle->graphcache[c].uri = NULL;
 	}
 	temp = twine_rdf_model_create();
-	if(sparql_queryf_model(spindle->sparql, temp,
-		"SELECT DISTINCT ?s ?p ?o"
-		" WHERE {"
-		"  GRAPH %V {"
-		"   ?s ?p ?o ."
-		"  }"
-		" }", graph))
+	if(twine_cache_fetch_graph_(temp, uristr))
+//		sparql_queryf_model(spindle->sparql, temp,
+//		"SELECT DISTINCT ?s ?p ?o"
+//		" WHERE {"
+//		"  GRAPH %V {"
+//		"   ?s ?p ?o ."
+//		"  }"
+//		" }", graph)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": graphcache: failed to fetch a graph description for <%s>\n", uristr);
 		twine_rdf_model_destroy(temp);
