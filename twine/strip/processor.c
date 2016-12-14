@@ -121,3 +121,4 @@ spindle_strip(twine_graph *graph, void *data)
 
 	return 0;
 }
+

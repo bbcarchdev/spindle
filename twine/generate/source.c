@@ -134,23 +134,55 @@ spindle_source_graphs_(SPINDLEENTRY *data)
 	librdf_node *node;
 	librdf_uri *nodeuri;
 	const char *nodeuristr;
+	URI *noderoot, *uri;
+	const char *noderootstr;
 
 	iter = librdf_model_get_contexts(data->sourcedata);
 	while(!librdf_iterator_end(iter))
 	{
+		// Get the URI of the graph
 		node = librdf_iterator_get_object(iter);
 		nodeuri = librdf_node_get_uri(node);
 		if(!nodeuri)
 		{
 			continue;
 		}
+
+		// Turn it into a string
 		nodeuristr = (const char *) librdf_uri_as_string(nodeuri);
 		if(!nodeuristr)
 		{
 			continue;
 		}
-		twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding graph <%s> to sources list\n", nodeuristr);
-		spindle_strset_add(data->sources, nodeuristr);
+
+		// Then into a URI
+		uri = uri_create_str(nodeuristr, NULL);
+		if(!uri)
+		{
+			continue;
+		}
+
+		// Extract the hostname from the string
+		noderoot = uri_create_str("/", uri);
+		if(!noderoot)
+		{
+			continue;
+		}
+		uri_destroy(uri);
+
+		// Convert that into a string
+		noderootstr = (const char *) uri_stralloc(noderoot);
+		if(!noderootstr)
+		{
+			continue;
+		}
+		uri_destroy(noderoot);
+
+		// Add the hostname to the list of sources
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding root <%s> to sources list\n", noderootstr);
+		spindle_strset_add(data->sources, noderootstr);
+
+		// Move on to the next graph name
 		librdf_iterator_next(iter);
 	}
 	librdf_free_iterator(iter);
