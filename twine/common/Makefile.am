@@ -21,7 +21,7 @@ AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@
 noinst_LTLIBRARIES = libspindle-common.la
 
 libspindle_common_la_SOURCES = p_spindle.h spindle-common.h \
-	context.c db-common.c db-schema.c rulebase.c \
+	context.c db-common.c db-schema.c db-correlate.c rulebase.c \
 	rulebase-class.c rulebase-pred.c rulebase-cachepred.c \
 	rulebase-coref.c strset.c correlate.c graphcache.c
 

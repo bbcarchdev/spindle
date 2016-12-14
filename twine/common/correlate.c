@@ -26,16 +26,6 @@
 /* 36 characters plus trailing NUL byte */
 #define UUID_BUFFER_SIZE                37
 
-struct relate_struct
-{
-	SPINDLE *spindle;
-	const char *id;
-	const char *uri;
-};
-
-static int spindle_perform_proxy_relate_(SQL *restrict db, void *restrict userdata);
-static int spindle_db_proxy_state_(SPINDLE *spindle, const char *id, int changed);
-
 /* Generate a new local URI for an external URI */
 char *
 spindle_proxy_generate(SPINDLE *spindle, const char *uri)
@@ -81,61 +71,54 @@ spindle_proxy_generate(SPINDLE *spindle, const char *uri)
 char *
 spindle_proxy_locate(SPINDLE *spindle, const char *uri)
 {
-	SQL_STATEMENT *rs;
-	char *buf, *p;
-	const char *s;
+	SPARQLRES *res;
+	SPARQLROW *row;
+	char *qbuf, *localname;
+	const char *uristr;
+	size_t l;
+	librdf_node *node;
+	librdf_uri *ruri;
 
-	rs = sql_queryf(spindle->db, "SELECT \"id\" FROM \"proxy\" WHERE %Q = ANY(\"sameas\")", uri);
-	if(!rs)
+	if(spindle->db)
+	{
+		return spindle_db_proxy_locate(spindle, uri);
+	}
+	/* TODO: if uri is within our namespace and is valid, return it as-is */
+	errno = 0;
+	localname = NULL;
+	l = strlen(uri) + strlen(spindle->root) + 127;
+	if(!l)
 	{
 		return NULL;
 	}
-	if(sql_stmt_eof(rs))
+	qbuf = (char *) calloc(1, l + 1);
+	snprintf(qbuf, l, "SELECT DISTINCT ?o FROM <%s> WHERE { <%s> <" NS_OWL "sameAs> ?o . }", spindle->root, uri);
+	res = sparql_query(spindle->sparql, qbuf, strlen(qbuf));
+	if(!res)
 	{
-		sql_stmt_destroy(rs);
+		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to query for existence of <%s> in <%s>\n", uri, spindle->root);
+		free(qbuf);
 		return NULL;
 	}
-	/* root + '/' + uuid + '#id' + NUL */
-	/* XXX the fragment should be configurable */
-	buf = (char *) malloc(strlen(spindle->root) + 1 + 32 + 3 + 1);
-	if(!buf)
+	free(qbuf);
+	row = sparqlres_next(res);
+	if(row)
 	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate buffer for proxy URI\n");
-		sql_stmt_destroy(rs);
-		return NULL;
-	}
-	strcpy(buf, spindle->root);
-	p = strchr(buf, 0);
-	if(p > buf)
-	{
-		p--;
-		if(*p == '/')
-		{
-			p++;
-		}
-		else
-		{
-			p++;
-			*p = '/';
-			p++;
+		node = sparqlrow_binding(row, 0);
+		if(node &&
+		   librdf_node_is_resource(node) &&
+		   (ruri = librdf_node_get_uri(node)) &&
+		   (uristr = (const char *) librdf_uri_as_string(ruri)))
+		{			
+			localname = strdup((const char *) uristr);
+			if(!localname)
+			{
+				twine_logf(LOG_ERR, PLUGIN_NAME ": failed to duplicate URI string\n");
+			}
 		}
 	}
-	else
-	{
-		*p = '/';
-		p++;
-	}
-	for(s = sql_stmt_str(rs, 0); *s; s++)
-	{
-		if(isalnum(*s))
-		{
-			*p = tolower(*s);
-			p++;
-		}
-	}
-	strcpy(p, "#id");
-	sql_stmt_destroy(rs);
-	return buf;
+	sparqlres_destroy(res);
+	return localname;
 }
 
 /* Assert that two URIs are equivalent */
@@ -298,55 +281,78 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 int
 spindle_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, char **refs)
 {
-	char *oldid, *newid;
-	SQL_STATEMENT *rs;
+	size_t c, slen, len;
+	int allocated;
+	char *qbuf, *qp;
 
-	(void) refs;
-
-	oldid = spindle_db_id(from);
-	newid = spindle_db_id(to);
-	if(!oldid || !newid)
+	if(spindle->db)
 	{
-		free(oldid);
-		free(newid);
-		return -1;
+		return spindle_db_proxy_migrate(spindle, from, to, refs);
 	}
-	rs = sql_queryf(spindle->db, "SELECT * FROM \"moved\" WHERE \"from\" = %Q", oldid);
-	if(!rs)
+	if(refs)
 	{
-		free(oldid);
-		free(newid);
-		return -1;
-	}
-	if(sql_stmt_eof(rs))
-	{
-		sql_executef(spindle->db, "INSERT INTO \"moved\" (\"from\", \"to\") VALUES (%Q, %Q)", oldid, newid);
+		allocated = 0;
 	}
 	else
 	{
-		sql_executef(spindle->db, "UPDATE \"moved\" SET \"to\" = %Q WHERE \"from\" = %Q", oldid, newid);
+		allocated = 1;
+		refs = spindle_proxy_refs(spindle, from);
+		if(!refs)
+		{
+			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to obtain references from <%s>\n", from);
+			return -1;
+		}
 	}
-	sql_stmt_destroy(rs);
-	sql_executef(spindle->db, "UPDATE \"proxy\" SET \"sameas\" = \"sameas\" || ( SELECT \"sameas\" FROM \"proxy\" WHERE \"id\" = %Q ) WHERE \"id\" = %Q", oldid, newid);
-	sql_executef(spindle->db, "DELETE FROM \"proxy\" WHERE \"id\" = %Q", oldid);
-	sql_executef(spindle->db, "DELETE FROM \"index\" WHERE \"id\" = %Q", oldid);
-	sql_executef(spindle->db, "UPDATE \"triggers\" SET \"triggerid\" = %Q WHERE \"triggerid\" = %Q", newid, oldid);
-	sql_executef(spindle->db, "UPDATE \"triggers\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
-	sql_executef(spindle->db, "UPDATE \"audiences\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
-	sql_executef(spindle->db, "UPDATE \"licenses_audiences\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
-	sql_executef(spindle->db, "UPDATE \"licenses_audiences\" SET \"audienceid\" = %Q WHERE \"audienceid\" = %Q", newid, oldid);
-	sql_executef(spindle->db, "UPDATE \"media\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
-	sql_executef(spindle->db, "UPDATE \"membership\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
-	sql_executef(spindle->db, "UPDATE \"membership\" SET \"collection\" = %Q WHERE \"collection\" = %Q", newid, oldid);
-	sql_executef(spindle->db, "UPDATE \"index_media\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
-	sql_executef(spindle->db, "UPDATE \"index_media\" SET \"media\" = %Q WHERE \"media\" = %Q", newid, oldid);
-	sql_executef(spindle->db, "UPDATE \"media\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
-	sql_executef(spindle->db, "UPDATE \"about\" SET \"id\" = %Q WHERE \"id\" = %Q", newid, oldid);
-	sql_executef(spindle->db, "UPDATE \"about\" SET \"about\" = %Q WHERE \"about\" = %Q", newid, oldid);
-	spindle_db_proxy_state_(spindle, newid, 1);
-	sql_executef(spindle->db, "DELETE FROM \"state\" WHERE \"id\" = %Q", oldid);
-	free(oldid);
-	free(newid);
+	if(strlen(from) > strlen(to))
+	{
+		slen = strlen(from);
+	}
+	else
+	{
+		slen = strlen(to);
+	}
+	len = 80 + strlen(spindle->root);
+	for(c = 0; refs[c]; c++)
+	{
+		len += strlen(refs[c]) +  slen + 24;
+	}
+	qbuf = (char *) calloc(1, len + 1);
+	if(!qbuf)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate SPARQL query buffer\n");
+		if(allocated)
+		{
+			spindle_proxy_refs_destroy(refs);
+		}
+		return -1;
+	}
+	/* Generate an INSERT DATA for the new references */
+	qp = qbuf;
+	qp += sprintf(qp, "PREFIX owl: <" NS_OWL ">\n"
+				  "INSERT DATA {\n"
+				  "GRAPH <%s> {\n", spindle->root);
+	for(c = 0; refs[c]; c++)
+	{
+		qp += sprintf(qp, "<%s> owl:sameAs <%s> .\n", refs[c], to);
+	}
+	qp += sprintf(qp, "} }");
+	sparql_update(spindle->sparql, qbuf, strlen(qbuf));
+	/* Generate a DELETE DATA for the old references */
+	qp = qbuf;
+	qp += sprintf(qp, "PREFIX owl: <" NS_OWL ">\n"
+				  "DELETE DATA {\n"
+				  "GRAPH <%s> {\n", spindle->root);
+	for(c = 0; refs[c]; c++)
+	{
+		qp += sprintf(qp, "<%s> owl:sameAs <%s> .\n", refs[c], from);
+	}
+	qp += sprintf(qp, "} }");
+	sparql_update(spindle->sparql, qbuf, strlen(qbuf));
+	free(qbuf);
+	if(allocated)
+	{
+		spindle_proxy_refs_destroy(refs);
+	}
 	return 0;
 }
 
@@ -354,57 +360,77 @@ spindle_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, char *
 char **
 spindle_proxy_refs(SPINDLE *spindle, const char *uri)
 {
-	SQL_STATEMENT *rs;
-	char *id;
-	char **refset;
-	size_t count;
+	char *qbuf;
+	char **refs, **p;
+	size_t l;
+	SPARQLRES *res;
+	SPARQLROW *row;
+	librdf_node *node;
+	librdf_uri *ruri;
+	size_t count, size;
+	const char *str;
 
-	id = spindle_db_id(uri);
-	if(!id)
+	if(spindle->db)
 	{
+		return spindle_db_proxy_refs(spindle, uri);
+	}
+	refs = NULL;
+	count = 0;
+	size = 0;
+	l = strlen(uri) + strlen(spindle->root) + 127;
+	qbuf = (char *) calloc(1, l + 1);
+	if(!qbuf)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate SPARQL query string\n");
 		return NULL;
 	}
-
-	rs = sql_queryf(spindle->db, "SELECT unnest(\"sameas\") AS \"uri\" FROM \"proxy\" WHERE \"id\" = %Q", id);
-	free(id);
-	if(!rs)
+	snprintf(qbuf, l, "SELECT DISTINCT ?s FROM <%s> WHERE { ?s <" NS_OWL "sameAs> <%s> . }", spindle->root, uri);
+	res = sparql_query(spindle->sparql, qbuf, strlen(qbuf));
+	if(!res)
 	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": SPARQL query failed");
+		free(qbuf);
 		return NULL;
 	}
-	for(count = 0; !sql_stmt_eof(rs); sql_stmt_next(rs))
+	free(qbuf);
+	while((row = sparqlres_next(res)))
 	{
-		count++;
-	}
-	refset = (char **) calloc(count + 1, sizeof(char *));
-	if(!refset)
-	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate buffer for reference-set\n");
-		sql_stmt_destroy(rs);
-		return NULL;
-	}
-	sql_stmt_rewind(rs);
-	for(count = 0; !sql_stmt_eof(rs); sql_stmt_next(rs))
-	{
-		refset[count] = strdup(sql_stmt_str(rs, 0));
-		if(!refset[count])
+		node = sparqlrow_binding(row, 0);
+		if(node && librdf_node_is_resource(node) && (ruri = librdf_node_get_uri(node)))
 		{
-			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to duplicate reference <%s>\n", sql_stmt_str(rs, 0));
-			for(count--; ; count--)
+			str = (const char *) librdf_uri_as_string(ruri);
+			if(!str)
 			{
-				free(refset[count]);
-				if(!count)
+				twine_logf(LOG_ERR, PLUGIN_NAME ": failed to obtain string form of URI\n");
+				continue;
+			}
+			if(count + 1 >= size)
+			{
+				p = (char **) realloc(refs, sizeof(char *) * (size + SET_BLOCKSIZE));
+				if(!p)
 				{
+					twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to extend reference list\n");
+					spindle_proxy_refs_destroy(refs);
+					refs = NULL;
 					break;
 				}
+				refs = p;
+				size += SET_BLOCKSIZE;				
 			}
-			free(refset);
-			sql_stmt_destroy(rs);
-			return NULL;
+			refs[count] = strdup(str);
+			if(!refs[count])
+			{
+				twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to duplicate <%s>\n", str);
+				spindle_proxy_refs_destroy(refs);
+				refs = NULL;
+				break;				
+			}
+			count++;
+			refs[count] = NULL;
 		}
-		count++;
 	}
-	sql_stmt_destroy(rs);
-	return refset;
+	sparqlres_destroy(res);
+	return refs;
 }
 
 /* Destroy a list of references */
@@ -428,117 +454,31 @@ spindle_proxy_refs_destroy(char **refs)
 int
 spindle_proxy_relate(SPINDLE *spindle, const char *remote, const char *local)
 {
-	char *id;
-	struct relate_struct data;
-
-	id = spindle_db_id(local);
-	if(!id)
-	{
-		return -1;
-	}
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": DB: adding %s = <%s>\n", id, remote);
-	data.spindle = spindle;
-	data.id = id;
-	data.uri = remote;
-	if(spindle_perform_proxy_relate_(spindle->db, (void *) &data) < 0)
-	{
-		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to relate <%s> to %s\n", remote, id);
-		free(id);
-		return -1;
-	}
-	free(id);
-	return 0;
-}
-
-static int
-spindle_perform_proxy_relate_(SQL *restrict db, void *restrict userdata)
-{
-	struct relate_struct *data;
-	SQL_STATEMENT *rs;
+	size_t l;
+	char *qbuf;
 	int r;
 
-	data = (struct relate_struct *) userdata;
-	rs = sql_queryf(db, "SELECT \"id\" FROM \"proxy\" WHERE \"id\" = %Q", data->id);
-	if(!rs)
+	if(spindle->db)
 	{
-		return -2;
+		return spindle_db_proxy_relate(spindle, remote, local);
 	}
-	if(sql_stmt_eof(rs))
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding <%s> (remote) owl:sameAs <%s> (local)\n", remote, local);
+	l = strlen(spindle->root) + strlen(remote) + strlen(local) + 127;
+	qbuf = (char *) calloc(1, l + 1);
+	if(!qbuf)
 	{
-		if(sql_executef(db, "INSERT INTO \"proxy\" (\"id\", \"sameas\") VALUES (%Q, ARRAY[]::text[])", data->id))
-		{
-			sql_stmt_destroy(rs);
-			return -2;
-		}
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate SPARQL query buffer\n");
+		return -1;
 	}
-	sql_stmt_destroy(rs);
-	if(sql_executef(db, "UPDATE \"proxy\" SET \"sameas\" = array_append(\"sameas\", %Q) WHERE \"id\" = %Q", data->uri, data->id))
+	snprintf(qbuf, l, "PREFIX owl: <" NS_OWL ">\nINSERT DATA {\nGRAPH <%s> {\n<%s> owl:sameAs <%s> . } }", spindle->root, remote, local);
+	twine_logf(LOG_DEBUG, "%s\n", qbuf);
+	r = sparql_update(spindle->sparql, qbuf, strlen(qbuf));
+	free(qbuf);
+	if(r)
 	{
-		return -2;
+		twine_logf(LOG_ERR, PLUGIN_NAME ": SPARQL INSERT DATA failed\n");
+		return -1;
 	}
-	/* Update any indexes which refer to this URI */
-	if(sql_executef(db, "UPDATE \"triggers\" SET \"triggerid\" = %Q WHERE \"uri\" = %Q", data->id, data->uri))
-	{
-		return -2;
-	}
-	if(sql_executef(db, "UPDATE \"audiences\" SET \"id\" = %Q WHERE \"uri\" = %Q", data->id, data->uri))
-	{
-		return -2;
-	}
-	if(sql_executef(db, "UPDATE \"licenses_audiences\" SET \"audienceid\" = %Q WHERE \"uri\" = %Q", data->id, data->uri))
-	{
-		return -2;
-	}
-	r = spindle_db_proxy_state_(data->spindle, data->id, 1);
-	if(r < 0)
-	{
-		return -2;
-	}
-	return 1;
-}
-
-/* Ensure there's an entry in the state table for this proxy */
-static int
-spindle_db_proxy_state_(SPINDLE *spindle, const char *id, int changed)
-{
-	SQL_STATEMENT *rs;
-	char skey[16], tbuf[20];
-	uint32_t shortkey;
-	time_t t;
-	struct tm tm;
-
-	rs = sql_queryf(spindle->db, "SELECT \"id\" FROM \"state\" WHERE \"id\" = %Q", id);
-	if(!rs)
-	{
-		return -2;
-	}
-	strncpy(skey, id, 8);
-	skey[8] = 0;
-	shortkey = (uint32_t) strtoul(skey, NULL, 16);
-	t = time(NULL);
-	gmtime_r(&t, &tm);
-	strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S", &tm);
-	if(sql_stmt_eof(rs))
-	{
-		if(sql_executef(spindle->db, "INSERT INTO \"state\" (\"id\", \"shorthash\", \"tinyhash\", \"status\", \"modified\", \"flags\") VALUES (%Q, '%lu', '%d', %Q, %Q, 0)",
-			id, (unsigned long) shortkey, (int) (shortkey % 256), "DIRTY", tbuf
-			))
-		{
-			sql_stmt_destroy(rs);
-			return -2;
-		}
-		sql_stmt_destroy(rs);
-		return 1;
-	}
-	if(changed)
-	{
-		if(sql_executef(spindle->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = 0, \"modified\" = %Q WHERE \"id\" = %Q",
-			"DIRTY", tbuf, id))
-		{
-			return -2;
-		}
-		return 1;
-	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": INSERT succeeded\n");
 	return 0;
 }
-
