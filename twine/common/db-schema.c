@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               24
+#define DB_SCHEMA_VERSION               25
 
 static int spindle_db_migrate_(SQL *restrict, const char *identifier, int newversion, void *restrict userdata);
 
@@ -493,6 +493,19 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 			return -1;
 		}
 		if(sql_execute(sql, "CREATE INDEX \"licenses_audiences_audienceid\" ON \"licenses_audiences\" (\"audienceid\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	// Version 25 introduces a timestamp to delay the execution of the triggers
+	if(newversion == 25)
+	{
+		if(sql_execute(sql, "ALTER TABLE \"triggers\" ADD COLUMN \"earliest_activation\" TIMESTAMP DEFAULT NOW()"))
+		{
+			return -1;
+		}
+		if(sql_execute(sql, "CREATE INDEX \"triggers_earliest_activation\" ON \"triggers\" (\"earliest_activation\")"))
 		{
 			return -1;
 		}

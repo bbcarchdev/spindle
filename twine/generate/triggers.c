@@ -75,12 +75,15 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 	SQL_STATEMENT *rs;
 	int flags;
 	char *id;
+	char nextactivationstr[32];
+	time_t now;
+	struct tm tm;
 	
 	if(!entry->generate->db)
 	{
 		return 0;
 	}
-	rs = sql_queryf(entry->generate->db, "SELECT \"id\", \"flags\", \"triggerid\" FROM \"triggers\" WHERE \"triggerid\" = %Q AND \"triggerid\" <> \"id\"", entry->id);
+	rs = sql_queryf(entry->generate->db, "SELECT \"id\", \"flags\", \"triggerid\" FROM \"triggers\" WHERE \"triggerid\" = %Q AND \"triggerid\" <> \"id\" AND \"earliest_activation\" < NOW()", entry->id);
 	if(!rs)
 	{
 		return -1;
@@ -93,7 +96,7 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 		// Get the flags to apply
 		flags = (int) sql_stmt_long(rs, 1);
 
-		/* Trigger updates that have this entry's flag in scope */
+		// Trigger updates that have this entry's flag in scope
 		if (entry->flags & flags)
 		{
 			// Do a logical OR if there is already a trigger scheduled (status = DIRTY and flags <> 0)
@@ -105,6 +108,13 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 			// Set the target as DIRTY
 			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q WHERE \"id\" = %Q", "DIRTY", id);
 		}
+
+		// Set the earliest activation date some time in the future
+		now = time(NULL);
+		now += 10; // TODO As for the next fetch in Anansi, this should be made configurable.
+		gmtime_r(&now, &tm);
+		strftime(nextactivationstr, 32, "%Y-%m-%d %H:%M:%S", &tm);
+		sql_executef(entry->generate->db, "UPDATE \"triggers\" SET \"earliest_activation\" = %Q WHERE \"triggerid\" = %Q AND \"earliest_activation\" < NOW()", nextactivationstr, id);
 	}
 	
 	sql_stmt_destroy(rs);
@@ -156,7 +166,7 @@ spindle_triggers_index(SQL *sql, const char *id, SPINDLEENTRY *data)
 
 	for(c = 0; c < data->ntriggers; c++)
 	{
-		if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\", \"flags\", \"triggerid\""") VALUES (%Q, %Q, '%d', %Q)",
+		if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\", \"flags\", \"triggerid\", \"earliest_activation\""") VALUES (%Q, %Q, '%d', %Q, NOW())",
 			id, data->triggers[c].uri, data->triggers[c].kind, data->triggers[c].id))
 		{
 			return -1;
