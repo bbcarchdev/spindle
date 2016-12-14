@@ -54,7 +54,6 @@
 # define NS_MIME                        "http://purl.org/NET/mediatypes/"
 # define NS_ODRL                        "http://www.w3.org/ns/odrl/2/"
 # define NS_EVENT                       "http://purl.org/NET/c4dm/event.owl#"
-# define NS_VOID                        "http://rdfs.org/ns/void#"
 
 /* MIME types */
 # define MIME_TURTLE                    "text/turtle"

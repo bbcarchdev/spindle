@@ -376,4 +376,3 @@ spindle_generate_state_update_(SPINDLEENTRY *cache)
 	return sql_executef(cache->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = '%d' WHERE \"id\" = %Q", "COMPLETE", 0, cache->id);
 }
 
-
