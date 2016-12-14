@@ -158,20 +158,21 @@ spindle_source_fetch_sparql_(SPINDLEENTRY *data)
 	for(c = 0; data->refs[c]; c++)
 	{
 		/* Add <ref> owl:sameAs <localname> triples to the proxy model */
-		if(sparql_queryf_model(data->sparql, data->sourcedata,
-			"SELECT DISTINCT ?s ?p ?o ?g"
-			" WHERE {"
-			"  GRAPH ?g {"
-			"  { <%s> ?p ?o ."
-			"   BIND(<%s> as ?s)"
-			"  }"
-			"  UNION"
-			"  { ?s ?p <%s> ."
-			"   BIND(<%s> as ?o)"
-			"  }"
-			" }"
-			"}",
-			data->refs[c], data->refs[c], data->refs[c], data->refs[c]))
+//		if(sparql_queryf_model(data->sparql, data->sourcedata,
+//			"SELECT DISTINCT ?s ?p ?o ?g"
+//			" WHERE {"
+//			"  GRAPH ?g {"
+//			"  { <%s> ?p ?o ."
+//			"   BIND(<%s> as ?s)"
+//			"  }"
+//			"  UNION"
+//			"  { ?s ?p <%s> ."
+//			"   BIND(<%s> as ?o)"
+//			"  }"
+//			" }"
+//			"}",
+//			data->refs[c], data->refs[c], data->refs[c], data->refs[c]))
+		if (twine_cache_fetch_about_(data->sourcedata, data->refs[c]))
 		{
 			r = -1;
 			break;
