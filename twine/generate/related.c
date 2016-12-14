@@ -57,20 +57,20 @@ spindle_related_fetch_entry(SPINDLEENTRY *data)
 		 * entity, restricted by the predicate used for the relation
 		 */
 		if(sparql_queryf_model(data->spindle->sparql, data->extradata,
-							   "SELECT DISTINCT ?s ?p ?o ?g\n"
-							   " WHERE {\n"
-							   "  GRAPH %V {\n"
-							   "   %V ?p1 ?s .\n"
+							   "SELECT DISTINCT ?s ?p ?o ?g"
+							   " WHERE {"
+							   "  GRAPH %V {"
+							   "   %V ?p1 ?s ."
 							   "   FILTER("
 							   "     ?p1 = <" NS_FOAF "page> || "
 							   "     ?p1 = <" NS_MRSS "player> || "
-							   "     ?p1 = <" NS_MRSS "content> "
-							   "   )\n"
-							   "  }\n"
-							   "  GRAPH ?g {\n"
-							   "   ?s ?p ?o .\n"
-							   "  }\n"
-							   "  FILTER(?g != %V && ?g != %V)\n"
+							   "     ?p1 = <" NS_MRSS "content>"
+							   "   )"
+							   "  }"
+							   "  GRAPH ?g {"
+							   "   ?s ?p ?o ."
+							   "  }"
+							   "  FILTER(?g != %V && ?g != %V)"
 							   "}",
 							   data->graph, data->self, data->graph, data->spindle->rootgraph))
 		{
