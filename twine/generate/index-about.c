@@ -53,13 +53,6 @@ spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data)
 		NULL
 	};
 	
-	/* Force an entity to always 'about' itself, so that queries match both
-	 * topics and the things about those topics
-	 */
-	if(sql_executef(sql, "INSERT INTO \"about\" (\"id\", \"about\") VALUES (%Q, %Q)", id, id))
-	{
-		return -1;
-	}
 	if(!(query = librdf_new_statement(data->spindle->world)))
 	{
 		return -1;
