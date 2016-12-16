@@ -256,7 +256,7 @@ spindle_query_meta(QUILTREQ *request, struct query_struct *query)
 	if(request->index || query->explicit || query->offset || query->limit != request->deflimit)
 	{
 		/* ... rdf:label */
-		spindle_query_title_(request, abstract, query);
+		//spindle_query_title_(request, abstract, query);
 	}
 	
 	free(root);
@@ -458,7 +458,7 @@ spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struc
 		/* containing "..." */
 		len += strlen(query->text) + 16;
 	}
-	if(query->media || query->type || query->audience)
+	else if(query->media || query->type || query->audience)
 	{
 		/* which have related ... media */
 		len += 25;

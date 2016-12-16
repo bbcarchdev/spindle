@@ -40,16 +40,19 @@ spindle_index(QUILTREQ *request, const char *qclass)
 	{
 		request->indextitle = "Everything";
 	}
+	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": calling spindle_query\n");
 	r = spindle_query(request, &query);
 	if(r != 200)
 	{
 		return r;
 	}
+	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": calling spindle_query_meta\n");
 	r = spindle_query_meta(request, &query);
 	if(r != 200)
 	{
 		return r;
 	}
+	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": calling spindle_query_osd\n");
 	r = spindle_query_osd(request);
 	if(r != 200)
 	{

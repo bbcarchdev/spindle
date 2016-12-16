@@ -42,7 +42,6 @@ static int add_array(librdf_model *model, const char *array, const char *subject
 static int add_point(librdf_model *model, const char *array, const char *subject);
 static int appendf(struct qbuf_struct *qbuf, const char *fmt, ...);
 static int process_membership_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item);
-static int spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query);
 
 /* Short names for media classes which can be used for convenience */
 struct mediamatch_struct spindle_mediamatch[] = {
@@ -60,6 +59,24 @@ struct mediamatch_struct spindle_mediamatch[] = {
 /* Const for audience defaults */
 const char *default_audience[2] = {"all", NULL};
 
+/* array_contains(array, string);
+ * Returns 1 if the array contains the string
+ * Otherwise 0
+ */
+int array_contains(char **array, const char *string)
+{
+	size_t i=0;
+	while(array && array[i] != NULL) {
+		if(!strcmp(array[i++], string))
+		{
+			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s TRUE\n", string);
+			return 1;
+		}
+	}
+	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s FALSE\n", string);
+	return 0;
+}
+
 /* Peform a query using the SQL database back-end */
 int
 spindle_query_db(QUILTREQ *request, struct query_struct *query)
@@ -67,35 +84,12 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	struct qbuf_struct qbuf;
 	size_t c;
 	SQL_STATEMENT *rs;
-	const char *related, *collection;
+	const char *collection;
 	int rankflags;
 
-	memset(&qbuf, 0, sizeof(struct qbuf_struct));
-	related = NULL;
+	// Set the collection
 	collection = NULL;
-	if(query->related)
-	{
-		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": DB: related: <%s> (base is <%s>)\n", query->related, request->base);
-		c = strlen(request->base);
-		if(!strncmp(query->related, request->base, c))
-		{
-			related = query->related + c;
-			while(related[0] == '/')
-			{
-				related++;
-			}
-			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": DB: related: '%s'\n", related);
-			if(strlen(related) != 32)
-			{
-				return 404;
-			}
-		}
-		else
-		{
-			return 404;
-		}
-	}
-	else if(query->collection)
+	if(query->collection)
 	{
 		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": DB: collection: <%s> (base is <%s>)\n", query->collection, request->base);
 		c = strlen(request->base);
@@ -117,42 +111,24 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 			return 404;
 		}
 	}
+
+	// If the search text is "*" set it to NULL
 	if(query->text && !strcmp(query->text, "*"))
 	{
 		query->text = NULL;
-	}	
+	}
+
+	// Get a lang for the request
 	query->lang = checklang(request, query->lang);
 	if(!query->lang)
 	{
 		return 404;
 	}
-	if(query->media)
-	{
-		if(!query->audience)
-		{
-			query->audience = default_audience;
-		}
-		if(!query->type)
-		{
-			query->type = "any";
-		}
-		if(strcmp(query->media, "any"))
-		{
-			for(c = 0; spindle_mediamatch[c].name; c++)
-			{
-				if(!strcmp(spindle_mediamatch[c].name, query->media))
-				{
-					query->media = spindle_mediamatch[c].uri;
-					break;
-				}
-			}
-		}
-	}
-	/* If we're performing any kind of media query, ensure the parameters
-	 * have defaults
-	 */
+
+	// Set default parameters for a Media search
 	if(query->media || query->audience || query->type)
 	{
+		// By default search for anything for the default audience
 		if(!query->media)
 		{
 			query->media = "any";
@@ -165,14 +141,34 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 		{
 			query->type = "any";
 		}
+
+		// If the media type is not "any" it may be one of the predefined
+		// keyword "audio", "video", etc. We search for those to eventually
+		// replace them by the correct media URI
+		if(strcmp(query->media, "any"))
+		{
+			for(c = 0; spindle_mediamatch[c].name; c++)
+			{
+				if(!strcmp(spindle_mediamatch[c].name, query->media))
+				{
+					query->media = spindle_mediamatch[c].uri;
+					break;
+				}
+			}
+		}
+
+		// Log the result
 		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db: media='%s', type='%s'\n", query->media, query->type);
-		// audiences log
 		size_t i=0;
 		while(query->audience && query->audience[i]) {
 			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db: audience='%s'\n", query->audience[i]);
 			i++;
 		}
 	}
+
+	// Init the query buffer
+	memset(&qbuf, 0, sizeof(struct qbuf_struct));
+
 	/* SELECT */
 	appendf(&qbuf, "SELECT \"i\".\"id\", \"i\".\"classes\", \"i\".\"title\", \"i\".\"description\", \"i\".\"coordinates\", \"i\".\"modified\"");
 	if(query->text)
@@ -200,71 +196,30 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 			appendf(&qbuf, ", ts_rank_cd(\"i\".\"index_%s\", \"query\", %d) AS \"rank\"", query->lang, rankflags);
 		}
 	}
+
 	/* FROM */
-	appendf(&qbuf, " FROM \"index\" \"i\"");
+	appendf(&qbuf, " FROM \"index\" AS \"i\"");
+
+	/* If a text was specified filter on it */
 	if(query->text)
 	{
-		appendf(&qbuf, " INNER JOIN plainto_tsquery(%%Q) \"query\" ON \"query\" @@ \"i\".\"index_%s\"", query->lang);
-		qbuf.args[qbuf.n] = query->text;
-		qbuf.n++;
+		appendf(&qbuf, ", to_tsquery('%s') AS \"query\"", query->text);
 	}
-	if(related)
-	{
-		/* IS related */
-		appendf(&qbuf, " INNER JOIN \"about\" \"a\" ON \"a\".\"about\" = %%Q AND \"a\".\"id\" = \"i\".\"id\"");
-		qbuf.args[qbuf.n] = related;
-		qbuf.n++;
-	}
+
+	/* If there is a collection specified scope the query for it */
 	if(collection)
 	{
-		if(query->media)
-		{
-			/* When we have a media query, either the topic OR the media may
-			 * be a member of the collection, so we perform a LEFT JOIN and
-			 * add a filter to the WHERE clause
-			 */
-			appendf(&qbuf, " LEFT JOIN \"membership\" \"cm\" ON (\"i\".\"id\" = \"cm\".\"id\" AND \"cm\".\"collection\" = %%Q)");
-		}
-		else
-		{
-			/* Otherwise, just perform an INNER JOIN */
-			appendf(&qbuf, " INNER JOIN \"membership\" \"cm\" ON (\"i\".\"id\" = \"cm\".\"id\" AND \"cm\".\"collection\" = %%Q)");
-		}
-		qbuf.args[qbuf.n] = collection;
-		qbuf.n++;
+		appendf(&qbuf, ", \"membership\" AS \"cm\"");
 	}
+
+	/* If we search for a media we will need extra data from other columns
+	 * to find information about the media associated to the index entry
+	 */
 	if(query->media)
 	{
-		/* We're querying for things with associated media */
-		if(related)
-		{
-			/* If it was a 'related' query, we're already joined to the 'about'
-			 * table and should use that for our join with the media table
-			 */
-			appendf(&qbuf, " INNER JOIN \"media\" \"m\" ON (\"i\".\"id\" = \"m\".\"id\"");
-		}
-		else
-		{
-			/* This is not a 'related' query, so join 'about' and 'index_about'
-			 * to find related media
-			 */
-			appendf(&qbuf, " INNER JOIN \"about\" \"a\" ON (\"i\".\"id\" = \"a\".\"about\")");
-			appendf(&qbuf, " INNER JOIN \"index_media\" \"im\" ON (\"a\".\"id\" = \"im\".\"id\")");
-			appendf(&qbuf, " INNER JOIN \"media\" \"m\" ON (\"im\".\"media\" = \"m\".\"id\"");
-		}
-		spindle_query_db_media_(&qbuf, query);
-		appendf(&qbuf, ")");		
-		if(collection)
-		{
-			/* We're performing a collection-scoped media query; we want to
-			 * return results where the media is a member of the collection,
-			 * not just the topic
-			 */
-			appendf(&qbuf, " LEFT JOIN \"membership\" \"cm2\" ON (\"im\".\"id\" = \"cm2\".\"id\" AND \"cm2\".\"collection\" = %%Q)");
-			qbuf.args[qbuf.n] = collection;
-			qbuf.n++;
-		}
+		appendf(&qbuf, ", \"index_media\" AS \"im\", \"media\" AS \"m\"");
 	}
+
 	/* WHERE */
 	if(query->score > 0)
 	{
@@ -276,18 +231,56 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	}
 	if(query->qclass)
 	{
-		appendf(&qbuf, " AND %%Q = ANY(\"i\".\"classes\")");
-		qbuf.args[qbuf.n] = query->qclass;
-		qbuf.n++;
+		appendf(&qbuf, " AND %Q = ANY(\"i\".\"classes\")", query->qclass);
 	}
-	if(query->media && collection)
+	if(query->text)
 	{
-		/* If there's a collection-scoped media query, either the topic or
-		 * the media may be members of the collection to match, so apply
-		 * a filter appropriately
-		 */
-		appendf(&qbuf, " AND (\"cm\".\"collection\" IS NOT NULL OR \"cm2\".\"collection\" IS NOT NULL)");
+		appendf(&qbuf, " AND \"query\" @@ \"i\".\"index_%s\"", query->lang);
 	}
+	if(collection)
+	{
+		appendf(&qbuf, " AND \"i\".\"id\" = \"cm\".\"id\" AND \"cm\".\"collection\" = %Q", collection);
+	}
+	if(query->media)
+	{
+		appendf(&qbuf, " AND \"i\".\"id\" = \"im\".\"id\" AND \"im\".\"media\" = \"m\".\"id\"");
+	}
+	if(!array_contains(query->audience, "any"))
+	{
+		if(array_contains(query->audience, "all"))
+		{
+			/* If the audience is 'all' we only return media available
+			 * to the public. Media for which no license has been defined
+			 */
+			appendf(&qbuf, " AND \"m\".\"audience\" IS NULL");
+		}
+		else
+		{
+			/* If the audience is not 'all' and is not 'any', then we filter by
+			 * media available to the public, or to the specified audiences
+			 * Handling multi value parameters for audience
+			 */
+			appendf(&qbuf, " AND (\"m\".\"audience\" IS NULL");
+			size_t i=0;
+			while(query->audience && query->audience[i]) {
+				quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db_media_ adding audience %s'\n", query->audience[i]);
+				appendf(&qbuf, " OR \"m\".\"audience\" = '%s'", query->audience[i]);
+				i++;
+			}
+			appendf(&qbuf, " )");
+		}
+	}
+	/* If the media class is not 'any', then filter by the class URI */
+	if(strcmp(query->media, "any"))
+	{
+		appendf(&qbuf, " AND \"m\".\"class\" = '%s'", query->media);
+	}
+	/* If the MIME type is not 'any', then filter by media type */
+	if(strcmp(query->type, "any"))
+	{
+		appendf(&qbuf, " AND \"m\".\"type\" = '%s'", query->type);
+	}
+
 	/* ORDER BY */
 	if(query->text)
 	{
@@ -297,6 +290,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	{
 		appendf(&qbuf, " ORDER BY \"modified\" DESC");
 	}
+
 	/* LIMIT ... OFFSET ... */
 	if(request->offset)
 	{
@@ -306,7 +300,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	{
 		appendf(&qbuf, " LIMIT %d", request->limit + 1);
 	}
-	rs = sql_queryf(spindle_db, qbuf.buf, qbuf.args[0], qbuf.args[1], qbuf.args[2], qbuf.args[3], qbuf.args[4], qbuf.args[5], qbuf.args[6], qbuf.args[7]);
+	rs = sql_queryf(spindle_db, qbuf.buf);
 	free(qbuf.buf);
 	if(!rs)
 	{
@@ -316,72 +310,20 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	return process_rs(request, query, rs);
 }
 
-/* array_contains(array, string);
- * Returns 1 if the array contains the string
- * Otherwise 0
- */
-int array_contains(char **array, const char *string)
-{
-	size_t i=0;
-	while(array && array[i] != NULL) {
-		if(!strcmp(array[i++], string))
-		{
-			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s TRUE\n", string);
-			return 1;
-		}
-	}
-	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s FALSE\n", string);
-	return 0;
-}
+// Everything with "Judi"
+//SELECT "i"."id", "i"."classes", "i"."title", "i"."description", "i"."coordinates", "i"."modified", ts_rank_cd("i"."index_en_gb", "query", 32) AS "rank" FROM "index" AS "i", to_tsquery('judi') AS "query"
+//WHERE "query" @@ "i"."index_en_gb"
+//ORDER BY rank DESC LIMIT 10;
 
+// Images about "Judi"
+// SELECT "i"."id", "i"."classes", "i"."title", "i"."description", "i"."coordinates", "i"."modified", ts_rank_cd("i"."index_en_gb", "query", 32) AS "rank"
+// FROM "index" AS "i", to_tsquery('judi') AS "query", "index_media" AS "im", "media" AS "m", "audiences" AS "a"
+// WHERE "i"."score" <= 40 AND "query" @@ "i"."index_en_gb"
+// AND "i"."id" = "im"."id"
+// AND "im"."media" = "m"."id"
+// AND "m"."class" = 'http://purl.org/dc/dcmitype/StillImage'
+// ORDER BY "rank" DESC, "i"."score" ASC, "modified" DESC LIMIT 26
 
-static int
-spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query)
-{
-	if(query->media)
-	{
-		/* Any media query */
-		if(array_contains(query->audience, "all"))
-		{
-			/* If the audience is 'all' (the default), we only return media
-			 * available to the public.
-			 */
-			appendf(qbuf, " AND \"m\".\"audience\" IS NULL");
-		}
-		else if(!array_contains(query->audience, "any"))
-		{
-			/* If the audience is not 'all' and is not 'any', then we filter by
-			 * media available to the public, or to the specified audiences
-			 * Handling multi value parameters for audience
-			 */
-			appendf(qbuf, " AND (\"m\".\"audience\" IS NULL");
-			size_t i=0;
-			while(query->audience && query->audience[i]) {
-				quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db_media_ adding audience %s'\n", query->audience[i]);
-				appendf(qbuf, " OR \"m\".\"audience\" = %%Q");
-				qbuf->args[qbuf->n] = query->audience[i];
-				qbuf->n++;
-				i++;
-			}
-			appendf(qbuf, " )");
-		}
-		/* If the media class is not 'any', then filter by the class URI */
-		if(strcmp(query->media, "any"))
-		{
-			appendf(qbuf, " AND \"m\".\"class\" = %%Q");
-			qbuf->args[qbuf->n] = query->media;
-			qbuf->n++;
-		}
-		/* If the MIME type is not 'any', then filter by media type */
-		if(strcmp(query->type, "any"))
-		{
-			appendf(qbuf, " AND \"m\".\"type\" = %%Q");
-			qbuf->args[qbuf->n] = query->type;
-			qbuf->n++;
-		}
-	}
-	return 0;
-}
 
 /* For a given item, determine what collections (if any) this item is part
  * of.
@@ -643,11 +585,6 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	uri = quilt_canon_str(item, QCO_SUBJECT);
 	quilt_logf(LOG_DEBUG, "adding row <%s>\n", uri);
 
-	/* rdfs:seeAlso */
-	st = quilt_st_create_uri(self, NS_RDFS "seeAlso", uri);
-	librdf_model_add_statement(request->model, st);
-	librdf_free_statement(st);
-
 	/* olo:slot */
 	st = quilt_st_create_uri(self, NS_OLO "slot", slotstr);
 	librdf_model_add_statement(request->model, st);
@@ -664,7 +601,14 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	librdf_free_statement(st);
 
 	/* <slot> rdfs:label "Result item %d" */
-	snprintf(nbuf, sizeof(nbuf) - 1, "Result #%d", index);
+	if(query->text)
+	{
+		snprintf(nbuf, sizeof(nbuf) - 1, "Result #%d", index);
+	}
+	else
+	{
+		snprintf(nbuf, sizeof(nbuf) - 1, "Associated resource #%d", index);
+	}
 	st = quilt_st_create_literal(slotstr, NS_RDFS "label", nbuf, "en-gb");
 	librdf_model_add_statement(request->model, st);
 	librdf_free_statement(st);
