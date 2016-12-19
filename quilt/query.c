@@ -256,6 +256,7 @@ spindle_query_meta(QUILTREQ *request, struct query_struct *query)
 	if(request->index || query->explicit || query->offset || query->limit != request->deflimit)
 	{
 		/* ... rdf:label */
+		// TODO need to be fixed
 		//spindle_query_title_(request, abstract, query);
 	}
 	

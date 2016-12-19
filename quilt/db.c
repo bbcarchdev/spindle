@@ -77,7 +77,24 @@ int array_contains(char **array, const char *string)
 	return 0;
 }
 
-/* Peform a query using the SQL database back-end */
+/* Perform a query using the SQL database back-end
+ *
+ * Here are some example of queries:
+ *
+ * Everything with "Judi"
+ * SELECT "i"."id", "i"."classes", "i"."title", "i"."description", "i"."coordinates", "i"."modified", ts_rank_cd("i"."index_en_gb", "query", 32) AS "rank" FROM "index" AS "i", to_tsquery('judi') AS "query"
+ * WHERE "query" @@ "i"."index_en_gb"
+ * ORDER BY rank DESC LIMIT 10;
+
+ * Images about "Judi"
+ * SELECT "i"."id", "i"."classes", "i"."title", "i"."description", "i"."coordinates", "i"."modified", ts_rank_cd("i"."index_en_gb", "query", 32) AS "rank"
+ * FROM "index" AS "i", to_tsquery('judi') AS "query", "index_media" AS "im", "media" AS "m"
+ * WHERE "i"."score" <= 40 AND "query" @@ "i"."index_en_gb"
+ * AND "i"."id" = "im"."id"
+ * AND "im"."media" = "m"."id"
+ * AND "m"."class" = 'http://purl.org/dc/dcmitype/StillImage'
+ * ORDER BY "rank" DESC, "i"."score" ASC, "modified" DESC LIMIT 26
+ */
 int
 spindle_query_db(QUILTREQ *request, struct query_struct *query)
 {
@@ -231,7 +248,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	}
 	if(query->qclass)
 	{
-		appendf(&qbuf, " AND %Q = ANY(\"i\".\"classes\")", query->qclass);
+		appendf(&qbuf, " AND '%s' = ANY(\"i\".\"classes\")", query->qclass);
 	}
 	if(query->text)
 	{
@@ -244,43 +261,44 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	if(query->media)
 	{
 		appendf(&qbuf, " AND \"i\".\"id\" = \"im\".\"id\" AND \"im\".\"media\" = \"m\".\"id\"");
-	}
-	if(!array_contains(query->audience, "any"))
-	{
-		if(array_contains(query->audience, "all"))
+
+		if(!array_contains(query->audience, "any"))
 		{
-			/* If the audience is 'all' we only return media available
-			 * to the public. Media for which no license has been defined
-			 */
-			appendf(&qbuf, " AND \"m\".\"audience\" IS NULL");
-		}
-		else
-		{
-			/* If the audience is not 'all' and is not 'any', then we filter by
-			 * media available to the public, or to the specified audiences
-			 * Handling multi value parameters for audience
-			 */
-			appendf(&qbuf, " AND (\"m\".\"audience\" IS NULL");
-			size_t i=0;
-			while(query->audience && query->audience[i]) {
-				quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db_media_ adding audience %s'\n", query->audience[i]);
-				appendf(&qbuf, " OR \"m\".\"audience\" = '%s'", query->audience[i]);
-				i++;
+			if(array_contains(query->audience, "all"))
+			{
+				/* If the audience is 'all' we only return media available
+				 * to the public. Media for which no license has been defined
+				 */
+				appendf(&qbuf, " AND \"m\".\"audience\" IS NULL");
 			}
-			appendf(&qbuf, " )");
+			else
+			{
+				/* If the audience is not 'all' and is not 'any', then we filter by
+				 * media available to the public, or to the specified audiences
+				 * Handling multi value parameters for audience
+				 */
+				appendf(&qbuf, " AND (\"m\".\"audience\" IS NULL");
+				size_t i=0;
+				while(query->audience && query->audience[i]) {
+					quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db_media_ adding audience %s'\n", query->audience[i]);
+					appendf(&qbuf, " OR \"m\".\"audience\" = '%s'", query->audience[i]);
+					i++;
+				}
+				appendf(&qbuf, " )");
+			}
 		}
-	}
-	/* If the media class is not 'any', then filter by the class URI */
-	if(strcmp(query->media, "any"))
-	{
-		appendf(&qbuf, " AND \"m\".\"class\" = '%s'", query->media);
+
+		/* If the media class is not 'any', then filter by the class URI */
+		if(strcmp(query->media, "any"))
+		{
+			appendf(&qbuf, " AND \"m\".\"class\" = '%s'", query->media);
+		}
 	}
 	/* If the MIME type is not 'any', then filter by media type */
-	if(strcmp(query->type, "any"))
+	if(query->type && strcmp(query->type, "any"))
 	{
 		appendf(&qbuf, " AND \"m\".\"type\" = '%s'", query->type);
 	}
-
 	/* ORDER BY */
 	if(query->text)
 	{
@@ -290,7 +308,6 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	{
 		appendf(&qbuf, " ORDER BY \"modified\" DESC");
 	}
-
 	/* LIMIT ... OFFSET ... */
 	if(request->offset)
 	{
@@ -310,20 +327,7 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	return process_rs(request, query, rs);
 }
 
-// Everything with "Judi"
-//SELECT "i"."id", "i"."classes", "i"."title", "i"."description", "i"."coordinates", "i"."modified", ts_rank_cd("i"."index_en_gb", "query", 32) AS "rank" FROM "index" AS "i", to_tsquery('judi') AS "query"
-//WHERE "query" @@ "i"."index_en_gb"
-//ORDER BY rank DESC LIMIT 10;
-
-// Images about "Judi"
-// SELECT "i"."id", "i"."classes", "i"."title", "i"."description", "i"."coordinates", "i"."modified", ts_rank_cd("i"."index_en_gb", "query", 32) AS "rank"
-// FROM "index" AS "i", to_tsquery('judi') AS "query", "index_media" AS "im", "media" AS "m", "audiences" AS "a"
-// WHERE "i"."score" <= 40 AND "query" @@ "i"."index_en_gb"
-// AND "i"."id" = "im"."id"
-// AND "im"."media" = "m"."id"
-// AND "m"."class" = 'http://purl.org/dc/dcmitype/StillImage'
-// ORDER BY "rank" DESC, "i"."score" ASC, "modified" DESC LIMIT 26
-
+v
 
 /* For a given item, determine what collections (if any) this item is part
  * of.
