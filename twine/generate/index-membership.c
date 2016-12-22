@@ -45,14 +45,6 @@ spindle_index_membership(SQL *sql, const char *id, SPINDLEENTRY *data)
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to query proxy for dct:isPartOf statements\n");
 		return -1;
 	}
-	/* Find the statements within the source data which express the fact
-	 * that the document describing our subject is a member of a collection
-	 */
-	if(spindle_index_membership_query_(sql, id, data, data->sourcedata, NULL, NS_FOAF "primaryTopic", 1, 1))
-	{
-		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to query proxy for foaf:primaryTopic statements\n");
-		return -1;
-	}
 	/* Attempt to recursively add this proxy to a collection corresponding to
 	 * the source graph URI (which may also be a member of other collections).
 	 */
@@ -231,6 +223,8 @@ spindle_index_membership_add_uri_(SPINDLEENTRY *data, SQL *sql, const char *id, 
 	char *collid, *localuri;
 	int r;
 
+	//twine_logf(LOG_DEBUG, PLUGIN_NAME ": membership: try adding the proxy <%s> as a member of <%s>\n", id, uristr);
+
 	r = 0;
 	localuri = NULL;
 	collid = NULL;
@@ -274,6 +268,8 @@ static int
 spindle_index_membership_add_(SQL *sql, const char *id, const char *collid)
 {
 	SQL_STATEMENT *rs;
+
+	//twine_logf(LOG_DEBUG, PLUGIN_NAME ": membership: adding the proxy <%s> as a member of the collection <%s>\n", id, collid);
 
 	// Check if the relation is already there
 	rs = sql_queryf(sql, "SELECT \"id\" FROM \"membership\" WHERE \"id\" = %Q AND \"collection\" = %Q", id, collid);
