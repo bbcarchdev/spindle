@@ -327,7 +327,6 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	return process_rs(request, query, rs);
 }
 
-v
 
 /* For a given item, determine what collections (if any) this item is part
  * of.
