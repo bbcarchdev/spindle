@@ -862,3 +862,15 @@ odrl:assignee
 odrl:assignee
 	olo:index 0 ;
 	spindle:expressedAs odrl:assignee .
+
+## skos:exactMatch
+
+skos:exactMatch
+	a spindle:Property ;
+	olo:index 20 ;
+	spindle:expect rdfs:Resource ;
+	spindle:proxyOnly false .
+
+skos:exactMatch
+	olo:index 0 ;
+	spindle:expressedAs skos:exactMatch .
