@@ -50,6 +50,7 @@
 @prefix gazetteer: <http://data.ordnancesurvey.co.uk/ontology/50kGazetteer/> .
 @prefix odrl: <http://www.w3.org/ns/odrl/2/> .
 @prefix wdrs: <http://www.w3.org/2007/05/powder-s#> .
+@prefix lio: <http://purl.org/net/lio#> .
 
 #### Co-reference predicates
 
@@ -496,6 +497,11 @@ schema:about spindle:property [
 ] .
 
 dct:subject spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:topic
+] .
+
+lio:location spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs foaf:topic
 ] .
