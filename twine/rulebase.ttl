@@ -1,8 +1,8 @@
 ## This file is part of Spindle, a co-reference aggregation engine
 ##
-##  Author: Mo McRoberts
+##  Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
 ##
-##  Copyright (c) 2014-2015 BBC
+##  Copyright (c) 2014-2017 BBC
 ##
 ##  Licensed under the Apache License, Version 2.0 (the "License");
 ##  you may not use this file except in compliance with the License.
@@ -49,6 +49,8 @@
 @prefix schema: <http://schema.org/> .
 @prefix gazetteer: <http://data.ordnancesurvey.co.uk/ontology/50kGazetteer/> .
 @prefix odrl: <http://www.w3.org/ns/odrl/2/> .
+@prefix wdrs: <http://www.w3.org/2007/05/powder-s#> .
+@prefix lio: <http://purl.org/net/lio#> .
 
 #### Co-reference predicates
 
@@ -118,6 +120,7 @@ foaf:Agent
 
 dct:Agent spindle:expressedAs foaf:Agent .
 <http://www.tate.org.uk/ontologies/collection#Artist> spindle:expressedAs foaf:Agent .
+<http://dbpedia.org/ontology/Agent> spindle:expressedAs foaf:Agent .
 
 ## Places
 
@@ -129,6 +132,8 @@ geo:SpatialThing
 dct:Location spindle:expressedAs geo:SpatialThing .
 gn:Feature spindle:expressedAs geo:SpatialThing .
 gazetteer:NamedPlace spindle:expressedAs geo:SpatialThing .
+<http://schema.org/Place> spindle:expressedAs geo:SpatialThing .
+<http://dbpedia.org/ontology/Place> spindle:expressedAs geo:SpatialThing .
 
 ## Events, timespans
 
@@ -141,6 +146,7 @@ event:Event
 <http://www.tate.org.uk/ontologies/collection#Death> spindle:expressedAs event:Event .
 dct:PeriodOfTime spindle:expressedAs event:Event .
 po:Broadcast spindle:expressedAs event:Event .
+<http://dbpedia.org/ontology/Event> spindle:expressedAs event:Event .
 
 
 ## Physical things
@@ -167,6 +173,7 @@ skos08:Concept spindle:expressedAs skos:Concept .
 <http://www.tate.org.uk/ontologies/collection#Subject> spindle:expressedAs skos:Concept .
 owl:Class spindle:expressedAs skos:Concept .
 rdfs:Class spindle:expressedAs skos:Concept .
+<http://dbpedia.org/ontology/TopicalConcept> spindle:expressedAs skos:Concept .
 
 ## Collections
 
@@ -178,6 +185,7 @@ dcmitype:Collection
 void:Dataset spindle:expressedAs dcmitype:Collection .
 dcmitype:Dataset spindle:expressedAs dcmitype:Collection .
 schema:Dataset spindle:expressedAs dcmitype:Collection .
+<http://www.openarchives.org/ore/terms/Proxy> spindle:expressedAs dcmitype:Collection .
 
 ## Creative works
 
@@ -222,6 +230,8 @@ dcmitype:Sound spindle:expressedAs foaf:Document .
 dcmitype:MovingImage spindle:expressedAs foaf:Document .
 dcmitype:InteractiveResource spindle:expressedAs foaf:Document .
 schema:Article spindle:expressedAs foaf:Document .
+schema:Painting spindle:expressedAs foaf:Document .
+schema:Book spindle:expressedAs foaf:Document .
 
 #### Property rules
 
@@ -234,6 +244,10 @@ rdfs:label
 	spindle:prominence 20 ;
 	spindle:indexed true .
 
+schema:name spindle:property [
+	olo:index 20 ;
+	spindle:expressedAs rdfs:label
+] .
 skos:prefLabel spindle:property [
 	olo:index 20 ;
 	spindle:expressedAs rdfs:label
@@ -330,13 +344,18 @@ rdfs:comment spindle:property [
 	spindle:expressedAs dct:description
 ] .
 
+schema:description spindle:property [
+	olo:index 30 ;
+	spindle:expressedAs dct:description
+] .
+
 ## geo:long
 
 geo:long
 	a spindle:Property ;
 	olo:index 3 ;
 	spindle:expect rdfs:Literal ;
-	spindle:expectType xsd:decimal ;
+#	spindle:expectType xsd:float ;
 	spindle:indexed true .
 
 geo:long spindle:property [
@@ -351,7 +370,7 @@ geo:lat
 	a spindle:Property ;
 	olo:index 4 ;
 	spindle:expect rdfs:Literal ;
-	spindle:expectType xsd:decimal ;
+#	spindle:expectType xsd:float ;
 	spindle:indexed true .
 
 geo:lat spindle:property [
@@ -388,6 +407,12 @@ foaf:thumbnail spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs foaf:depiction
 ] .
+
+schema:thumbnailUrl spindle:property [
+	olo:index 10 ;
+	spindle:expressedAs foaf:depiction
+] .
+
 
 ## skos:inScheme
 
@@ -472,6 +497,11 @@ schema:about spindle:property [
 ] .
 
 dct:subject spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:topic
+] .
+
+lio:location spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs foaf:topic
 ] .
@@ -784,6 +814,12 @@ mrss:content spindle:property [
 	spindle:expressedAs mrss:content
 ] .
 
+## This is how IIIF manifest files are linked in Wellcome
+wdrs:describedBy spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs mrss:content
+] .
+
 ## dct:format
 
 dct:format
@@ -832,3 +868,15 @@ odrl:assignee
 odrl:assignee
 	olo:index 0 ;
 	spindle:expressedAs odrl:assignee .
+
+## skos:exactMatch
+
+skos:exactMatch
+	a spindle:Property ;
+	olo:index 20 ;
+	spindle:expect rdfs:Resource ;
+	spindle:proxyOnly false .
+
+skos:exactMatch
+	olo:index 0 ;
+	spindle:expressedAs skos:exactMatch .
