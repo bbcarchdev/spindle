@@ -582,10 +582,10 @@ static int
 process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 {
 	QUILTCANON *item;
-	int c;
+	int c, r;
 	const char *t;
 	char idbuf[36], *p, *self;	
-
+	
 	if(request->index)
 	{
 		self = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
@@ -596,7 +596,6 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 	}
 	for(c = 0; !sql_stmt_eof(rs) && c < request->limit; sql_stmt_next(rs))
 	{
-		c++;
 		item = quilt_canon_create(request->canonical);
 		quilt_canon_reset_path(item);
 		quilt_canon_reset_params(item);
@@ -612,7 +611,12 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 		}
 		*p = 0;
 		quilt_canon_add_path(item, idbuf);
-		process_row(request, query, rs, idbuf, self, item, query->offset + c);
+		r = process_row(request, query, rs, idbuf, self, item, query->offset + c);
+		if(r > 0)
+		{
+			/* Only increment the count if a row was actually added to the model */
+			c++;		
+		}
 		quilt_canon_destroy(item);
 	}
 	if(!sql_stmt_eof(rs))
@@ -634,14 +638,19 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	char nbuf[64];
 	librdf_node *node;
 
-	(void) id;
+	uri = quilt_canon_str(item, QCO_SUBJECT);
+
+	if(!strcmp(self, uri))
+	{
+		/* Never ever state that <foo> foaf:topic <foo> */
+		free(uri);
+		return 0;
+	}
+	quilt_logf(LOG_DEBUG, "adding row <%s>\n", uri);
 
 	slot = quilt_canon_create(request->canonical);
 	quilt_canon_set_fragment(slot, id);
 	slotstr = quilt_canon_str(slot, QCO_FRAGMENT);
-
-	uri = quilt_canon_str(item, QCO_SUBJECT);
-	quilt_logf(LOG_DEBUG, "adding row <%s>\n", uri);
 
 	/* rdfs:seeAlso */
 	st = quilt_st_create_uri(self, NS_RDFS "seeAlso", uri);
@@ -664,14 +673,14 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	librdf_free_statement(st);
 
 	/* <slot> rdfs:label "Result item %d" */
-	snprintf(nbuf, sizeof(nbuf) - 1, "Result #%d", index);
+	snprintf(nbuf, sizeof(nbuf) - 1, "Result #%d", index + 1);
 	st = quilt_st_create_literal(slotstr, NS_RDFS "label", nbuf, "en-gb");
 	librdf_model_add_statement(request->model, st);
 	librdf_free_statement(st);
 
 	/* <slot> olo:index nn */
 	st = quilt_st_create(slotstr, NS_OLO "index");
-	node = quilt_node_create_int(index);
+	node = quilt_node_create_int(index + 1);
 	librdf_statement_set_object(st, node);
 	librdf_model_add_statement(request->model, st);
 	librdf_free_statement(st);
@@ -716,7 +725,7 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	free(uri);
 	quilt_canon_destroy(slot);
 	free(slotstr);
-	return 0;
+	return 1;
 }
 
 static int
