@@ -110,6 +110,7 @@ spindle_rulebase_dump(SPINDLERULES *rules)
 	spindle_rulebase_cachepred_dump(rules);
 	spindle_rulebase_class_dump(rules);
 	spindle_rulebase_pred_dump(rules);
+	spindle_rulebase_coref_dump(rules);
 	return 0;
 }
 

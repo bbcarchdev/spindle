@@ -122,3 +122,18 @@ spindle_rulebase_coref_add_(SPINDLERULES *rules, const char *candidate, const st
 	return 1;
 }
 
+int
+spindle_rulebase_coref_dump(SPINDLERULES *rules)
+{
+	size_t c;
+
+	if(rules->match_types)
+	{
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": match types:\n");
+		for(c = 0; rules->match_types[c].predicate; c++)
+		{
+			twine_logf(LOG_DEBUG, PLUGIN_NAME ": %d: <%s>\n", (int) c, rules->match_types[c]);
+		}
+	}
+	return 0;
+}
