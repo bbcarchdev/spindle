@@ -22,7 +22,7 @@ DIST_SUBDIRS = m4 twine quilt docbook-html5 docs
 
 SUBDIRS = twine quilt migrate docs
 
-EXTRA_DIST = LICENSE-2.0
+EXTRA_DIST = LICENSE-2.0 README.md
 
 BRANCH ?= develop
 DOCS_BRANCH ?= gh-pages
