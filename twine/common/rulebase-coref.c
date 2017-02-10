@@ -140,6 +140,11 @@ spindle_rulebase_coref_dump(SPINDLERULES *rules)
 		{
 			twine_logf(LOG_DEBUG, PLUGIN_NAME ": %d: <%s>\n", (int) c, rules->match_types[c]);
 		}
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": matching predicates (%d entries):\n", (int) rules->corefcount);
+		for(c = 0; c < rules->corefcount; c++)
+		{
+			twine_logf(LOG_DEBUG, PLUGIN_NAME ": %d: <%s>\n", (int) c, rules->coref[c].predicate);
+		}
 	}
 	return 0;
 }
