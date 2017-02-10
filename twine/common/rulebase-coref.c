@@ -35,7 +35,7 @@ static int spindle_rulebase_coref_add_(SPINDLERULES *rules, const char *candidat
  * data and should be used to trigger matching.
  *
  * "match-type" is one of the spindle matching triples indicating what
- * sort of matching should occur - 
+ * sort of matching should occur - e.g., spindle:resourceMatch.
  *
  */
 int
@@ -46,10 +46,16 @@ spindle_rulebase_coref_add_node(SPINDLERULES *rules, const char *candidate, libr
 	size_t c;
 
 	/* If there are no match types defined, then there's no list to add
-	 * any candidates to.
+	 * any candidates to - this is because the match types list is only
+	 * available when the callback functions in spindle-generate (or
+	 * equivalent) are available.
 	 */
 	if(!rules->match_types)
 	{
+		/* However, we should still mark the candidate predicate as being
+		 * cacheable.
+		 */
+		spindle_rulebase_cachepred_add(rules, candidate);		
 		return 0;
 	}
 	if(!librdf_node_is_resource(matchnode))
