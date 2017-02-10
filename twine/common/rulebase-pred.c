@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2015 BBC
+ * Copyright (c) 2015-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -318,14 +318,14 @@ spindle_rulebase_pred_dump(SPINDLERULES *rules)
 		{
 			if(rules->predicates[c].matches[d].onlyfor)
 			{
-				twine_logf(LOG_DEBUG, PLUGIN_NAME "  +--> %d: <%s> (for <%s>)\n",
+				twine_logf(LOG_DEBUG, PLUGIN_NAME ":   +--> %d: <%s> (for <%s>)\n",
 						   rules->predicates[c].matches[d].priority,
 						   rules->predicates[c].matches[d].predicate,
 						   rules->predicates[c].matches[d].onlyfor);
 			}
 			else
 			{
-				twine_logf(LOG_DEBUG, PLUGIN_NAME "  +--> %d: <%s>\n",
+				twine_logf(LOG_DEBUG, PLUGIN_NAME ":   +--> %d: <%s>\n",
 						   rules->predicates[c].matches[d].priority,
 						   rules->predicates[c].matches[d].predicate);
 			}
