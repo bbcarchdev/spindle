@@ -51,6 +51,10 @@
 @prefix odrl: <http://www.w3.org/ns/odrl/2/> .
 @prefix wdrs: <http://www.w3.org/2007/05/powder-s#> .
 @prefix lio: <http://purl.org/net/lio#> .
+@prefix bibo: <http://purl.org/ontology/po/> .
+@prefix media: <http://purl.org/media#> .
+@prefix video: <http://purl.org/media/video#> .
+@prefix audio: <http://purl.org/media/audio#> .
 
 #### Co-reference predicates
 
@@ -194,26 +198,100 @@ frbr:Work
 		olo:index 80 ;
 		rdfs:label "Creative work"@en .
 
+<http://dbpedia.org/ontology/Work> spindle:expressedAs frbr:Work .
+schema:CreativeWork spindle:expressedAs frbr:Work .
+bibo:Document spindle:expressedAs frbr:Work .
+
+# AV works
+
 po:Clip
 	spindle:expressedAs frbr:Work ;
 	spindle:prominence 15 .
+	
 po:Episode
 	spindle:expressedAs frbr:Work ;
 	spindle:prominence 25 .
+schema:Episode
+	spindle:expressedAs frbr:Work ;
+    spindle:prominence 25 .
+
+schema:Movie
+	spindle:expressedAs frbr:Work ;
+	spindle:prominence 30 .
+
 po:Version
 	spindle:expressedAs frbr:Work ;
 	spindle:prominence -50 .
-po:OriginalVersion spindle:expressedAs frbr:Work .
-po:Programme spindle:expressedAs frbr:Work .
+
+po:OriginalVersion
+	spindle:expressedAs frbr:Work ;
+	spindle:prominence -50 .
+
 po:Brand
 	spindle:expressedAs frbr:Work ;
 	spindle:prominence 30 .
-po:Series spindle:expressedAs frbr:Work ;
+
+po:Series
+	spindle:expressedAs frbr:Work ;
 	spindle:prominence 30 .
+schema:TVSeries
+	spindle:expressedAs frbr:Work ;
+	spindle:prominence 30 .
+
+schema:MusicComposition
+	spindle:expressedAs frbr:Work ;
+	spindle:prominence 30 .
+
+po:Programme spindle:expressedAs frbr:Work .
 po:ProgrammeItem spindle:expressedAs frbr:Work .
-<http://www.tate.org.uk/ontologies/collection#Artwork> spindle:expressedAs frbr:Work .
-<http://dbpedia.org/ontology/Work> spindle:expressedAs frbr:Work .
-schema:CreativeWork spindle:expressedAs frbr:Work .
+
+# Written works
+
+bibo:Article
+	spindle:expressedAs frbr:Work ;
+	spindle:prominence 25 .
+
+bibo:AcademicArticle
+	spindle:expressedAs frbr:Work ;
+	spindle:prominence 25 .
+
+bibo:Book
+	spindle:expressedAs frbr:Work ;
+	spindle:prominence 30 .
+
+bibo:BookSection
+	spindle:expressedAs frbr:Work .
+
+bibo:Brief
+	spindle:expressedAs frbr:Work .
+
+bibo:Chapter
+	spindle:expressedAs frbr:Work .
+
+bibo:BookSection
+	spindle:expressedAs frbr:Work .
+	
+# Pictures
+
+schema:VisualArtwork
+	spindle:expressedAs frbr:Work ;
+	spindle:prominence 30 .
+
+<http://www.tate.org.uk/ontologies/collection#Artwork>
+	spindle:expressedAs frbr:Work ;
+	spindle:prominence 30 .
+
+bibo:Image
+	spindle:expressedAs frbr:Work ;
+	spindle:prominence 30 .
+
+schema:Painting
+	spindle:expressedAs frbr:Work ;
+	spindle:prominence 30 .
+	
+schema:Photograph
+	spindle:expressedAs frbr:Work ;
+	spindle:prominence 30 .
 
 ## Digital objects
 
@@ -222,16 +300,41 @@ foaf:Document
 		olo:index 90 ;
 		rdfs:label "Digital object"@en .
 
+frbr:Expression spindle:expressedAs foaf:Document .
+schema:DigitalDocument spindle:expressedAs foaf:Document .
+
+# Text
+
+dcmitype:Text spindle:expressedAs foaf:Document .
+schema:Book spindle:expressedAs foaf:Document .
+schema:Article spindle:expressedAs foaf:Document .
+
+# Video
+
+dcmitype:MovingImage spindle:expressedAs foaf:Document .
+schema:VideoObject spindle:expressedAs foaf:Document .
+video:Recording spindle:expressedAs foaf:Document .
+
+# Audio
+
+dcmitype:Sound spindle:expressedAs foaf:Document .
+audio:Recording spindle:expressedAs foaf:Document .
+
+# Still images
+
 foaf:Image spindle:expressedAs foaf:Document .
 dcmitype:Image spindle:expressedAs foaf:Document .
 dcmitype:StillImage spindle:expressedAs foaf:Document .
-dcmitype:Text spindle:expressedAs foaf:Document .
-dcmitype:Sound spindle:expressedAs foaf:Document .
-dcmitype:MovingImage spindle:expressedAs foaf:Document .
+
+# Interactive media
+
 dcmitype:InteractiveResource spindle:expressedAs foaf:Document .
-schema:Article spindle:expressedAs foaf:Document .
-schema:Painting spindle:expressedAs foaf:Document .
-schema:Book spindle:expressedAs foaf:Document .
+
+# Software
+
+dcmitype:Software spindle:expressedAs foaf:Document .
+schema:SoftwareApplication spindle:expressedAs foaf:Document .
+schema:SoftwareSourceCode spindle:expressedAs foaf:Document .
 
 #### Property rules
 
@@ -398,6 +501,21 @@ foaf:thumbnail spindle:property [
 	spindle:expressedAs foaf:depiction
 ] .
 
+media:depiction spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:depiction
+] .
+
+media:thumbnail spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:depiction
+] .
+
+po:depiction spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:depiction
+] .
+
 <http://www.tate.org.uk/ontologies/collection#thumbnailUrl> spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs foaf:depiction
@@ -506,7 +624,6 @@ lio:location spindle:property [
 	spindle:expressedAs foaf:topic
 ] .
 
-# (for shakespeare data)
 po:subject spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs foaf:topic
@@ -526,30 +643,6 @@ foaf:depicts spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs foaf:topic
 ] .
-# --
-
-## void:inDataset
-
-void:inDataset
-	a spindle:Property ;
-	olo:index 9 ;
-	spindle:expect rdfs:Resource ;
-	spindle:proxyOnly true .
-
-void:inDataset spindle:property [
-	olo:index 0 ;
-	spindle:expressedAs void:inDataset
-] .
-
-## We don't current support range restrictions in the rule-base, which would
-## only make sense when spindle:proxyOnly is true, so we can't use this rule
-## at the moment.
-##
-# dct:isPartOf spindle:property [
-#	olo:index 0 ;
-#	rdfs:range void:Dataset ;
-#	spindle:expressedAs void:inDataset
-#] .
 
 ## dct:isPartOf
 
@@ -580,6 +673,11 @@ po:broadcast_on spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs dct:isPartOf ;
 	rdfs:domain event:Event
+] .
+
+void:inDataset spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs dct:isPartOf
 ] .
 
 ## dct:hasVersion
@@ -748,6 +846,12 @@ gn:wikipediaArticle spindle:property [
 	spindle:expressedAs foaf:page
 ] .
 
+wdrs:describedBy spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs foaf:page
+] .
+
+
 ## dct:rights
 
 dct:rights
@@ -814,8 +918,12 @@ mrss:content spindle:property [
 	spindle:expressedAs mrss:content
 ] .
 
-## This is how IIIF manifest files are linked in Wellcome
-wdrs:describedBy spindle:property [
+media:download spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs mrss:content
+] .
+
+frbr:expression spindle:property [
 	olo:index 0 ;
 	spindle:expressedAs mrss:content
 ] .
