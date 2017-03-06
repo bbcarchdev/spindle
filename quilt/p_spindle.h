@@ -97,7 +97,7 @@ struct query_struct
 	const char *lang;
 	/* Related media query */
 	const char *media;
-	const char **audience;
+	const char *const *audience;
 	const char *type;
 	/* Query bounds */   
 	int limit;
@@ -137,6 +137,8 @@ int spindle_item_related(QUILTREQ *request);
 int spindle_lookup(QUILTREQ *req, const char *uri);
 
 int spindle_add_concrete(QUILTREQ *request);
+
+int spindle_array_contains(const char *const *array, const char *value);
 
 /* Initialise a query structure */
 int spindle_query_init(struct query_struct *dest);

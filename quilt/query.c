@@ -3,7 +3,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2016 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -590,9 +590,9 @@ spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struc
 			strcpy(p, query->type);
 			p = strchr(p, 0);
 		}
-		if(query->audience && !array_contains(query->audience, "any"))
+		if(query->audience && !spindle_array_contains(query->audience, "any"))
 		{
-			if(array_contains(query->audience, "all"))
+			if(spindle_array_contains(query->audience, "all"))
 			{
 				strcpy(p, " available to everyone");
 				p = strchr(p, 0);

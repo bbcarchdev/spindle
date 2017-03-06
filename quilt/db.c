@@ -341,52 +341,34 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	return process_rs(request, query, rs);
 }
 
-/* array_contains(array, string);
- * Returns 1 if the array contains the string
- * Otherwise 0
- */
-int array_contains(char **array, const char *string)
-{
-	size_t i=0;
-	while(array && array[i] != NULL) {
-		if(!strcmp(array[i++], string))
-		{
-			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s TRUE\n", string);
-			return 1;
-		}
-	}
-	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s FALSE\n", string);
-	return 0;
-}
-
-
 static int
 spindle_query_db_media_(struct db_qbuf_struct *qbuf, struct query_struct *query)
 {
+	size_t i;
+
 	if(query->media)
 	{
 		/* Any media query */
-		if(array_contains(query->audience, "all"))
+		if(spindle_array_contains(query->audience, "all"))
 		{
 			/* If the audience is 'all' (the default), we only return media
 			 * available to the public.
 			 */
 			appendf(qbuf, " AND \"m\".\"audience\" IS NULL");
 		}
-		else if(!array_contains(query->audience, "any"))
+		else if(!spindle_array_contains(query->audience, "any"))
 		{
 			/* If the audience is not 'all' and is not 'any', then we filter by
 			 * media available to the public, or to the specified audiences
 			 * Handling multi value parameters for audience
 			 */
 			appendf(qbuf, " AND (\"m\".\"audience\" IS NULL");
-			size_t i=0;
-			while(query->audience && query->audience[i]) {
+			for(i = 0; query->audience && query->audience[i]; i++)
+			{
 				quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db_media_ adding audience %s'\n", query->audience[i]);
 				appendf(qbuf, " OR \"m\".\"audience\" = %%Q");
 				qbuf->args[qbuf->n] = query->audience[i];
 				qbuf->n++;
-				i++;
 			}
 			appendf(qbuf, " )");
 		}
