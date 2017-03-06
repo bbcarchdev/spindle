@@ -24,7 +24,7 @@
 
 #include "p_spindle.h"
 
-struct qbuf_struct
+struct db_qbuf_struct
 {
 	char *buf;
 	char *bp;
@@ -61,10 +61,10 @@ static int add_langvector(librdf_model *model, librdf_node *graph, const char *v
 static int add_array(librdf_model *model, librdf_node *graph, const char *array, const char *subject, const char *predicate, int reverse);
 static int add_point(librdf_model *model, librdf_node *graph, const char *array, const char *subject);
 
-/* Append a formatted string to a qbuf_struct */
-static int appendf(struct qbuf_struct *qbuf, const char *fmt, ...);
+/* Append a formatted string to a db_qbuf_struct */
+static int appendf(struct db_qbuf_struct *qbuf, const char *fmt, ...);
 
-static int spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query);
+static int spindle_query_db_media_(struct db_qbuf_struct *qbuf, struct query_struct *query);
 
 /* Render a db_item_struct into a model */
 static int spindle_item_db_render_(struct db_item_struct *item);
@@ -89,13 +89,13 @@ const char *default_audience[2] = {"all", NULL};
 int
 spindle_query_db(QUILTREQ *request, struct query_struct *query)
 {
-	struct qbuf_struct qbuf;
+	struct db_qbuf_struct qbuf;
 	size_t c;
 	SQL_STATEMENT *rs;
 	const char *related, *collection;
 	int rankflags;
 
-	memset(&qbuf, 0, sizeof(struct qbuf_struct));
+	memset(&qbuf, 0, sizeof(struct db_qbuf_struct));
 	related = NULL;
 	collection = NULL;
 	if(query->related)
@@ -361,7 +361,7 @@ int array_contains(char **array, const char *string)
 
 
 static int
-spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query)
+spindle_query_db_media_(struct db_qbuf_struct *qbuf, struct query_struct *query)
 {
 	if(query->media)
 	{
@@ -1241,7 +1241,7 @@ add_langvector(librdf_model *model, librdf_node *graph, const char *vector, cons
 }
 
 static int
-appendf(struct qbuf_struct *qbuf, const char *fmt, ...)
+appendf(struct db_qbuf_struct *qbuf, const char *fmt, ...)
 {
 	char *p;
 	va_list ap;
