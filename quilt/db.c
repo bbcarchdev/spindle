@@ -3,7 +3,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -34,15 +34,26 @@ struct qbuf_struct
 	size_t n;
 };
 
+struct db_item_struct
+{
+	QUILTREQ *request;
+	librdf_model *model;
+	librdf_node *graph;
+	const char *id;
+	const char *subject;
+	const char *sameas;
+};
+
 static int process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs);
 static int process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item, int index);
 static const char *checklang(QUILTREQ *request, const char *lang);
 static int add_langvector(librdf_model *model, const char *vector, const char *subject, const char *predicate);
-static int add_array(librdf_model *model, const char *array, const char *subject, const char *predicate);
+static int add_array(librdf_model *model, librdf_node *graph, const char *array, const char *subject, const char *predicate, int reverse);
 static int add_point(librdf_model *model, const char *array, const char *subject);
 static int appendf(struct qbuf_struct *qbuf, const char *fmt, ...);
 static int process_membership_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item);
 static int spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query);
+static int spindle_item_db_render_(struct db_item_struct *item);
 
 /* Short names for media classes which can be used for convenience */
 struct mediamatch_struct spindle_mediamatch[] = {
@@ -383,6 +394,81 @@ spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query)
 	return 0;
 }
 
+/* For a given item, populate the model with information about it from the
+ * index; this is used if cached N-Quads are not available.
+ *
+ * The result is an HTTP response code (200 for success).
+ */
+int
+spindle_item_db(QUILTREQ *request)
+{
+	size_t c;
+	const char *id, *t;
+	struct db_item_struct item;
+	SQL_STATEMENT *rs;
+
+	/* Extract the UUID from the request-URI */
+	c = strlen(request->base);
+	if(!strncmp(request->subject, request->base, c))
+	{
+		id = request->subject + c;
+		while(id[0] == '/')
+		{
+			id++;
+		}
+		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": DB: item: '%s'\n", id);
+		if(strlen(id) != 32)
+		{
+			return 404;
+		}
+	}
+	else
+	{
+		return 404;
+	}
+	/* Populate a db_item_struct based upon the data that's available. The
+	 * structure has space for the various index fields (in their raw form
+	 * as returned by the database).
+	 * We query first for an actual proxy entry: if this doesn't exist, then
+	 * we can return a 404. This will give us just the co-references and
+	 * confirm the local identifier is known to us.
+	 *
+	 * Next, we can fetch index data. If this fails, we just leave the
+	 * db_item_struct populated with only the co-references: it just means
+	 * the entity hasn't been indexed yet and so no further detail is
+	 * available (this is preferable to returning a 404 for the item).
+	 *
+	 * Finally, we can invoke spindle_item_db_render_() to populate the
+	 * model based upon the contents of the db_item_struct.
+	 */
+	memset(&item, 0, sizeof(struct db_item_struct));
+	item.request = request;
+	item.model = request->model;
+	item.graph = NULL; /* XXX should use the proxy graph */
+	item.id = id;
+	rs = sql_queryf(spindle_db, "SELECT \"sameas\" FROM \"proxy\" WHERE \"id\" = %Q", item.id);
+	if(!rs)
+	{
+		return 500;
+	}
+	if(sql_stmt_eof(rs))
+	{
+		sql_stmt_destroy(rs);
+		return 404;
+	}
+	t = sql_stmt_str(rs, 0);
+	if(!t)
+	{
+		sql_stmt_destroy(rs);
+		return 404;
+	}
+	item.sameas = (const char *) strdup(t);
+	sql_stmt_destroy(rs);
+	spindle_item_db_render_(&item);
+	free((char *) (item.sameas));
+	return 200;
+}
+
 /* For a given item, determine what collections (if any) this item is part
  * of.
  */
@@ -713,7 +799,7 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	s = sql_stmt_str(rs, 1);
 	if(s)
 	{
-		add_array(request->model, s, uri, NS_RDF "type");
+		add_array(request->model, NULL, s, uri, NS_RDF "type", 0);
 	}
 
 	/* geo:lat, geo:long */
@@ -753,7 +839,7 @@ process_membership_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, con
 
 /* Add a URI array to the model */
 static int
-add_array(librdf_model *model, const char *array, const char *subject, const char *predicate)
+add_array(librdf_model *model, librdf_node *graph, const char *array, const char *subject, const char *predicate, int reverse)
 {
 	librdf_statement *st;
 	char *buf, *p;
@@ -823,8 +909,22 @@ add_array(librdf_model *model, const char *array, const char *subject, const cha
 		*p = 0;
 		if(*buf)
 		{
-			st = quilt_st_create_uri(subject, predicate, buf);
-			librdf_model_add_statement(model, st);
+			if(reverse)
+			{
+				st = quilt_st_create_uri(buf, predicate, subject);
+			}
+			else
+			{
+				st = quilt_st_create_uri(subject, predicate, buf);
+			}
+			if(graph)
+			{
+				librdf_model_context_add_statement(model, graph, st);
+			}
+			else
+			{
+				librdf_model_add_statement(model, st);
+			}
 			librdf_free_statement(st);
 		}
 	}
@@ -1175,4 +1275,48 @@ checklang(QUILTREQ *req, const char *lang)
 		return "gd_gb";
 	}
 	return NULL;
+}
+
+/* Render (materialise) the contents of a db_item_struct as RDF into
+ * a model.
+ *
+ * Note that many of the fields are optional, and won't be provided if
+ * the data isn't available at the time of rendering; this function is
+ * intended to materialise as much as is available -- missing data is
+ * not an error.
+ */
+
+int
+spindle_item_db_render_(struct db_item_struct *item)
+{
+	char *subj;
+	QUILTCANON *selfc;
+
+	quilt_logf(LOG_DEBUG, "DB: render '%s'\n", item->id);
+	if(item->subject)
+	{
+		subj = NULL;
+	}
+	else
+	{
+		selfc = quilt_canon_create(item->request->canonical);
+		quilt_canon_reset_path(selfc);
+		quilt_canon_reset_params(selfc);
+		quilt_canon_set_fragment(selfc, "id");
+		quilt_canon_add_path(selfc, item->id);		
+		subj = quilt_canon_str(selfc, QCO_SUBJECT);
+		quilt_canon_destroy(selfc);
+		selfc = NULL;
+		item->subject = subj;
+	}
+	if(item->sameas)
+	{
+		add_array(item->model, item->graph, item->sameas, item->subject, NS_OWL "sameAs", 1);
+	}
+	if(subj)
+	{
+		item->subject = NULL;
+		free(subj);
+	}
+	return 0;
 }
