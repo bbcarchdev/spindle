@@ -42,17 +42,31 @@ struct db_item_struct
 	const char *id;
 	const char *subject;
 	const char *sameas;
+	const char *classes;
+	const char *titles;
+	const char *descriptions;
+	const char *coords;
 };
 
 static int process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs);
 static int process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item, int index);
 static const char *checklang(QUILTREQ *request, const char *lang);
-static int add_langvector(librdf_model *model, const char *vector, const char *subject, const char *predicate);
-static int add_array(librdf_model *model, librdf_node *graph, const char *array, const char *subject, const char *predicate, int reverse);
-static int add_point(librdf_model *model, const char *array, const char *subject);
-static int appendf(struct qbuf_struct *qbuf, const char *fmt, ...);
 static int process_membership_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item);
+
+
+/* Utilities for parsing specific kinds of data types and materialising
+ * them as quads or triples
+ */
+static int add_langvector(librdf_model *model, librdf_node *graph, const char *vector, const char *subject, const char *predicate);
+static int add_array(librdf_model *model, librdf_node *graph, const char *array, const char *subject, const char *predicate, int reverse);
+static int add_point(librdf_model *model, librdf_node *graph, const char *array, const char *subject);
+
+/* Append a formatted string to a qbuf_struct */
+static int appendf(struct qbuf_struct *qbuf, const char *fmt, ...);
+
 static int spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query);
+
+/* Render a db_item_struct into a model */
 static int spindle_item_db_render_(struct db_item_struct *item);
 
 /* Short names for media classes which can be used for convenience */
@@ -464,7 +478,20 @@ spindle_item_db(QUILTREQ *request)
 	}
 	item.sameas = (const char *) strdup(t);
 	sql_stmt_destroy(rs);
+	/* Attempt to fetch index information about the item */
+	rs = sql_queryf(spindle_db, "SELECT \"classes\", \"title\", \"description\", \"coordinates\" FROM \"index\" WHERE \"id\" = %Q", item.id);
+	if(rs && !sql_stmt_eof(rs))
+	{
+		item.classes = sql_stmt_str(rs, 0);
+		item.titles = sql_stmt_str(rs, 1);
+		item.descriptions = sql_stmt_str(rs, 2);
+		item.coords = sql_stmt_str(rs, 3);
+	}
 	spindle_item_db_render_(&item);
+	if(rs)
+	{
+		sql_stmt_destroy(rs);
+	}
 	free((char *) (item.sameas));
 	return 200;
 }
@@ -650,7 +677,7 @@ spindle_audiences_db(QUILTREQ *request, struct query_struct *query)
 		librdf_free_statement(st);
 		if(title)
 		{
-			add_langvector(request->model, title, audience, NS_RDFS "label");
+			add_langvector(request->model, NULL, title, audience, NS_RDFS "label");
 		}
 		free(deststr);
 	}
@@ -785,14 +812,14 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	s = sql_stmt_str(rs, 2);
 	if(s)
 	{
-		add_langvector(request->model, s, uri, NS_RDFS "label");
+		add_langvector(request->model, NULL, s, uri, NS_RDFS "label");
 	}
 
 	/* rdfs:comment */
 	s = sql_stmt_str(rs, 3);
 	if(s)
 	{
-		add_langvector(request->model, s, uri, NS_RDFS "comment");
+		add_langvector(request->model, NULL, s, uri, NS_RDFS "comment");
 	}
 
 	/* rdf:type */
@@ -806,7 +833,7 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	s = sql_stmt_str(rs, 4);
 	if(s)
 	{
-		add_point(request->model, s, uri);
+		add_point(request->model, NULL, s, uri);
 	}
 	free(uri);
 	quilt_canon_destroy(slot);
@@ -935,7 +962,7 @@ add_array(librdf_model *model, librdf_node *graph, const char *array, const char
 
 /* Add a point to the model */
 static int
-add_point(librdf_model *model, const char *array, const char *subject)
+add_point(librdf_model *model, librdf_node *graph, const char *array, const char *subject)
 {
 	char *buf, *p;
 	int q, e;
@@ -1030,12 +1057,26 @@ add_point(librdf_model *model, const char *array, const char *subject)
 	}	
 	st = quilt_st_create(subject, NS_GEO "lat");
 	librdf_statement_set_object(st, coords[0]);
-	librdf_model_add_statement(model, st);
+	if(graph)
+	{
+		librdf_model_context_add_statement(model, graph, st);
+	}
+	else
+	{
+		librdf_model_add_statement(model, st);
+	}
 	librdf_free_statement(st);
 
 	st = quilt_st_create(subject, NS_GEO "long");
 	librdf_statement_set_object(st, coords[1]);
-	librdf_model_add_statement(model, st);
+	if(graph)
+	{
+		librdf_model_context_add_statement(model, graph, st);
+	}
+	else
+	{
+		librdf_model_add_statement(model, st);
+	}
 	librdf_free_statement(st);
 
 	librdf_free_uri(type);
@@ -1044,7 +1085,7 @@ add_point(librdf_model *model, const char *array, const char *subject)
 
 /* Add a language=>literal PostgreSQL vector to the model */
 static int
-add_langvector(librdf_model *model, const char *vector, const char *subject, const char *predicate)
+add_langvector(librdf_model *model, librdf_node *graph, const char *vector, const char *subject, const char *predicate)
 {
 	librdf_statement *st;
 	char *buf, *lang, *value, *p;
@@ -1185,7 +1226,14 @@ add_langvector(librdf_model *model, const char *vector, const char *subject, con
 			}
 		}
 		st = quilt_st_create_literal(subject, predicate, value, lang);
-		librdf_model_add_statement(model, st);
+		if(graph)
+		{
+			librdf_model_context_add_statement(model, graph, st);
+		}
+		else
+		{
+			librdf_model_add_statement(model, st);
+		}
 		librdf_free_statement(st);
 	}
 	free(buf);
@@ -1312,6 +1360,22 @@ spindle_item_db_render_(struct db_item_struct *item)
 	if(item->sameas)
 	{
 		add_array(item->model, item->graph, item->sameas, item->subject, NS_OWL "sameAs", 1);
+	}
+	if(item->classes)
+	{
+		add_array(item->model, item->graph, item->classes, item->subject, NS_RDF "type", 0);
+	}
+	if(item->titles)
+	{
+		add_langvector(item->model, item->graph, item->titles, item->subject, NS_RDFS "label");
+	}
+	if(item->descriptions)
+	{
+		add_langvector(item->model, item->graph, item->descriptions, item->subject, NS_RDFS "comment");
+	}
+	if(item->coords)
+	{
+		add_point(item->model, item->graph, item->coords, item->subject);
 	}
 	if(subj)
 	{
