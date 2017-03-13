@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2016 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               24
+#define DB_SCHEMA_VERSION               25
 
 static int spindle_db_migrate_(SQL *restrict, const char *identifier, int newversion, void *restrict userdata);
 
@@ -493,6 +493,14 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 			return -1;
 		}
 		if(sql_execute(sql, "CREATE INDEX \"licenses_audiences_audienceid\" ON \"licenses_audiences\" (\"audienceid\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 25)
+	{
+		if(sql_execute(sql, "DELETE FROM \"membership\" WHERE \"id\" = \"collection\""))
 		{
 			return -1;
 		}
