@@ -976,4 +976,3 @@ odrl:assignee
 odrl:assignee
 	olo:index 0 ;
 	spindle:expressedAs odrl:assignee .
-

@@ -3,7 +3,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -55,6 +55,13 @@ spindle_item(QUILTREQ *request)
 	else
 	{
 		r = spindle_item_sparql(request);
+	}
+	if(r != 200 && spindle_db)
+	{
+		/* If no data was retrieved from caches, synthesise it
+		 * from the database (#106)
+		 */
+		r = spindle_item_db(request);
 	}
 	if(r != 200)
 	{

@@ -275,6 +275,7 @@ spindle_index_membership_add_(SQL *sql, const char *id, const char *collid)
 {
 	SQL_STATEMENT *rs;
 
+	// Check if the relation is already there
 	rs = sql_queryf(sql, "SELECT \"id\" FROM \"membership\" WHERE \"id\" = %Q AND \"collection\" = %Q", id, collid);
 	if(!rs)
 	{
@@ -286,10 +287,27 @@ spindle_index_membership_add_(SQL *sql, const char *id, const char *collid)
 		return 0;
 	}
 	sql_stmt_destroy(rs);
+
+	 // Ensure we won't create a loop by adding it.
+	rs = sql_queryf(sql, "SELECT \"id\" FROM \"membership\" WHERE \"id\" = %Q AND \"collection\" = %Q", collid, id);
+	if(!rs)
+	{
+		return -1;
+	}
+	if(!sql_stmt_eof(rs))
+	{
+		sql_stmt_destroy(rs);
+		return 0;
+	}
+	sql_stmt_destroy(rs);
+
+	// Add the direct relation
 	if(sql_executef(sql, "INSERT INTO \"membership\" (\"id\", \"collection\") VALUES (%Q, %Q)", id, collid))
 	{
 		return -1;
 	}
+
+	// Recursively add all the membership
 	rs = sql_queryf(sql, "SELECT \"collection\" FROM \"membership\" WHERE \"id\" = %Q", collid);
 	if(!rs)
 	{
@@ -302,4 +320,3 @@ spindle_index_membership_add_(SQL *sql, const char *id, const char *collid)
 	sql_stmt_destroy(rs);
 	return 0;
 }
-
