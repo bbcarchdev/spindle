@@ -78,10 +78,6 @@ spindle_generate(SPINDLEGENERATE *generate, const char *identifier, int mode)
 	{
 		r = spindle_generate_entry_(&data);
 	}
-	if(!r)
-	{
-		spindle_trigger_apply(&data);
-	}
 	spindle_entry_cleanup(&data);
 	if(r)
 	{
@@ -309,11 +305,18 @@ spindle_generate_entry_(SPINDLEENTRY *entry)
 		return -1;
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] store generated entry\n", gettimediffms(&start));
+	/* Update the state of the entry */
 	if(spindle_generate_state_update_(entry) < 0)
 	{
 		return -1;
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update entry state\n", gettimediffms(&start));
+	/* Apply the triggers to update the state of target entries */
+	if(spindle_trigger_apply(entry) < 0)
+	{
+		return -1;
+	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] apply triggers\n", gettimediffms(&start));
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": generation complete for <%s>\n", entry->localname);
 	return 0;
 }

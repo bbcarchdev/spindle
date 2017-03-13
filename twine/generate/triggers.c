@@ -74,33 +74,36 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 {
 	SQL_STATEMENT *rs;
 	int flags;
+	char *id;
 	
 	if(!entry->generate->db)
 	{
 		return 0;
 	}
-	rs = sql_queryf(entry->generate->db, "SELECT \"id\", \"flags\", \"triggerid\" FROM \"triggers\" WHERE \"triggerid\" = %Q", entry->id);
+	rs = sql_queryf(entry->generate->db, "SELECT \"id\", \"flags\", \"triggerid\" FROM \"triggers\" WHERE \"triggerid\" = %Q AND \"triggerid\" <> \"id\"", entry->id);
 	if(!rs)
 	{
 		return -1;
 	}
 	for(; !sql_stmt_eof(rs); sql_stmt_next(rs))
 	{
-		/* Never apply a trigger to the entry itself */
-		if(!strcmp(sql_stmt_str(rs, 0), sql_stmt_str(rs, 2)))
-		{
-			continue;
-		}
+		// Get the id of the target
+		id = sql_stmt_str(rs, 0);
+
+		// Get the flags to apply
 		flags = (int) sql_stmt_long(rs, 1);
-		if(!flags)
-		{
-			flags = -1;
-		}
+
 		/* Trigger updates that have this entry's flag in scope */
 		if (entry->flags & flags)
 		{
-			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q WHERE \"id\" = %Q", "DIRTY", sql_stmt_str(rs, 0));
-			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"flags\" = \"flags\" | %d WHERE \"id\" = %Q AND \"flags\" <> 0", flags, sql_stmt_str(rs, 0));
+			// Do a logical OR if there is already a trigger scheduled (status = DIRTY and flags <> 0)
+			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"flags\" = \"flags\" | %d WHERE \"id\" = %Q AND \"flags\" <> 0 AND \"status\" = 'DIRTY'", flags, id);
+
+			// Set the flag in case we set a previously completed or rejected resource (status != DIRTY)
+			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"flags\" = %d WHERE \"id\" = %Q AND \"status\" <> 'DIRTY'", flags, id);
+
+			// Set the target as DIRTY
+			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q WHERE \"id\" = %Q", "DIRTY", id);
 		}
 	}
 	
@@ -135,7 +138,17 @@ spindle_triggers_update(SPINDLEENTRY *data)
 	return 0;
 }
 
-/* Add the set of trigger URIs to the database */
+/* Add the set of trigger URIs to the database
+ * Checks the trigger doesnt already exist to prevent trigger loop.
+ * Adds an entry to triggers for id, uri, flags, triggerid
+ * args:
+ *   sql - libsql handle
+ *   id
+ *   data - Spindle Entry
+ * Returns:
+ *   0 on success
+ *   -1 on failure
+ */
 int
 spindle_triggers_index(SQL *sql, const char *id, SPINDLEENTRY *data)
 {

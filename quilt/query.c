@@ -3,7 +3,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
 static char *spindle_query_subjtitle_(QUILTREQ *request, const char *primary, const char *secondary);
 static int spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struct *query);
 
+
 /* Initialise a query_struct */
 int
 spindle_query_init(struct query_struct *dest)
@@ -47,7 +48,7 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 	{
 		dest->explicit = 1;
 		quilt_canon_set_param(request->canonical, "q", t);
-	}		
+	}
 	t = quilt_request_getparam(request, "class");
 	if(t)
 	{
@@ -66,7 +67,7 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 	}
 	dest->limit = request->limit;
 	if(request->limit != request->deflimit)
-	{		
+	{
 		quilt_canon_set_param_int(request->canonical, "limit", request->limit);
 	}
 	dest->text = quilt_request_getparam(request, "q");
@@ -80,15 +81,16 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 	{
 		quilt_canon_set_param(request->canonical, "media", dest->media);
 	}
-	dest->audience = quilt_request_getparam(request, "for");
+
+	// Process for= parameters
+	dest->audience = quilt_request_getparam_multi(request, "for");
 	if(dest->audience)
 	{
+		// Put the array of for= params in the request
+		quilt_canon_set_param_multi(request->canonical, "for", dest->audience);
 		dest->explicit = 1;
 	}
-	if(dest->audience && strcmp(dest->audience, "all"))
-	{
-		quilt_canon_set_param(request->canonical, "for", dest->audience);
-	}
+
 	dest->type = quilt_request_getparam(request, "type");
 	if(dest->type)
 	{
@@ -319,6 +321,10 @@ spindle_query_osd(QUILTREQ *request)
 	if(request->home)
 	{
 		/* Add VoID descriptive metadata */	
+		st = quilt_st_create_uri(self, NS_RDF "type", NS_VOID "Dataset");
+		librdf_model_context_add_statement(request->model, request->basegraph, st);
+		librdf_free_statement(st);
+		
 		link = quilt_canon_create(request->canonical);
 		quilt_canon_reset_params(link);
 		quilt_canon_add_param(link, "uri", "");
@@ -418,7 +424,7 @@ spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struc
 	size_t len, c;
 	char *buf, *p, *title_en_gb;
 	int sing;
-	
+
 	title_en_gb = NULL;
 	if(request->indextitle)
 	{
@@ -457,7 +463,7 @@ spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struc
 		/* which have related ... media */
 		len += 25;
 		if(query->media)
-		{			
+		{
 			len += strlen(query->media) + 2;
 		}
 		if(query->type)
@@ -468,7 +474,11 @@ spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struc
 		if(query->audience)
 		{
 			/* available to [everyone | <audience>] */
-			len += strlen(query->audience) + 22;
+			size_t i=0;
+			while(query->audience && (query->audience[i] != NULL)) {
+				len += strlen(query->audience[i]) + 22;
+				i++;
+			}
 		}
 	}
 	buf = (char *) malloc(len + 1);
@@ -580,9 +590,9 @@ spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struc
 			strcpy(p, query->type);
 			p = strchr(p, 0);
 		}
-		if(query->audience && strcmp(query->audience, "any"))
+		if(query->audience && !spindle_array_contains(query->audience, "any"))
 		{
-			if(!strcmp(query->audience, "all"))
+			if(spindle_array_contains(query->audience, "all"))
 			{
 				strcpy(p, " available to everyone");
 				p = strchr(p, 0);
@@ -590,16 +600,21 @@ spindle_query_title_(QUILTREQ *request, const char *abstract, struct query_struc
 			else
 			{
 				strcpy(p, " available to <");
-				p = strchr(p, 0);
-				strcpy(p, query->audience);
-				p = strchr(p, 0);
-				*p = '>';
-				p++;
+				size_t i=0;
+				while(query->audience[i] != NULL)
+				{
+					strcat(p, query->audience[i++]);
+					if (query->audience[i] != NULL)
+					{
+						strcat(p, ", ");
+					}
+				}
+				strcat(p, ">");
 			}
 		}
 	}
 	*p = 0;
-	
+
 	st = quilt_st_create_literal(abstract, NS_RDFS "label", buf, "en-gb");
 	librdf_model_add_statement(request->model, st);
 	librdf_free_statement(st);

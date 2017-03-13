@@ -3,7 +3,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2016 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -67,6 +67,26 @@ quilt_plugin_init(void)
 	{
 		return -1;
 	}
+	return 0;
+}
+
+
+/* spindle_array_contains(array, string);
+ * Returns 1 if the array contains the string (via case-sensitive comprison)
+ * Otherwise 0
+ */
+int
+spindle_array_contains(const char *const *array, const char *string)
+{
+	size_t i=0;
+	while(array && array[i] != NULL) {
+		if(!strcmp(array[i++], string))
+		{
+			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s TRUE\n", string);
+			return 1;
+		}
+	}
+	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s FALSE\n", string);
 	return 0;
 }
 

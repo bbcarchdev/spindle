@@ -61,6 +61,7 @@ int spindle_rulebase_cachepred_cleanup(SPINDLERULES *rules);
 int spindle_rulebase_cachepred_dump(SPINDLERULES *rules);
 
 int spindle_rulebase_coref_add_node(SPINDLERULES *rules, const char *predicate, librdf_node *node);
+int spindle_rulebase_coref_dump(SPINDLERULES *rules);
 
 /* Database schema update */
 int spindle_db_schema_update_(SPINDLE *spindle);

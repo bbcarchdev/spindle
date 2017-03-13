@@ -3,7 +3,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ struct query_struct
 	const char *lang;
 	/* Related media query */
 	const char *media;
-	const char *audience;
+	const char *const *audience;
 	const char *type;
 	/* Query bounds */   
 	int limit;
@@ -138,6 +138,8 @@ int spindle_lookup(QUILTREQ *req, const char *uri);
 
 int spindle_add_concrete(QUILTREQ *request);
 
+int spindle_array_contains(const char *const *array, const char *value);
+
 /* Initialise a query structure */
 int spindle_query_init(struct query_struct *dest);
 /* Populate an empty query_struct from a QUILTREQ */
@@ -156,6 +158,7 @@ int spindle_query_db(QUILTREQ *request, struct query_struct *query);
 int spindle_lookup_db(QUILTREQ *request, const char *target);
 int spindle_audiences_db(QUILTREQ *request, struct query_struct *query);
 int spindle_membership_db(QUILTREQ *request);
+int spindle_item_db(QUILTREQ *request);
 
 /* SPARQL back-end */
 int spindle_query_sparql(QUILTREQ *request, struct query_struct *query);

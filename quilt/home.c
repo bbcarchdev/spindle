@@ -3,7 +3,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -59,6 +59,12 @@ spindle_home(QUILTREQ *request)
 	/* Add all of the indices as void:Datasets */
 	r = 0;
 	abstract = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
+	/* Add data describing the root dataset itself */
+	st = quilt_st_create_literal(abstract, NS_RDFS "label", "Research & Education Space", "en");
+	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_free_statement(st);
+	
+	/* Add class partitions */
 	partcanon = NULL;
 	partstr = NULL;
 	for(c = 0; spindle_indices[c].uri; c++)
@@ -146,7 +152,7 @@ spindle_home(QUILTREQ *request)
 	librdf_free_statement(st);	
 	st = quilt_st_create_uri(partstr, NS_RDF "type", NS_VOID "Dataset");
 	librdf_model_context_add_statement(request->model, request->basegraph, st);
-	librdf_free_statement(st);	
+	librdf_free_statement(st);
 	st = quilt_st_create_literal(partstr, NS_RDFS "label", "Audiences", "en-gb");
 	librdf_model_context_add_statement(request->model, request->basegraph, st);
 	librdf_free_statement(st);	
