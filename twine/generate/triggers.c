@@ -153,14 +153,25 @@ int
 spindle_triggers_index(SQL *sql, const char *id, SPINDLEENTRY *data)
 {
 	size_t c;
+	SQL_STATEMENT *rs;
 
 	for(c = 0; c < data->ntriggers; c++)
 	{
-		if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\", \"flags\", \"triggerid\""") VALUES (%Q, %Q, '%d', %Q)",
-			id, data->triggers[c].uri, data->triggers[c].kind, data->triggers[c].id))
+		// Check if we are about to create a loop
+		rs = sql_queryf(sql, "SELECT \"id\" FROM \"triggers\" WHERE \"id\" = %Q AND \"triggerid\" = %Q", data->triggers[c].id, id);
+		if(!rs)
 		{
 			return -1;
 		}
+		if (sql_stmt_eof(rs)) {
+			if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\", \"flags\", \"triggerid\""") VALUES (%Q, %Q, '%d', %Q)",
+				id, data->triggers[c].uri, data->triggers[c].kind, data->triggers[c].id))
+			{
+				sql_stmt_destroy(rs);
+				return -1;
+			}
+		}
+		sql_stmt_destroy(rs);
 	}
 	return 0;
 }

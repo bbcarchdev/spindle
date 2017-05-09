@@ -517,7 +517,10 @@ spindle_membership_db(QUILTREQ *request)
 	{
 		self = quilt_canon_str(request->canonical, QCO_NOEXT|QCO_FRAGMENT);
 	}
-	rs = sql_queryf(spindle_db, "SELECT \"collection\" FROM \"membership\" WHERE \"id\" = %Q", id);
+	/* #109: If we are generating the membership graph, we should use query
+	 * parameters for pagination, and ignore them otherwise
+	 */
+	rs = sql_queryf(spindle_db, "SELECT \"collection\" FROM \"membership\" WHERE \"id\" = %Q LIMIT %d", id, request->limit);
 	if(!rs)
 	{
 		free(self);
@@ -710,7 +713,7 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 		if(r > 0)
 		{
 			/* Only increment the count if a row was actually added to the model */
-			c++;		
+			c++;
 		}
 		quilt_canon_destroy(item);
 	}
