@@ -28,6 +28,7 @@ AWSS3BUCKET *spindle_bucket;
 char *spindle_cachepath;
 SQL *spindle_db;
 int spindle_s3_verbose;
+long spindle_s3_fetch_limit;
 
 static int spindle_cache_init_(void);
 static int spindle_cache_init_s3_(const char *bucket);
@@ -161,6 +162,10 @@ spindle_cache_init_s3_(const char *bucket)
 		aws_s3_set_secret(spindle_bucket, t);
 		free(t);
 	}
+
+	// As its in terms of kbs
+	spindle_s3_fetch_limit = 1024 * quilt_config_get_int("s3:fetch_limit", DEFAULT_SPINDLE_FETCH_LIMIT);
+
 	spindle_s3_verbose = quilt_config_get_bool("s3:verbose", 0);
 	return 0;
 }

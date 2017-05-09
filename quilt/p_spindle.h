@@ -39,6 +39,8 @@
 
 # define SPINDLE_THRESHOLD              40
 
+# define DEFAULT_SPINDLE_FETCH_LIMIT	( 2 * 1024 )
+
 # define MIME_NQUADS                    "application/n-quads"
 
 /* Namespaces */
