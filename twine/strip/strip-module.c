@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2017 BBC
+ * Copyright (c) 2014-2015 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -35,10 +35,6 @@ twine_plugin_init(void)
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to load rule-base\n");
 		return -1;
-	}
-	if(twine_config_get_bool(PLUGIN_NAME ":dumprules", twine_config_get_bool("spindle:dumprules", 0)))
-	{
-		spindle_rulebase_dump(rulebase);
 	}
 	twine_preproc_register("spindle", spindle_strip, rulebase);
 	twine_graph_register(PLUGIN_NAME, spindle_strip, rulebase);

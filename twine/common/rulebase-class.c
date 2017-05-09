@@ -167,7 +167,7 @@ spindle_rulebase_class_dump(SPINDLERULES *rules)
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": %d: <%s>\n", rules->classes[c].score, rules->classes[c].uri);
 		for(d = 0; d < rules->classes[c].matchcount; d++)
 		{
-			twine_logf(LOG_DEBUG, PLUGIN_NAME ":   +--> <%s>\n", rules->classes[c].match[d].uri);
+			twine_logf(LOG_DEBUG, PLUGIN_NAME "  +--> <%s>\n", rules->classes[c].match[d].uri);
 		}
 	}
 	return 0;

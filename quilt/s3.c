@@ -24,7 +24,7 @@
 
 #include "p_spindle.h"
 
-extern long spindle_s3_cutoff_bytes;
+extern long spindle_s3_fetch_limit;
 
 struct data_struct
 {
@@ -135,9 +135,9 @@ spindle_s3_write_(char *ptr, size_t size, size_t nemb, void *userdata)
 
 	size *= nemb;
 
-	if(size > spindle_s3_cutoff_bytes)
+	if(spindle_s3_fetch_limit && size > spindle_s3_fetch_limit)
 	{
-		quilt_logf(LOG_WARNING, QUILT_PLUGIN_NAME ": S3: failing write due to size exceeding cutoff bytes. input_size:%u > cutoff:%u \n", size, spindle_s3_cutoff_bytes);
+		quilt_logf(LOG_WARNING, QUILT_PLUGIN_NAME ": S3: failing write due to size exceeding fetch limit. input_size:%u > fetch_limit:%u \n", size, spindle_s3_fetch_limit);
 		return 0;
 	}
 

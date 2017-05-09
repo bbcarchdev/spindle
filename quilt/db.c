@@ -3,7 +3,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2017 BBC
+ * Copyright (c) 2014-2015 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
 
 #include "p_spindle.h"
 
-struct db_qbuf_struct
+struct qbuf_struct
 {
 	char *buf;
 	char *bp;
@@ -34,40 +34,15 @@ struct db_qbuf_struct
 	size_t n;
 };
 
-struct db_item_struct
-{
-	QUILTREQ *request;
-	librdf_model *model;
-	librdf_node *graph;
-	const char *id;
-	const char *subject;
-	const char *sameas;
-	const char *classes;
-	const char *titles;
-	const char *descriptions;
-	const char *coords;
-};
-
 static int process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs);
 static int process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item, int index);
 static const char *checklang(QUILTREQ *request, const char *lang);
+static int add_langvector(librdf_model *model, const char *vector, const char *subject, const char *predicate);
+static int add_array(librdf_model *model, const char *array, const char *subject, const char *predicate);
+static int add_point(librdf_model *model, const char *array, const char *subject);
+static int appendf(struct qbuf_struct *qbuf, const char *fmt, ...);
 static int process_membership_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, const char *self, QUILTCANON *item);
-
-
-/* Utilities for parsing specific kinds of data types and materialising
- * them as quads or triples
- */
-static int add_langvector(librdf_model *model, librdf_node *graph, const char *vector, const char *subject, const char *predicate);
-static int add_array(librdf_model *model, librdf_node *graph, const char *array, const char *subject, const char *predicate, int reverse);
-static int add_point(librdf_model *model, librdf_node *graph, const char *array, const char *subject);
-
-/* Append a formatted string to a db_qbuf_struct */
-static int appendf(struct db_qbuf_struct *qbuf, const char *fmt, ...);
-
-static int spindle_query_db_media_(struct db_qbuf_struct *qbuf, struct query_struct *query);
-
-/* Render a db_item_struct into a model */
-static int spindle_item_db_render_(struct db_item_struct *item);
+static int spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query);
 
 /* Short names for media classes which can be used for convenience */
 struct mediamatch_struct spindle_mediamatch[] = {
@@ -89,13 +64,13 @@ const char *default_audience[2] = {"all", NULL};
 int
 spindle_query_db(QUILTREQ *request, struct query_struct *query)
 {
-	struct db_qbuf_struct qbuf;
+	struct qbuf_struct qbuf;
 	size_t c;
 	SQL_STATEMENT *rs;
 	const char *related, *collection;
 	int rankflags;
 
-	memset(&qbuf, 0, sizeof(struct db_qbuf_struct));
+	memset(&qbuf, 0, sizeof(struct qbuf_struct));
 	related = NULL;
 	collection = NULL;
 	if(query->related)
@@ -341,34 +316,52 @@ spindle_query_db(QUILTREQ *request, struct query_struct *query)
 	return process_rs(request, query, rs);
 }
 
-static int
-spindle_query_db_media_(struct db_qbuf_struct *qbuf, struct query_struct *query)
+/* array_contains(array, string);
+ * Returns 1 if the array contains the string
+ * Otherwise 0
+ */
+int array_contains(char **array, const char *string)
 {
-	size_t i;
+	size_t i=0;
+	while(array && array[i] != NULL) {
+		if(!strcmp(array[i++], string))
+		{
+			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s TRUE\n", string);
+			return 1;
+		}
+	}
+	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s FALSE\n", string);
+	return 0;
+}
 
+
+static int
+spindle_query_db_media_(struct qbuf_struct *qbuf, struct query_struct *query)
+{
 	if(query->media)
 	{
 		/* Any media query */
-		if(spindle_array_contains(query->audience, "all"))
+		if(array_contains(query->audience, "all"))
 		{
 			/* If the audience is 'all' (the default), we only return media
 			 * available to the public.
 			 */
 			appendf(qbuf, " AND \"m\".\"audience\" IS NULL");
 		}
-		else if(!spindle_array_contains(query->audience, "any"))
+		else if(!array_contains(query->audience, "any"))
 		{
 			/* If the audience is not 'all' and is not 'any', then we filter by
 			 * media available to the public, or to the specified audiences
 			 * Handling multi value parameters for audience
 			 */
 			appendf(qbuf, " AND (\"m\".\"audience\" IS NULL");
-			for(i = 0; query->audience && query->audience[i]; i++)
-			{
+			size_t i=0;
+			while(query->audience && query->audience[i]) {
 				quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": spindle_query_db_media_ adding audience %s'\n", query->audience[i]);
 				appendf(qbuf, " OR \"m\".\"audience\" = %%Q");
 				qbuf->args[qbuf->n] = query->audience[i];
 				qbuf->n++;
+				i++;
 			}
 			appendf(qbuf, " )");
 		}
@@ -388,94 +381,6 @@ spindle_query_db_media_(struct db_qbuf_struct *qbuf, struct query_struct *query)
 		}
 	}
 	return 0;
-}
-
-/* For a given item, populate the model with information about it from the
- * index; this is used if cached N-Quads are not available.
- *
- * The result is an HTTP response code (200 for success).
- */
-int
-spindle_item_db(QUILTREQ *request)
-{
-	size_t c;
-	const char *id, *t;
-	struct db_item_struct item;
-	SQL_STATEMENT *rs;
-
-	/* Extract the UUID from the request-URI */
-	c = strlen(request->base);
-	if(!strncmp(request->subject, request->base, c))
-	{
-		id = request->subject + c;
-		while(id[0] == '/')
-		{
-			id++;
-		}
-		quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": DB: item: '%s'\n", id);
-		if(strlen(id) != 32)
-		{
-			return 404;
-		}
-	}
-	else
-	{
-		return 404;
-	}
-	/* Populate a db_item_struct based upon the data that's available. The
-	 * structure has space for the various index fields (in their raw form
-	 * as returned by the database).
-	 * We query first for an actual proxy entry: if this doesn't exist, then
-	 * we can return a 404. This will give us just the co-references and
-	 * confirm the local identifier is known to us.
-	 *
-	 * Next, we can fetch index data. If this fails, we just leave the
-	 * db_item_struct populated with only the co-references: it just means
-	 * the entity hasn't been indexed yet and so no further detail is
-	 * available (this is preferable to returning a 404 for the item).
-	 *
-	 * Finally, we can invoke spindle_item_db_render_() to populate the
-	 * model based upon the contents of the db_item_struct.
-	 */
-	memset(&item, 0, sizeof(struct db_item_struct));
-	item.request = request;
-	item.model = request->model;
-	item.graph = NULL; /* XXX should use the proxy graph */
-	item.id = id;
-	rs = sql_queryf(spindle_db, "SELECT \"sameas\" FROM \"proxy\" WHERE \"id\" = %Q", item.id);
-	if(!rs)
-	{
-		return 500;
-	}
-	if(sql_stmt_eof(rs))
-	{
-		sql_stmt_destroy(rs);
-		return 404;
-	}
-	t = sql_stmt_str(rs, 0);
-	if(!t)
-	{
-		sql_stmt_destroy(rs);
-		return 404;
-	}
-	item.sameas = (const char *) strdup(t);
-	sql_stmt_destroy(rs);
-	/* Attempt to fetch index information about the item */
-	rs = sql_queryf(spindle_db, "SELECT \"classes\", \"title\", \"description\", \"coordinates\" FROM \"index\" WHERE \"id\" = %Q", item.id);
-	if(rs && !sql_stmt_eof(rs))
-	{
-		item.classes = sql_stmt_str(rs, 0);
-		item.titles = sql_stmt_str(rs, 1);
-		item.descriptions = sql_stmt_str(rs, 2);
-		item.coords = sql_stmt_str(rs, 3);
-	}
-	spindle_item_db_render_(&item);
-	if(rs)
-	{
-		sql_stmt_destroy(rs);
-	}
-	free((char *) (item.sameas));
-	return 200;
 }
 
 /* For a given item, determine what collections (if any) this item is part
@@ -659,7 +564,7 @@ spindle_audiences_db(QUILTREQ *request, struct query_struct *query)
 		librdf_free_statement(st);
 		if(title)
 		{
-			add_langvector(request->model, NULL, title, audience, NS_RDFS "label");
+			add_langvector(request->model, title, audience, NS_RDFS "label");
 		}
 		free(deststr);
 	}
@@ -677,10 +582,10 @@ static int
 process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 {
 	QUILTCANON *item;
-	int c, r;
+	int c;
 	const char *t;
 	char idbuf[36], *p, *self;	
-	
+
 	if(request->index)
 	{
 		self = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
@@ -691,6 +596,7 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 	}
 	for(c = 0; !sql_stmt_eof(rs) && c < request->limit; sql_stmt_next(rs))
 	{
+		c++;
 		item = quilt_canon_create(request->canonical);
 		quilt_canon_reset_path(item);
 		quilt_canon_reset_params(item);
@@ -706,12 +612,7 @@ process_rs(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs)
 		}
 		*p = 0;
 		quilt_canon_add_path(item, idbuf);
-		r = process_row(request, query, rs, idbuf, self, item, query->offset + c);
-		if(r > 0)
-		{
-			/* Only increment the count if a row was actually added to the model */
-			c++;		
-		}
+		process_row(request, query, rs, idbuf, self, item, query->offset + c);
 		quilt_canon_destroy(item);
 	}
 	if(!sql_stmt_eof(rs))
@@ -733,19 +634,14 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	char nbuf[64];
 	librdf_node *node;
 
-	uri = quilt_canon_str(item, QCO_SUBJECT);
-
-	if(!strcmp(self, uri))
-	{
-		/* Never ever state that <foo> foaf:topic <foo> */
-		free(uri);
-		return 0;
-	}
-	quilt_logf(LOG_DEBUG, "adding row <%s>\n", uri);
+	(void) id;
 
 	slot = quilt_canon_create(request->canonical);
 	quilt_canon_set_fragment(slot, id);
 	slotstr = quilt_canon_str(slot, QCO_FRAGMENT);
+
+	uri = quilt_canon_str(item, QCO_SUBJECT);
+	quilt_logf(LOG_DEBUG, "adding row <%s>\n", uri);
 
 	/* rdfs:seeAlso */
 	st = quilt_st_create_uri(self, NS_RDFS "seeAlso", uri);
@@ -768,14 +664,14 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	librdf_free_statement(st);
 
 	/* <slot> rdfs:label "Result item %d" */
-	snprintf(nbuf, sizeof(nbuf) - 1, "Result #%d", index + 1);
+	snprintf(nbuf, sizeof(nbuf) - 1, "Result #%d", index);
 	st = quilt_st_create_literal(slotstr, NS_RDFS "label", nbuf, "en-gb");
 	librdf_model_add_statement(request->model, st);
 	librdf_free_statement(st);
 
 	/* <slot> olo:index nn */
 	st = quilt_st_create(slotstr, NS_OLO "index");
-	node = quilt_node_create_int(index + 1);
+	node = quilt_node_create_int(index);
 	librdf_statement_set_object(st, node);
 	librdf_model_add_statement(request->model, st);
 	librdf_free_statement(st);
@@ -794,33 +690,33 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	s = sql_stmt_str(rs, 2);
 	if(s)
 	{
-		add_langvector(request->model, NULL, s, uri, NS_RDFS "label");
+		add_langvector(request->model, s, uri, NS_RDFS "label");
 	}
 
 	/* rdfs:comment */
 	s = sql_stmt_str(rs, 3);
 	if(s)
 	{
-		add_langvector(request->model, NULL, s, uri, NS_RDFS "comment");
+		add_langvector(request->model, s, uri, NS_RDFS "comment");
 	}
 
 	/* rdf:type */
 	s = sql_stmt_str(rs, 1);
 	if(s)
 	{
-		add_array(request->model, NULL, s, uri, NS_RDF "type", 0);
+		add_array(request->model, s, uri, NS_RDF "type");
 	}
 
 	/* geo:lat, geo:long */
 	s = sql_stmt_str(rs, 4);
 	if(s)
 	{
-		add_point(request->model, NULL, s, uri);
+		add_point(request->model, s, uri);
 	}
 	free(uri);
 	quilt_canon_destroy(slot);
 	free(slotstr);
-	return 1;
+	return 0;
 }
 
 static int
@@ -848,7 +744,7 @@ process_membership_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, con
 
 /* Add a URI array to the model */
 static int
-add_array(librdf_model *model, librdf_node *graph, const char *array, const char *subject, const char *predicate, int reverse)
+add_array(librdf_model *model, const char *array, const char *subject, const char *predicate)
 {
 	librdf_statement *st;
 	char *buf, *p;
@@ -918,22 +814,8 @@ add_array(librdf_model *model, librdf_node *graph, const char *array, const char
 		*p = 0;
 		if(*buf)
 		{
-			if(reverse)
-			{
-				st = quilt_st_create_uri(buf, predicate, subject);
-			}
-			else
-			{
-				st = quilt_st_create_uri(subject, predicate, buf);
-			}
-			if(graph)
-			{
-				librdf_model_context_add_statement(model, graph, st);
-			}
-			else
-			{
-				librdf_model_add_statement(model, st);
-			}
+			st = quilt_st_create_uri(subject, predicate, buf);
+			librdf_model_add_statement(model, st);
 			librdf_free_statement(st);
 		}
 	}
@@ -944,7 +826,7 @@ add_array(librdf_model *model, librdf_node *graph, const char *array, const char
 
 /* Add a point to the model */
 static int
-add_point(librdf_model *model, librdf_node *graph, const char *array, const char *subject)
+add_point(librdf_model *model, const char *array, const char *subject)
 {
 	char *buf, *p;
 	int q, e;
@@ -1039,26 +921,12 @@ add_point(librdf_model *model, librdf_node *graph, const char *array, const char
 	}	
 	st = quilt_st_create(subject, NS_GEO "lat");
 	librdf_statement_set_object(st, coords[0]);
-	if(graph)
-	{
-		librdf_model_context_add_statement(model, graph, st);
-	}
-	else
-	{
-		librdf_model_add_statement(model, st);
-	}
+	librdf_model_add_statement(model, st);
 	librdf_free_statement(st);
 
 	st = quilt_st_create(subject, NS_GEO "long");
 	librdf_statement_set_object(st, coords[1]);
-	if(graph)
-	{
-		librdf_model_context_add_statement(model, graph, st);
-	}
-	else
-	{
-		librdf_model_add_statement(model, st);
-	}
+	librdf_model_add_statement(model, st);
 	librdf_free_statement(st);
 
 	librdf_free_uri(type);
@@ -1067,7 +935,7 @@ add_point(librdf_model *model, librdf_node *graph, const char *array, const char
 
 /* Add a language=>literal PostgreSQL vector to the model */
 static int
-add_langvector(librdf_model *model, librdf_node *graph, const char *vector, const char *subject, const char *predicate)
+add_langvector(librdf_model *model, const char *vector, const char *subject, const char *predicate)
 {
 	librdf_statement *st;
 	char *buf, *lang, *value, *p;
@@ -1208,14 +1076,7 @@ add_langvector(librdf_model *model, librdf_node *graph, const char *vector, cons
 			}
 		}
 		st = quilt_st_create_literal(subject, predicate, value, lang);
-		if(graph)
-		{
-			librdf_model_context_add_statement(model, graph, st);
-		}
-		else
-		{
-			librdf_model_add_statement(model, st);
-		}
+		librdf_model_add_statement(model, st);
 		librdf_free_statement(st);
 	}
 	free(buf);
@@ -1223,7 +1084,7 @@ add_langvector(librdf_model *model, librdf_node *graph, const char *vector, cons
 }
 
 static int
-appendf(struct db_qbuf_struct *qbuf, const char *fmt, ...)
+appendf(struct qbuf_struct *qbuf, const char *fmt, ...)
 {
 	char *p;
 	va_list ap;
@@ -1305,64 +1166,4 @@ checklang(QUILTREQ *req, const char *lang)
 		return "gd_gb";
 	}
 	return NULL;
-}
-
-/* Render (materialise) the contents of a db_item_struct as RDF into
- * a model.
- *
- * Note that many of the fields are optional, and won't be provided if
- * the data isn't available at the time of rendering; this function is
- * intended to materialise as much as is available -- missing data is
- * not an error.
- */
-
-int
-spindle_item_db_render_(struct db_item_struct *item)
-{
-	char *subj;
-	QUILTCANON *selfc;
-
-	quilt_logf(LOG_DEBUG, "DB: render '%s'\n", item->id);
-	if(item->subject)
-	{
-		subj = NULL;
-	}
-	else
-	{
-		selfc = quilt_canon_create(item->request->canonical);
-		quilt_canon_reset_path(selfc);
-		quilt_canon_reset_params(selfc);
-		quilt_canon_set_fragment(selfc, "id");
-		quilt_canon_add_path(selfc, item->id);		
-		subj = quilt_canon_str(selfc, QCO_SUBJECT);
-		quilt_canon_destroy(selfc);
-		selfc = NULL;
-		item->subject = subj;
-	}
-	if(item->sameas)
-	{
-		add_array(item->model, item->graph, item->sameas, item->subject, NS_OWL "sameAs", 1);
-	}
-	if(item->classes)
-	{
-		add_array(item->model, item->graph, item->classes, item->subject, NS_RDF "type", 0);
-	}
-	if(item->titles)
-	{
-		add_langvector(item->model, item->graph, item->titles, item->subject, NS_RDFS "label");
-	}
-	if(item->descriptions)
-	{
-		add_langvector(item->model, item->graph, item->descriptions, item->subject, NS_RDFS "comment");
-	}
-	if(item->coords)
-	{
-		add_point(item->model, item->graph, item->coords, item->subject);
-	}
-	if(subj)
-	{
-		item->subject = NULL;
-		free(subj);
-	}
-	return 0;
 }

@@ -3,7 +3,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2017 BBC
+ * Copyright (c) 2014-2016 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ AWSS3BUCKET *spindle_bucket;
 char *spindle_cachepath;
 SQL *spindle_db;
 int spindle_s3_verbose;
-long spindle_s3_cutoff_bytes = 3600;
+long spindle_s3_fetch_limit;
 
 static int spindle_cache_init_(void);
 static int spindle_cache_init_s3_(const char *bucket);
@@ -68,26 +68,6 @@ quilt_plugin_init(void)
 	{
 		return -1;
 	}
-	return 0;
-}
-
-
-/* spindle_array_contains(array, string);
- * Returns 1 if the array contains the string (via case-sensitive comprison)
- * Otherwise 0
- */
-int
-spindle_array_contains(const char *const *array, const char *string)
-{
-	size_t i=0;
-	while(array && array[i] != NULL) {
-		if(!strcmp(array[i++], string))
-		{
-			quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s TRUE\n", string);
-			return 1;
-		}
-	}
-	quilt_logf(LOG_DEBUG, QUILT_PLUGIN_NAME ": array_contains %s FALSE\n", string);
 	return 0;
 }
 
@@ -162,9 +142,10 @@ spindle_cache_init_s3_(const char *bucket)
 		aws_s3_set_secret(spindle_bucket, t);
 		free(t);
 	}
-	if((t = quilt_config_geta("s3:cutoff_bytes", NULL)))
+	if((t = quilt_config_geta("s3:fetch_limit", DEFAULT_SPINDLE_FETCH_LIMIT)))
 	{
-		spindle_s3_cutoff_bytes = atol(t);
+		// As its in terms of kbs
+		spindle_s3_fetch_limit = atol(t) * 1024;
 		free(t);
 	}
 	spindle_s3_verbose = quilt_config_get_bool("s3:verbose", 0);
