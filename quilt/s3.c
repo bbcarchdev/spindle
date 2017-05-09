@@ -24,6 +24,8 @@
 
 #include "p_spindle.h"
 
+extern long spindle_s3_cutoff_bytes;
+
 struct data_struct
 {
 	char *buf;
@@ -132,6 +134,13 @@ spindle_s3_write_(char *ptr, size_t size, size_t nemb, void *userdata)
 	data = (struct data_struct *) userdata;
 
 	size *= nemb;
+
+	if(size > spindle_s3_cutoff_bytes)
+	{
+		quilt_logf(LOG_WARNING, QUILT_PLUGIN_NAME ": S3: failing write due to size exceeding cutoff bytes. input_size:%u > cutoff:%u \n", size, spindle_s3_cutoff_bytes);
+		return 0;
+	}
+
 	if(data->pos + size >= data->size)
 	{
 		p = (char *) realloc(data->buf, data->size + size + 1);

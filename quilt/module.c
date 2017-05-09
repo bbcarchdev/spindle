@@ -28,6 +28,7 @@ AWSS3BUCKET *spindle_bucket;
 char *spindle_cachepath;
 SQL *spindle_db;
 int spindle_s3_verbose;
+long spindle_s3_cutoff_bytes = 3600;
 
 static int spindle_cache_init_(void);
 static int spindle_cache_init_s3_(const char *bucket);
@@ -159,6 +160,11 @@ spindle_cache_init_s3_(const char *bucket)
 	if((t = quilt_config_geta("s3:secret", NULL)))
 	{
 		aws_s3_set_secret(spindle_bucket, t);
+		free(t);
+	}
+	if((t = quilt_config_geta("s3:cutoff_bytes", NULL)))
+	{
+		spindle_s3_cutoff_bytes = atol(t);
 		free(t);
 	}
 	spindle_s3_verbose = quilt_config_get_bool("s3:verbose", 0);
