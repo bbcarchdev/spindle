@@ -288,7 +288,11 @@ bibo:Image
 schema:Painting
 	spindle:expressedAs frbr:Work ;
 	spindle:prominence 30 .
-	
+
+schema:Book
+    spindle:expressedAs frbr:Work ;
+    spindle:prominence 30 .
+
 schema:Photograph
 	spindle:expressedAs frbr:Work ;
 	spindle:prominence 30 .
@@ -306,7 +310,6 @@ schema:DigitalDocument spindle:expressedAs foaf:Document .
 # Text
 
 dcmitype:Text spindle:expressedAs foaf:Document .
-schema:Book spindle:expressedAs foaf:Document .
 schema:Article spindle:expressedAs foaf:Document .
 
 # Video
