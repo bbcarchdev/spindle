@@ -68,6 +68,10 @@ quilt_plugin_init(void)
 	{
 		return -1;
 	}
+	if(spindle_partition_init())
+	{
+		return -1;
+	}
 	return 0;
 }
 

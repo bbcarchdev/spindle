@@ -128,6 +128,7 @@ extern AWSS3BUCKET *spindle_bucket;
 extern char *spindle_cachepath;
 extern int spindle_s3_verbose;
 extern struct index_struct spindle_indices[];
+extern struct index_struct *spindle_partitions;
 extern struct mediamatch_struct spindle_mediamatch[];
 
 int spindle_process(QUILTREQ *request);
@@ -144,6 +145,8 @@ int spindle_array_contains(const char *const *array, const char *value);
 
 /* Initialise a query structure */
 int spindle_query_init(struct query_struct *dest);
+/* Initialise spindle partiotions */
+int spindle_partition_init(void);
 /* Populate an empty query_struct from a QUILTREQ */
 int spindle_query_request(struct query_struct *dest, QUILTREQ *req, const char *qclass);
 /* Perform a query */

@@ -22,7 +22,7 @@ quiltmodule_LTLIBRARIES = spindle.la
 
 spindle_la_SOURCES = p_spindle.h \
 	module.c request.c home.c index.c item.c sparql.c db.c s3.c \
-	file.c query.c
+	file.c query.c partitions.c
 
 spindle_la_LDFLAGS = -no-undefined -module -avoid-version
 
