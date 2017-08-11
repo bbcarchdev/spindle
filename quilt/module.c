@@ -29,6 +29,7 @@ char *spindle_cachepath;
 SQL *spindle_db;
 int spindle_s3_verbose;
 long spindle_s3_fetch_limit;
+int spindle_threshold;
 
 static int spindle_cache_init_(void);
 static int spindle_cache_init_s3_(const char *bucket);
@@ -50,6 +51,7 @@ quilt_plugin_init(void)
 	spindle_bucket = NULL;
 	spindle_db = NULL;
 	spindle_cachepath = NULL;
+	spindle_threshold = quilt_config_get_int(QUILT_PLUGIN_NAME ":threshold", SPINDLE_THRESHOLD);
 	if((t = quilt_config_geta(QUILT_PLUGIN_NAME ":db", NULL)))
 	{
 		spindle_db = sql_connect(t);

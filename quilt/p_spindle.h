@@ -129,6 +129,7 @@ extern char *spindle_cachepath;
 extern int spindle_s3_verbose;
 extern struct index_struct spindle_indices[];
 extern struct mediamatch_struct spindle_mediamatch[];
+extern int spindle_threshold;
 
 int spindle_process(QUILTREQ *request);
 

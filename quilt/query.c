@@ -116,9 +116,15 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 			quilt_canon_set_param(request->canonical, "mode", t);
 		}
 	}
+	t = quilt_request_getparam(request, "score");
+	if(t)
+	{
+		dest->score = atoi(t);
+		quilt_canon_set_param(request->canonical, "score", t);
+	}
 	if(dest->score == -1)
 	{
-		dest->score = SPINDLE_THRESHOLD;
+		dest->score = spindle_threshold;
 	}
 	return 200;
 }
