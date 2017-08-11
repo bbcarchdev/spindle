@@ -51,7 +51,8 @@ quilt_plugin_init(void)
 	spindle_bucket = NULL;
 	spindle_db = NULL;
 	spindle_cachepath = NULL;
-	spindle_threshold = quilt_config_get_int(QUILT_PLUGIN_NAME ":threshold", SPINDLE_THRESHOLD);
+	spindle_threshold = quilt_config_get_int(QUILT_PLUGIN_NAME ":score", SPINDLE_THRESHOLD);
+	quilt_logf(LOG_INFO, QUILT_PLUGIN_NAME ": default score threshold set to %d\n", spindle_threshold);
 	if((t = quilt_config_geta(QUILT_PLUGIN_NAME ":db", NULL)))
 	{
 		spindle_db = sql_connect(t);
