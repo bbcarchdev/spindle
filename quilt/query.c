@@ -44,13 +44,13 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 	const char *t;
 
 	t = quilt_request_getparam(request, "q");
-	if(t)
+	if(t && t[0])
 	{
 		dest->explicit = 1;
 		quilt_canon_set_param(request->canonical, "q", t);
 	}
 	t = quilt_request_getparam(request, "class");
-	if(t)
+	if(t && t[0])
 	{
 		dest->explicit = 1;
 		quilt_canon_set_param(request->canonical, "class", t);
@@ -73,7 +73,7 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 	dest->text = quilt_request_getparam(request, "q");
 	dest->lang = quilt_request_getparam(request, "lang");
 	dest->media = quilt_request_getparam(request, "media");
-	if(dest->text || dest->lang || dest->media)
+	if((dest->text && dest->text[0]) || (dest->lang && dest->lang[0]) || (dest->media && dest->media[0]))
 	{
 		dest->explicit = 1;
 	}
@@ -92,7 +92,7 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 	}
 
 	dest->type = quilt_request_getparam(request, "type");
-	if(dest->type)
+	if(dest->type && dest->type[0])
 	{
 		dest->explicit = 1;
 	}
@@ -101,7 +101,7 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 		quilt_canon_set_param(request->canonical, "type", dest->type);
 	}
 	t = quilt_request_getparam(request, "mode");
-	if(t)
+	if(t && t[0])
 	{
 		if(!strcmp(t, "autocomplete"))
 		{
@@ -117,7 +117,7 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 		}
 	}
 	t = quilt_request_getparam(request, "score");
-	if(t)
+	if(t && t[0])
 	{
 		dest->score = atoi(t);
 		quilt_canon_set_param(request->canonical, "score", t);

@@ -166,14 +166,16 @@ spindle_add_concrete(QUILTREQ *request)
 static int
 spindle_request_is_query_(QUILTREQ *request)
 {
+	const char *t;
+
 	if(!request->home)
 	{
 		return 0;
 	}
-	if(quilt_request_getparam(request, "q") ||
-		 quilt_request_getparam(request, "media") ||
-		 quilt_request_getparam(request, "for") ||
-		 quilt_request_getparam(request, "type"))
+	if(((t = quilt_request_getparam(request, "q")) && t[0]) ||
+	   ((t = quilt_request_getparam(request, "media")) && t[0]) ||
+	   ((t = quilt_request_getparam(request, "for")) && t[0]) ||
+	   ((t = quilt_request_getparam(request, "type")) && t[0]))
 	{
 		request->index = 1;
 		request->home = 0;
@@ -269,11 +271,18 @@ spindle_request_is_partition_(QUILTREQ *request, char **qclass)
 static const char *
 spindle_request_is_lookup_(QUILTREQ *request)
 {
+	const char *t;
+
 	if(!request->home)
 	{
 		return NULL;
 	}
-	return quilt_request_getparam(request, "uri");
+	t = quilt_request_getparam(request, "uri");
+	if(t && t[0])
+	{
+		return t;
+	}
+	return NULL;
 }
 
 static struct spindle_dynamic_endpoint *
