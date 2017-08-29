@@ -96,9 +96,12 @@ spindle_add_concrete(QUILTREQ *request)
 {
 	const char *s;
 	char *subject, *abstract, *concrete, *typebuf;
+	librdf_world *world;
 	librdf_statement *st;
+	librdf_node *graph;
 	int explicit;
 
+	graph = quilt_request_graph(request);
 	explicit = (request->ext != NULL);
 	abstract = quilt_canon_str(request->canonical, (explicit ? QCO_ABSTRACT : QCO_REQUEST));
 	concrete = quilt_canon_str(request->canonical, (explicit ? QCO_REQUEST : QCO_CONCRETE));
@@ -108,18 +111,18 @@ spindle_add_concrete(QUILTREQ *request)
 	if(strchr(subject, '#'))
 	{
 		st = quilt_st_create_uri(abstract, NS_FOAF "primaryTopic", subject);
-		librdf_model_add_statement(request->model, st);
+		librdf_model_context_add_statement(request->model, graph, st);
 		librdf_free_statement(st);
 	}
 
 	/* abstract dct:hasFormat concrete */
 	st = quilt_st_create_uri(abstract, NS_DCTERMS "hasFormat", concrete);
-	librdf_model_add_statement(request->model, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
 
 	/* concrete rdf:type ... */
 	st = quilt_st_create_uri(concrete, NS_RDF "type", NS_DCMITYPE "Text");
-	librdf_model_add_statement(request->model, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);	
 	s = NULL;
 	if(!strcmp(request->type, "text/turtle"))
@@ -137,7 +140,7 @@ spindle_add_concrete(QUILTREQ *request)
 	if(s)
 	{
 		st = quilt_st_create_uri(concrete, NS_RDF "type", s);
-		librdf_model_add_statement(request->model, st);
+		librdf_model_context_add_statement(request->model, graph, st);
 		librdf_free_statement(st);
 	}
 
@@ -147,7 +150,7 @@ spindle_add_concrete(QUILTREQ *request)
 		strcpy(typebuf, NS_MIME);
 		strcat(typebuf, request->type);
 		st = quilt_st_create_uri(concrete, NS_DCTERMS "format", typebuf);
-		librdf_model_add_statement(request->model, st);
+		librdf_model_context_add_statement(request->model, graph, st);
 		librdf_free_statement(st);
 		free(typebuf);
 	}
@@ -312,7 +315,9 @@ spindle_request_audiences_(QUILTREQ *req, struct spindle_dynamic_endpoint *endpo
 	char *entrystr, *deststr, *self;
 	int r;
 	struct query_struct query;
+	librdf_node *graph;
 
+	graph = quilt_request_graph(req);
 	spindle_query_init(&query);
 	req->index = 1;
 	req->home = 0;
@@ -357,19 +362,19 @@ spindle_request_audiences_(QUILTREQ *req, struct spindle_dynamic_endpoint *endpo
 		quilt_canon_set_fragment(dest, NULL);
 		deststr = quilt_canon_str(dest, QCO_FRAGMENT);
 		st = quilt_st_create_uri(entrystr, NS_RDF "type", NS_ODRL "Group");
-		librdf_model_add_statement(req->model, st);
+		librdf_model_context_add_statement(req->model, graph, st);
 		librdf_free_statement(st);
 		st = quilt_st_create_literal(entrystr, NS_RDFS "label", "Everyone", "en-gb");
-		librdf_model_add_statement(req->model, st);
+		librdf_model_context_add_statement(req->model, graph, st);
 		librdf_free_statement(st);
 		st = quilt_st_create_literal(entrystr, NS_RDFS "comment", "Resources which are generally-accessible to the public", "en-gb");
-		librdf_model_add_statement(req->model, st);
+		librdf_model_context_add_statement(req->model, graph, st);
 		librdf_free_statement(st);
 		st = quilt_st_create_uri(entrystr, NS_RDFS "seeAlso", deststr);
-		librdf_model_add_statement(req->model, st);
+		librdf_model_context_add_statement(req->model, graph, st);
 		librdf_free_statement(st);
 		st = quilt_st_create_uri(self, NS_RDFS "seeAlso", entrystr);
-		librdf_model_add_statement(req->model, st);
+		librdf_model_context_add_statement(req->model, graph, st);
 		librdf_free_statement(st);
 		free(entrystr);
 		free(deststr);
