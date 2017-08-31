@@ -76,9 +76,9 @@ typedef enum
 
 struct index_struct
 {
-	const char *uri;
-	const char *title;
-	const char *qclass;
+	char *uri;
+	char *title;
+	char *qclass;
 };
 
 struct query_struct
@@ -127,7 +127,7 @@ extern SQL *spindle_db;
 extern AWSS3BUCKET *spindle_bucket;
 extern char *spindle_cachepath;
 extern int spindle_s3_verbose;
-extern struct index_struct spindle_indices[];
+extern struct index_struct *spindle_indices;
 extern struct mediamatch_struct spindle_mediamatch[];
 extern int spindle_threshold;
 

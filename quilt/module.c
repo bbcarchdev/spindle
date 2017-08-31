@@ -31,17 +31,22 @@ int spindle_s3_verbose;
 long spindle_s3_fetch_limit;
 int spindle_threshold;
 
+struct index_struct *spindle_indices = NULL;
+
 static int spindle_cache_init_(void);
 static int spindle_cache_init_s3_(const char *bucket);
 static int spindle_cache_init_file_(const char *path);
 static int spindle_db_querylog_(SQL *restrict sql, const char *query);
 static int spindle_db_noticelog_(SQL *restrict sql, const char *notice);
 static int spindle_db_errorlog_(SQL *restrict sql, const char *sqlstate, const char *message);
+static struct index_struct *spindle_partition_(const char *resource);
+static int spindle_partition_cb_(const char *key, const char *value, void *data);
 
 int
 quilt_plugin_init(void)
 {
 	char *t;
+	struct index_struct *everything;
 
 	if(quilt_plugin_register_engine(QUILT_PLUGIN_NAME, spindle_process))
 	{
@@ -71,6 +76,9 @@ quilt_plugin_init(void)
 	{
 		return -1;
 	}
+	everything = spindle_partition_("/everything");
+	everything->title = strdup("Everything");
+	quilt_config_get_all(NULL, NULL, spindle_partition_cb_, NULL);
 	return 0;
 }
 
@@ -231,4 +239,81 @@ spindle_db_errorlog_(SQL *restrict sql, const char *sqlstate, const char *messag
 	return 0;
 }
 
+/* quilt_config_getall() callback */
+static int
+spindle_partition_cb_(const char *key, const char *value, void *data)
+{
+	char buf[64], *s;
+	const char *prop;
+	struct index_struct *ind;
 
+	(void) data;
+
+	if(!key || !value || strncmp(key, "partition:", 10))
+	{
+		return 0;
+	}
+	key += 10;
+	prop = strchr(key, ':');
+	if(!prop)
+	{
+		return 0;
+	}
+	if(prop - key >= 63)
+	{
+		return 0;
+	}
+	buf[0] = '/';
+	strncpy(&(buf[1]), key, prop - key);
+	buf[prop - key + 1] = 0;
+	prop++;
+	quilt_logf(LOG_DEBUG, "partition=[%s], prop=[%s], value=[%s]\n", buf, prop, value);
+	ind = spindle_partition_(buf);
+	if(!ind)
+	{
+		return 0;
+	}
+	if(!strcmp(prop, "class"))
+	{
+		s = strdup(value);
+		free(ind->qclass);
+		ind->qclass = s;
+		return 0;
+	}
+	if(!strcmp(prop, "title"))
+	{
+		s = strdup(value);
+		free(ind->title);
+		ind->title = s;
+	}	
+	return 0;
+}
+
+static struct index_struct *
+spindle_partition_(const char *resource)
+{
+	size_t c;
+	struct index_struct *p;
+
+	for(c = 0; spindle_indices && spindle_indices[c].uri; c++)
+	{
+		if(!strcmp(spindle_indices[c].uri, resource))
+		{
+			return &(spindle_indices[c]);
+		}
+	}
+	p = (struct index_struct *) realloc(spindle_indices, sizeof(struct index_struct) * (c + 2));
+	if(!p)
+	{
+		return NULL;
+	}
+	spindle_indices = p;
+	memset(&(p[c]), 0, sizeof(struct index_struct));
+	memset(&(p[c + 1]), 0, sizeof(struct index_struct));
+	p[c].uri = strdup(resource);
+	if(!p[c].uri)
+	{
+		return NULL;
+	}
+	return &(p[c]);
+}

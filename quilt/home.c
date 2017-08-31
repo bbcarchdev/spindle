@@ -24,23 +24,6 @@
 
 #include "p_spindle.h"
 
-/* XXX replace with config */
-struct index_struct spindle_indices[] = {
-	{ "/everything", "Everything", NULL },
-	{ "/people", "People", NS_FOAF "Person" },
-	{ "/groups", "Groups", NS_FOAF "Group" },
-	{ "/agents", "Agents", NS_FOAF "Agent" },
-	{ "/places", "Places", NS_GEO "SpatialThing" },
-	{ "/events", "Events", NS_EVENT "Event" },
-
-	{ "/things", "Physical things", NS_CRM "E18_Physical_Thing" },
-	{ "/collections", "Collections", NS_DCMITYPE "Collection" },
-	{ "/works", "Creative works", NS_FRBR "Work" },
-	{ "/assets", "Digital assets", NS_FOAF "Document" },
-	{ "/concepts", "Concepts", NS_SKOS "Concept" },
-	{ NULL, NULL, NULL }
-};
-
 int
 spindle_home(QUILTREQ *request)
 {
@@ -69,7 +52,7 @@ spindle_home(QUILTREQ *request)
 	/* Add class partitions */
 	partcanon = NULL;
 	partstr = NULL;
-	for(c = 0; spindle_indices[c].uri; c++)
+	for(c = 0; spindle_indices && spindle_indices[c].uri; c++)
 	{
 		partcanon = quilt_canon_create(request->canonical);
 		if(!partcanon)

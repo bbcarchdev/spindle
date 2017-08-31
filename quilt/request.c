@@ -223,7 +223,7 @@ spindle_request_is_partition_(QUILTREQ *request, char **qclass)
 
 	*qclass = NULL;
 	/* First check to determine whether there's a match against the list */
-	for(c = 0; spindle_indices[c].uri; c++)
+	for(c = 0; spindle_indices && spindle_indices[c].uri; c++)
 	{
 		if(!strcmp(request->path, spindle_indices[c].uri))
 		{
