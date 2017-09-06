@@ -12,7 +12,7 @@ before_install:
 - sudo add-apt-repository "deb [arch=amd64] https://apt.bbcarchdev.net/debian wheezy main ports dev stage live"
 - sudo add-apt-repository "deb http://archive.ubuntu.com/ubuntu $(lsb_release -sc) main universe restricted multiverse"
 - sudo apt-get update -qq
-- sudo apt-get install -qq libtwine-dev uuid-dev liburi-dev libsql-dev libsparqlclient-dev libquilt-dev libawsclient-dev libmq-dev automake autoconf libtool pkg-config
+- sudo apt-get install -qq libtwine-dev uuid-dev liburi-dev libsql-dev libsparqlclient-dev libawsclient-dev libmq-dev automake autoconf libtool pkg-config
 before_script:
 - autoreconf -f -i
 script:

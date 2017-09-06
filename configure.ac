@@ -42,14 +42,10 @@ BT_REQUIRE_LIBURI
 BT_REQUIRE_LIBSQL
 BT_REQUIRE_LIBAWSCLIENT
 BT_REQUIRE_LIBSPARQLCLIENT
-
-dnl These libraries are linked conditionally
-BT_REQUIRE_LIBTWINE([true])
-BT_REQUIRE_LIBQUILT([true])
-BT_REQUIRE_LIBMQ([true])
+BT_REQUIRE_LIBTWINE
+BT_REQUIRE_LIBMQ
 
 BT_DEFINE_PATH([TWINEMODULEDIR], [twinemoduledir], [Twine module path])
-BT_DEFINE_PATH([QUILTMODULEDIR], [quiltmoduledir], [Quilt module path])
 
 use_docbook_html5=yes
 BT_BUILD_DOCS
@@ -75,14 +71,12 @@ BT_DEFINE_PREFIX
 AC_DEFINE_UNQUOTED([SPINDLE_ENABLE_ABOUT_SELF], [0], [Whether to enable 'items are about themselves' in the index])
 
 AC_CONFIG_FILES([Makefile
-m4/Makefile
-twine/Makefile
-twine/common/Makefile
-twine/strip/Makefile
-twine/correlate/Makefile
-twine/generate/Makefile
-quilt/Makefile
+common/Makefile
+strip/Makefile
+correlate/Makefile
+generate/Makefile
 migrate/Makefile
+m4/Makefile
 docbook-html5/Makefile
 docs/Makefile
 ])
