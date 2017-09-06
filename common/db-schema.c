@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               27
+#define DB_SCHEMA_VERSION               28
 
 static int spindle_db_migrate_(SQL *restrict, const char *identifier, int newversion, void *restrict userdata);
 
@@ -521,7 +521,15 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 			return -1;
 		}
 		return 0;
-	}	
+	}
+	if(newversion == 28)
+	{
+		if(sql_execute(sql, "CREATE INDEX \"media_duration\" ON \"media\" (\"duration\")"))
+		{
+			return -1;
+		}
+		return 0;
+	}
 	twine_logf(LOG_NOTICE, PLUGIN_NAME ": unsupported database schema version %d\n", newversion);
 	return -1;
 }
