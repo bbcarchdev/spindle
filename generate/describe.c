@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ spindle_describe_entry(SPINDLEENTRY *data)
 			librdf_free_statement(st);
 		
 			/* For each subject in the graph, add triples stating that:
-			 *   ex:subject wdrs:describedBy ex:graphuri .
+			 *   ex:subject wdrs:describedby ex:graphuri .
 			 */
 			stream = librdf_model_context_as_stream(data->sourcedata, node);
 			for(; !librdf_stream_end(stream); librdf_stream_next(stream))
@@ -101,7 +101,7 @@ spindle_describe_entry(SPINDLEENTRY *data)
 				}
 				st = twine_rdf_st_create();
 				librdf_statement_set_subject(st, librdf_new_node_from_node(subject));
-				librdf_statement_set_predicate(st, twine_rdf_node_createuri(NS_POWDER "describedBy"));
+				librdf_statement_set_predicate(st, twine_rdf_node_createuri(NS_POWDER "describedby"));
 				librdf_statement_set_object(st, librdf_new_node_from_node(node));
 				twine_rdf_model_add_st(model, st, data->graph);
 				librdf_free_statement(st);
