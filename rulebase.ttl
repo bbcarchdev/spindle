@@ -792,11 +792,25 @@ po:broadcast_of spindle:property [
 	rdfs:domain event:Event
 ] .
 
+## po:duration
+
+po:duration
+	a spindle:Property, spindle:DurationProperty ;
+	olo:index 13 ;
+	spindle:prominence 30 ;
+	spindle:indexed true ;
+	spindle:expect rdfs:Literal .
+
+po:duration spindle:property [
+	olo:index 0 ;
+	spindle:expressedAs po:duration
+] .
+
 ## foaf:page
 
 foaf:page
-	a spindle:Property ;
-	olo:index 13 ;
+	a spindle:Property, spindle:MediaProperty ;
+	olo:index 14 ;
 	spindle:expect rdfs:Resource ;
 	spindle:prominence 5 ;
 	spindle:proxyOnly false .
@@ -846,16 +860,10 @@ gn:wikipediaArticle spindle:property [
 	spindle:expressedAs foaf:page
 ] .
 
-wdrs:describedBy spindle:property [
-	olo:index 0 ;
-	spindle:expressedAs foaf:page
-] .
-
-
 ## dct:rights
 
 dct:rights
-	a spindle:Property ;
+	a spindle:Property, spindle:RightsProperty ;
 	olo:index 15 ;
 	spindle:expect rdfs:Resource ;
 	spindle:proxyOnly false .
@@ -888,7 +896,7 @@ xhtml:license spindle:property [
 ## mrss:player
 
 mrss:player
-	a spindle:Property ;
+	a spindle:Property, spindle:MediaProperty ;
 	olo:index 16 ;
 	spindle:prominence 10 ;
 	spindle:expect rdfs:Resource ;
@@ -902,7 +910,7 @@ mrss:player spindle:property [
 ## mrss:content
 
 mrss:content
-	a spindle:Property ;
+	a spindle:Property, spindle:MediaProperty ;
 	olo:index 16 ;
 	spindle:prominence 10 ;
 	spindle:expect rdfs:Resource ;
@@ -931,7 +939,7 @@ frbr:expression spindle:property [
 ## dct:format
 
 dct:format
-	a spindle:Property ;
+	a spindle:Property, spindle:MIMETypeProperty ;
 	olo:index 17 ;
 	spindle:expect rdfs:Resource ;
 	spindle:proxyOnly false .
