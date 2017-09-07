@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ static int spindle_index_audiences_assignee_(SPINDLEGENERATE *generate, librdf_m
 
 /* Determine who can access a digital object based upon data about licenses; invoked by spindle_index_media() */
 int
-spindle_index_audiences(SPINDLEGENERATE *generate, const char *license, const char *mediaid, const char *mediauri, const char *mediakind, const char *mediatype)
+spindle_index_audiences(SPINDLEGENERATE *generate, const char *license, const char *mediaid, const char *mediauri, const char *mediakind, const char *mediatype, const char *duration)
 {
 	SQL_STATEMENT *rs;
 	char *uri, *id;
@@ -60,8 +60,9 @@ spindle_index_audiences(SPINDLEGENERATE *generate, const char *license, const ch
 	}
 	for(; !sql_stmt_eof(rs); sql_stmt_next(rs))
 	{
-		sql_executef(generate->spindle->db, "INSERT INTO \"media\" (\"id\", \"uri\", \"class\", \"type\", \"audience\", \"audienceid\") VALUES (%Q, %Q, %Q, %Q, %Q, %Q)",
-			mediaid, mediauri, mediakind, mediatype, sql_stmt_str(rs, 0), sql_stmt_str(rs, 1));
+		sql_executef(generate->spindle->db, "INSERT INTO \"media\" (\"id\", \"uri\", \"class\", \"type\", \"audience\", \"audienceid\", \"duration\") VALUES (%Q, %Q, %Q, %Q, %Q, %Q, %Q)",
+					 mediaid, mediauri, mediakind, mediatype, sql_stmt_str(rs, 0), 
+					 sql_stmt_str(rs, 1), duration);
 	}
 	sql_stmt_destroy(rs);
 	return 1;

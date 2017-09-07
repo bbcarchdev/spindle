@@ -41,7 +41,7 @@
 
 # define SPINDLE_URI_MIME               "application/x-spindle-uri"
 
-# define SPINDLE_DB_INDEX_VERSION       1
+# define SPINDLE_DB_INDEX_VERSION       2
 
 # define MIME_NQUADS                    "application/n-quads"
 
@@ -176,7 +176,7 @@ int spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data);
 int spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data);
 int spindle_index_membership(SQL *sql, const char *id, SPINDLEENTRY *data);
 int spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data);
-int spindle_index_audiences(SPINDLEGENERATE *generate, const char *license, const char *mediaid, const char *mediauri, const char *mediakind, const char *mediatype);
+int spindle_index_audiences(SPINDLEGENERATE *generate, const char *license, const char *mediaid, const char *mediauri, const char *mediakind, const char *mediatype, const char *duration);
 
 /* Cached N-Quads handling */
 int spindle_cache_init(SPINDLEGENERATE *spindle);
