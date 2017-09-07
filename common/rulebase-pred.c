@@ -282,7 +282,7 @@ int
 spindle_rulebase_pred_dump(SPINDLERULES *rules)
 {
 	size_t c, d;
-	const char *expect, *po;
+	const char *expect, *po, *id;
 
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": predicates rule-base (%d entries):\n", (int) rules->predcount);
 	for(c = 0; c < rules->predcount; c++)
@@ -306,13 +306,21 @@ spindle_rulebase_pred_dump(SPINDLERULES *rules)
 		{
 			po = "";
 		}
-		if(rules->predicates[c].datatype)
+		if(rules->predicates[c].indexed)
 		{
-			twine_logf(LOG_DEBUG, PLUGIN_NAME ": %d: <%s> (%s <%s>) %s\n", rules->predicates[c].score, rules->predicates[c].target, expect, rules->predicates[c].datatype, po);
+			id = " [indexed]";
 		}
 		else
 		{
-			twine_logf(LOG_DEBUG, PLUGIN_NAME ": %d: <%s> (%s) %s\n", rules->predicates[c].score, rules->predicates[c].target, expect, po);
+			id = "";
+		}
+		if(rules->predicates[c].datatype)
+		{
+			twine_logf(LOG_DEBUG, PLUGIN_NAME ": %d: <%s> (%s <%s>) %s%s\n", rules->predicates[c].score, rules->predicates[c].target, expect, rules->predicates[c].datatype, po, id);
+		}
+		else
+		{
+			twine_logf(LOG_DEBUG, PLUGIN_NAME ": %d: <%s> (%s) %s%s\n", rules->predicates[c].score, rules->predicates[c].target, expect, po, id);
 		}
 		for(d = 0; d < rules->predicates[c].matchcount; d++)
 		{
