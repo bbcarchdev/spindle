@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2015 BBC
+ * Copyright (c) 2015-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ static int spindle_rulebase_class_compare_(const void *ptra, const void *ptrb);
 static struct spindle_classmap_struct *spindle_rulebase_class_add_(SPINDLERULES *rules, const char *uri);
 static int spindle_rulebase_class_add_match_(struct spindle_classmap_struct *match, const char *uri, int prominence);
 static int spindle_rulebase_class_set_score_(struct spindle_classmap_struct *entry, librdf_statement *statement);
+static int spindle_rulebase_class_add_root_(struct spindle_classmap_struct *entry, librdf_statement *statement);
 
 /* Given an instance of a spindle:Class, add it to the rulebase */
 int
@@ -46,25 +47,32 @@ spindle_rulebase_class_add_node(SPINDLERULES *rules, librdf_model *model, const 
 	{
 		return -1;
 	}
-	/* Process the properties of the instance */
+	/* Query the model for other information about the class */
 	s = librdf_new_node_from_node(node);
 	query = librdf_new_statement_from_nodes(world, s, NULL, NULL);
-	stream = librdf_model_find_statements(model, query);
 	r = 0;
-	while(!librdf_stream_end(stream))
+	for(stream = librdf_model_find_statements(model, query);
+		!librdf_stream_end(stream);
+		librdf_stream_next(stream))
 	{
 		statement = librdf_stream_get_object(stream);
 		predicate = librdf_statement_get_predicate(statement);
 		pred = librdf_node_get_uri(predicate);
 		preduri = (const char *) librdf_uri_as_string(pred);
+		/* ex:Class olo:index score */
 		if(!strcmp(preduri, NS_OLO "index"))
 		{
-			if((r = spindle_rulebase_class_set_score_(classentry, statement)))
-			{
-				break;
-			}
+			r = spindle_rulebase_class_set_score_(classentry, statement);
 		}
-		librdf_stream_next(stream);
+		/* ex:Class void:classPartition <http://someprefix/> */
+		if(!strcmp(preduri, NS_VOID "classPartition"))
+		{
+			r = spindle_rulebase_class_add_root_(classentry, statement);
+		}
+		if(r < 0)
+		{
+			break;
+		}
 	}
 	librdf_free_stream(stream);
 	librdf_free_statement(query);
@@ -139,6 +147,10 @@ spindle_rulebase_class_cleanup(SPINDLERULES *rules)
 			free(rules->classes[c].match[d].uri);
 		}
 		free(rules->classes[c].match);
+		if(rules->classes[c].roots)
+		{
+			spindle_strset_destroy(rules->classes[c].roots);
+		}
 	}
 	free(rules->classes);
 	rules->classes = NULL;
@@ -165,6 +177,16 @@ spindle_rulebase_class_dump(SPINDLERULES *rules)
 	for(c = 0; c < rules->classcount; c++)
 	{
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": %d: <%s>\n", rules->classes[c].score, rules->classes[c].uri);
+		if(rules->classes[c].roots)
+		{
+			for(d = 0; d < rules->classes[c].roots->count; d++)
+			{
+				if(rules->classes[c].roots->strings[d])
+				{
+					twine_logf(LOG_DEBUG, PLUGIN_NAME ": inference root: <%s>\n", rules->classes[c].roots->strings[d]);
+				}
+			}
+		}
 		for(d = 0; d < rules->classes[c].matchcount; d++)
 		{
 			twine_logf(LOG_DEBUG, PLUGIN_NAME ":   +--> <%s>\n", rules->classes[c].match[d].uri);
@@ -269,5 +291,45 @@ spindle_rulebase_class_set_score_(struct spindle_classmap_struct *entry, librdf_
 		return 0;
 	}
 	entry->score = (int) score;
+	return 1;
+}
+
+/* Add a new root URI which will be used when inferring classes if
+ * no explicit class is known
+ */
+static int
+spindle_rulebase_class_add_root_(struct spindle_classmap_struct *entry, librdf_statement *statement)
+{
+	librdf_node *node;
+	librdf_uri *uri;
+	const unsigned char *uristr;
+
+	if(!entry->roots)
+	{
+		entry->roots = spindle_strset_create();
+		if(!entry->roots)
+		{
+			return -1;
+		}
+	}
+	node = librdf_statement_get_object(statement);
+	if(!node || !librdf_node_is_resource(node))
+	{
+		return 0;
+	}
+	uri = librdf_node_get_uri(node);
+	if(!uri)
+	{
+		return 0;
+	}
+	uristr = librdf_uri_as_string(uri);
+	if(!uristr)
+	{
+		return 0;
+	}
+	if(spindle_strset_add(entry->roots, (const char *) uristr))
+	{
+		return -1;
+	}
 	return 1;
 }

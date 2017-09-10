@@ -169,9 +169,13 @@ dct:PhysicalResource spindle:expressedAs crm:E18_Physical_Thing .
 ## Concepts
 
 skos:Concept
-		a spindle:Class ;
-		olo:index 100 ;
-		rdfs:label "Concept"@en .
+	a spindle:Class ;
+	olo:index 100 ;
+	rdfs:label "Concept"@en ;
+	void:classPartition
+		<http://dbpedialite.org/things/> ,
+		<http://www.wikidata.org/entity/> ,
+		<http://www.bbc.co.uk/things/> .
 
 skos08:Concept spindle:expressedAs skos:Concept .
 <http://www.tate.org.uk/ontologies/collection#Subject> spindle:expressedAs skos:Concept .

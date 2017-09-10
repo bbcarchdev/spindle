@@ -56,6 +56,7 @@
 # define NS_EVENT                       "http://purl.org/NET/c4dm/event.owl#"
 # define NS_PO                          "http://purl.org/ontology/po/"
 # define NS_FRBR                        "http://purl.org/vocab/frbr/core#"
+# define NS_VOID                        "http://rdfs.org/ns/void#"
 
 /* MIME types */
 # define MIME_TURTLE                    "text/turtle"
@@ -156,6 +157,7 @@ struct spindle_classmap_struct
 	size_t matchsize;
 	int score;
 	int prominence;
+	struct spindle_strset_struct *roots;
 };
 
 struct spindle_classmatch_struct

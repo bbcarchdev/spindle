@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2015 BBC
+ * Copyright (c) 2015-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -160,6 +160,7 @@ spindle_rulebase_loadfile_(const char *filename)
 	return buffer;
 }
 
+/* Invoked for every statement in the rulebase */
 static int
 spindle_rulebase_add_statement_(SPINDLERULES *rules, librdf_model *model, librdf_statement *statement)
 {
@@ -217,6 +218,7 @@ spindle_rulebase_add_statement_(SPINDLERULES *rules, librdf_model *model, librdf
 		objuri = (const char *) librdf_uri_as_string(obj);
 		if(!strcmp(objuri, NS_SPINDLE "Class"))
 		{
+			/* Create a new class entry */
 			if(spindle_rulebase_class_add_node(rules, model, subjuri, subject) < 0)
 			{
 				return -1;
@@ -225,6 +227,7 @@ spindle_rulebase_add_statement_(SPINDLERULES *rules, librdf_model *model, librdf
 		}
 		if(!strcmp(objuri, NS_SPINDLE "Property"))
 		{
+			/* Create a new property entry */
 			if(spindle_rulebase_pred_add_node(rules, model, subjuri, subject) < 0)
 			{
 				return -1;
@@ -233,7 +236,9 @@ spindle_rulebase_add_statement_(SPINDLERULES *rules, librdf_model *model, librdf
 		}
 		return 0;
 	}
-	/* ex:Class spindle:expressedAs ex:OtherClass */
+	/* ex:Class spindle:expressedAs ex:OtherClass
+	 * Add a class match rule
+	 */
 	if(!strcmp(preduri, NS_SPINDLE "expressedAs"))
 	{
 		if(!librdf_node_is_resource(object))
@@ -242,7 +247,9 @@ spindle_rulebase_add_statement_(SPINDLERULES *rules, librdf_model *model, librdf
 		}
 		return spindle_rulebase_class_add_matchnode(rules, model, subjuri, object);
 	}
-	/* ex:predicate spindle:property [ ... ] */
+	/* ex:predicate spindle:property [ ... ]
+	 * Add a property match rule
+	 */
 	if(!strcmp(preduri, NS_SPINDLE "property"))
 	{
 		if(librdf_node_is_literal(object))
@@ -251,7 +258,9 @@ spindle_rulebase_add_statement_(SPINDLERULES *rules, librdf_model *model, librdf
 		}
 		return spindle_rulebase_pred_add_matchnode(rules, model, subjuri, object, 0);
 	}
-	/* ex:predicate spindle:inverseProperty [ ... ] */
+	/* ex:predicate spindle:inverseProperty [ ... ]
+	 * Add an inverse property-match rule
+	 */
 	if(!strcmp(preduri, NS_SPINDLE "inverseProperty"))
 	{
 		if(librdf_node_is_literal(object))
@@ -260,7 +269,9 @@ spindle_rulebase_add_statement_(SPINDLERULES *rules, librdf_model *model, librdf
 		}
 		return spindle_rulebase_pred_add_matchnode(rules, model, subjuri, object, 1);
 	}
-	/* ex:predicate spindle:coref spindle:foo */
+	/* ex:predicate spindle:coref spindle:foo
+	 * Add a co-reference match type rule
+	 */
 	if(!strcmp(preduri, NS_SPINDLE "coref"))
 	{
 		return spindle_rulebase_coref_add_node(rules, subjuri, object);
