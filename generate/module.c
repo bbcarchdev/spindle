@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ spindle_generate_init_(SPINDLEGENERATE *generate)
 	{
 		spindle_rulebase_dump(generate->rules);
 	}
-	generate->aboutself = twine_config_get_bool(PLUGIN_NAME ":about-self", 0);
+	generate->aboutself = twine_config_get_bool(PLUGIN_NAME ":about-self", twine_config_get_bool("spindle:about-self", 0));
 	if(generate->aboutself)
 	{
 		twine_logf(LOG_INFO, PLUGIN_NAME ": creative works will be 'about' themselves\n");
