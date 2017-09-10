@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ spindle_class_match(SPINDLEENTRY *cache, struct spindle_strset_struct *classes)
 	librdf_stream *stream;
 	librdf_uri *uri;
 	unsigned char *uristr;
-	size_t c, d;
+	size_t c, d, n;
 	struct spindle_classmap_struct *mapentry;
 	struct spindle_classmatch_struct *match;
 	int score;
@@ -82,6 +82,44 @@ spindle_class_match(SPINDLEENTRY *cache, struct spindle_strset_struct *classes)
 	}
 	librdf_free_stream(stream);
 	librdf_free_statement(query);
+	if(!match)
+	{
+		/* Attempt to infer the class using the coreferences of the entity */
+		for(c = 0; c < cache->rules->classcount; c++)
+		{
+			if(!cache->rules->classes[c].roots)
+			{
+				/* This class has no roots */
+				continue;
+			}
+			if(cache->rules->classes[c].score > score)
+			{
+				/* We've previously matched a higher-prominence class */
+				continue;
+			}
+			for(d = 0; d < cache->rules->classes[c].roots->count; d++)
+			{
+				for(n = 0; cache->refs[n]; n++)
+				{
+					/* Check the entry's coreference URIs against the
+					 * class root URIs from the rulebase
+					 */
+					if(!strncmp(cache->refs[n], cache->rules->classes[c].roots->strings[d],
+								strlen(cache->rules->classes[c].roots->strings[d])))
+					{
+						mapentry = &(cache->rules->classes[c]);
+						match = &(cache->rules->classes[c].match[d]);
+						score = cache->rules->classes[c].score;
+						if(classes)
+						{
+							spindle_strset_add(classes, mapentry->uri);
+						}
+						break;
+					}
+				}
+			}
+		}
+	}	
 	if(!match)
 	{
 		twine_logf(LOG_WARNING, PLUGIN_NAME ": no class match for object <%s>\n", cache->localname);
