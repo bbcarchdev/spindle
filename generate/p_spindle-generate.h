@@ -43,8 +43,6 @@
 
 # define SPINDLE_DB_INDEX_VERSION       2
 
-# define MIME_NQUADS                    "application/n-quads"
-
 typedef struct spindle_generate_struct SPINDLEGENERATE;
 typedef struct spindle_entry_struct SPINDLEENTRY;
 
@@ -65,6 +63,8 @@ struct spindle_generate_struct
 	struct spindle_predicatemap_struct *licensepred;
 	struct spindle_license_struct *licenses;
 	size_t nlicenses;
+	/* Should creative works be 'about' themselves? */
+	int aboutself;
 };
 
 /* State used while generating a single proxy entry */

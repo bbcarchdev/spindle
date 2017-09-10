@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -55,9 +55,11 @@
 # define NS_ODRL                        "http://www.w3.org/ns/odrl/2/"
 # define NS_EVENT                       "http://purl.org/NET/c4dm/event.owl#"
 # define NS_PO                          "http://purl.org/ontology/po/"
+# define NS_FRBR                        "http://purl.org/vocab/frbr/core#"
 
 /* MIME types */
 # define MIME_TURTLE                    "text/turtle"
+# define MIME_NQUADS                    "application/n-quads"
 
 typedef struct spindle_context_struct SPINDLE;
 typedef struct spindle_rulebase_struct SPINDLERULES;

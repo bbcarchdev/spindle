@@ -594,7 +594,7 @@ skos08:narrower spindle:property [
 ## foaf:topic
 
 foaf:topic
-	a spindle:Property ;
+	a spindle:Property, spindle:TopicProperty ;
 	olo:index 9 ;
 	spindle:expect rdfs:Resource ;
 	spindle:proxyOnly true .
@@ -774,7 +774,7 @@ event:place spindle:property [
 ## event:factor
 
 event:factor
-    a spindle:Property ;
+    a spindle:Property, spindle:TopicProperty ;
 	olo:index 12 ;
 	spindle:expect rdfs:Resource ;
 	spindle:prominence 1 ;

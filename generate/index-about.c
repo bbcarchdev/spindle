@@ -46,6 +46,7 @@ spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data)
 	int r;
 	size_t c;
 
+	/* XXX should be rulebase-driven -- spindle:TopicProperty */
 	const char *predlist[] = 
 	{
 		NS_FOAF "topic",
@@ -53,15 +54,16 @@ spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data)
 		NULL
 	};
 	
-#if SPINDLE_ENABLE_ABOUT_SELF
-	/* Force an entity to always 'about' itself, so that queries match both
-	 * topics and the things about those topics
-	 */
-	if(sql_executef(sql, "INSERT INTO \"about\" (\"id\", \"about\") VALUES (%Q, %Q)", id, id))
+	if(data->generate->aboutself && data->classname && !strcmp(data->classname, NS_FRBR "Work"))
 	{
-		return -1;
+		/* Force a Creative Work entity to always 'about' itself, so that queries match both
+		 * topics and the works about those topics
+		 */
+		if(sql_executef(sql, "INSERT INTO \"about\" (\"id\", \"about\") VALUES (%Q, %Q)", id, id))
+		{
+			return -1;
+		}
 	}
-#endif
 	if(!(query = librdf_new_statement(data->spindle->world)))
 	{
 		return -1;

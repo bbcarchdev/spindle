@@ -96,6 +96,11 @@ spindle_generate_init_(SPINDLEGENERATE *generate)
 	{
 		spindle_rulebase_dump(generate->rules);
 	}
+	generate->aboutself = twine_config_get_bool(PLUGIN_NAME ":about-self", 0);
+	if(generate->aboutself)
+	{
+		twine_logf(LOG_INFO, PLUGIN_NAME ": creative works will be 'about' themselves\n");
+	}
 	return 0;
 }
 
