@@ -34,7 +34,7 @@ spindle_describe_entry(SPINDLEENTRY *data)
 	librdf_statement *st, *statement;
 	const char *uri;
 	int r;
-	
+
 	model = twine_rdf_model_create();
 	if(data->flags & TK_PROXY)
 	{
@@ -80,7 +80,7 @@ spindle_describe_entry(SPINDLEENTRY *data)
 			librdf_statement_set_subject(st, librdf_new_node_from_node(node));
 			librdf_statement_set_predicate(st, twine_rdf_node_createuri(NS_RDF "type"));
 			librdf_statement_set_object(st, twine_rdf_node_createuri(NS_FOAF "Document"));
-			twine_rdf_model_add_st(data->proxydata, st, data->graph);
+			twine_rdf_model_add_st(model, st, data->graph);
 			librdf_free_statement(st);
 		
 			/* For each subject in the graph, add triples stating that:
@@ -121,9 +121,12 @@ spindle_describe_entry(SPINDLEENTRY *data)
 		librdf_free_iterator(iter);
 		spindle_cache_store(data, "graphs", model);
 	}
-	stream = librdf_model_as_stream(model);
-	librdf_model_add_statements(data->proxydata, stream);
-	librdf_free_stream(stream);
+	if(data->generate->describedby)
+	{
+		stream = librdf_model_as_stream(model);
+		librdf_model_add_statements(data->proxydata, stream);
+		librdf_free_stream(stream);
+	}
 	twine_rdf_model_destroy(model);
 	return 0;
 }

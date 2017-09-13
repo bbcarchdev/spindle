@@ -65,6 +65,8 @@ struct spindle_generate_struct
 	size_t nlicenses;
 	/* Should creative works be 'about' themselves? */
 	int aboutself;
+	/* Should we add POWDER describedby statements to the proxy graph? */
+	int describedby;
 };
 
 /* State used while generating a single proxy entry */
