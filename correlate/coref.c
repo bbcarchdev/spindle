@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2016 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,8 +36,6 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 	librdf_uri *uri;
 	unsigned char *l, *r;
 	size_t c;
-
-	(void) graphuri;
 
 	set = (struct spindle_corefset_struct *) calloc(1, sizeof(struct spindle_corefset_struct));
 	if(!set)
@@ -82,10 +80,12 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 			return NULL;
 		}
 	}
-	/* Now, find all of the subjects in the graph and add them as dangling
+	/* Now, find all of the URIs in the graph and add them as dangling
 	 * references if they don't already exist: this ensures that they'll
 	 * still get processed even there aren't actually any co-references
 	 */
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding graph URI <%s>\n", graphuri);
+	spindle_coref_add_(set, graphuri, NULL);
 	query = librdf_new_statement(spindle->world);
 	stream = librdf_model_find_statements(model, query);
 	while(!librdf_stream_end(stream))
@@ -96,7 +96,33 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 		   (uri = librdf_node_get_uri(subj)) &&
 		   (l = librdf_uri_as_string(uri)))
 		{
-/*			twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding subject <%s>\n", (const char *) l); */
+			twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding subject <%s>\n", (const char *) l);
+			if(spindle_coref_add_(set, (const char *) l, NULL))
+			{
+				spindle_coref_destroy(set);
+				set = NULL;
+				break;
+			}
+		}
+		subj = librdf_statement_get_predicate(st);
+		if(librdf_node_is_resource(subj) &&
+		   (uri = librdf_node_get_uri(subj)) &&
+		   (l = librdf_uri_as_string(uri)))
+		{
+			twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding predicate <%s>\n", (const char *) l);
+			if(spindle_coref_add_(set, (const char *) l, NULL))
+			{
+				spindle_coref_destroy(set);
+				set = NULL;
+				break;
+			}
+		}
+		subj = librdf_statement_get_object(st);
+		if(librdf_node_is_resource(subj) &&
+		   (uri = librdf_node_get_uri(subj)) &&
+		   (l = librdf_uri_as_string(uri)))
+		{
+			twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding object <%s>\n", (const char *) l);
 			if(spindle_coref_add_(set, (const char *) l, NULL))
 			{
 				spindle_coref_destroy(set);
