@@ -181,8 +181,6 @@ skos:Concept
 
 skos08:Concept spindle:expressedAs skos:Concept .
 <http://www.tate.org.uk/ontologies/collection#Subject> spindle:expressedAs skos:Concept .
-owl:Class spindle:expressedAs skos:Concept .
-rdfs:Class spindle:expressedAs skos:Concept .
 <http://dbpedia.org/ontology/TopicalConcept> spindle:expressedAs skos:Concept .
 po:Genre spindle:expressedAs skos:Concept .
 po:Format spindle:expressedAs skos:Concept .
