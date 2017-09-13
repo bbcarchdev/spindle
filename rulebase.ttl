@@ -344,6 +344,30 @@ dcmitype:Software spindle:expressedAs foaf:Document .
 schema:SoftwareApplication spindle:expressedAs foaf:Document .
 schema:SoftwareSourceCode spindle:expressedAs foaf:Document .
 
+## Classes
+
+rdfs:Class
+	a spindle:Class ;
+	olo:index 120 ;
+	rdfs:label "Class"@en .
+
+owl:Class spindle:expressedAs rdfs:Class .
+rdfs:Datatype spindle:expressedAs rdfs:Class .
+
+## Properties
+
+rdf:Property
+	a spindle:Class ;
+	olo:index 125 ;
+	rdfs:label "Property"@en .
+
+owl:ObjectProperty spindle:expressedAs rdf:Property .
+owl:DatatypeProperty spindle:expressedAs rdf:Property .
+owl:FunctionalProperty spindle:expressedAs rdf:Property .
+owl:InverseFunctionalProperty spindle:expressedAs rdf:Property .
+owl:TransitiveProperty spindle:expressedAs rdf:Property .
+rdfs:ContainerMembershipProperty spindle:expressedAs rdf:Property .
+
 #### Property rules
 
 ## rdfs:label
