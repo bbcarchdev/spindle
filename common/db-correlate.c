@@ -32,6 +32,13 @@ struct spindle_create_struct
 	char id[36];
 };
 
+struct spindle_state_struct
+{
+	SPINDLE *spindle;
+	const char *id;
+	int changed;
+};
+
 struct relate_struct
 {
 	SPINDLE *spindle;
@@ -41,6 +48,7 @@ struct relate_struct
 
 static int spindle_db_perform_proxy_create_(SQL *restrict db, void *restrict userdata);
 static int spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict userdata);
+static int spindle_db_perform_proxy_state_(SQL *restrict db, void *restrict userdata);
 
 int
 spindle_db_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struct spindle_strset_struct *changeset)
@@ -63,7 +71,7 @@ spindle_db_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, st
 	if(data.id[0])
 	{
 		/* Now update the index state if required */
-		if(spindle_db_proxy_state_(spindle, data.id, 1))
+		if(spindle_db_proxy_state_(spindle, data.id, 1) < 0)
 		{
 			twine_logf(LOG_ERR, PLUGIN_NAME ": DB: failed to update proxy state\n");
 			return -1;
@@ -272,22 +280,36 @@ spindle_db_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, cha
 	return 0;
 }
 
-/* Ensure there's an entry in the state table for this proxy */
+/* Ensure there's an entry in the state table for this proxy (and update the flags
+ * if needed) */
 int
 spindle_db_proxy_state_(SPINDLE *spindle, const char *id, int changed)
 {
+	struct spindle_state_struct data;
+		
+	data.spindle = spindle;
+	data.id = id;
+	data.changed = changed;
+	return sql_perform(spindle->db, spindle_db_perform_proxy_state_, (void *) &data, -1, SQL_TXN_CONSISTENT);
+}
+
+static int
+spindle_db_perform_proxy_state_(SQL *restrict db, void *restrict userdata)
+{
+	struct spindle_state_struct *data;
 	SQL_STATEMENT *rs;
 	char skey[16], tbuf[20];
 	uint32_t shortkey;
 	time_t t;
 	struct tm tm;
-	
-	rs = sql_queryf(spindle->db, "SELECT \"id\" FROM \"state\" WHERE \"id\" = %Q", id);
+
+	data = (struct spindle_state_struct *) userdata;
+	rs = sql_queryf(db, "SELECT \"id\" FROM \"state\" WHERE \"id\" = %Q", data->id);
 	if(!rs)
 	{
-		return -2;
+		return SQL_TXN_FAIL;
 	}
-	strncpy(skey, id, 8);
+	strncpy(skey, data->id, 8);
 	skey[8] = 0;
 	shortkey = (uint32_t) strtoul(skey, NULL, 16);
 	t = time(NULL);
@@ -295,26 +317,31 @@ spindle_db_proxy_state_(SPINDLE *spindle, const char *id, int changed)
 	strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S", &tm);
 	if(sql_stmt_eof(rs))
 	{
-		if(sql_executef(spindle->db, "INSERT INTO \"state\" (\"id\", \"shorthash\", \"tinyhash\", \"status\", \"modified\", \"flags\") VALUES (%Q, '%lu', '%d', %Q, %Q, 0)",
-			id, (unsigned long) shortkey, (int) (shortkey % 256), "DIRTY", tbuf
+		/* The entry doesn't already exist, create it */
+		if(sql_executef(db, "INSERT INTO \"state\" (\"id\", \"shorthash\", \"tinyhash\", \"status\", \"modified\", \"flags\") VALUES (%Q, '%lu', '%d', %Q, %Q, 0)",
+			data->id, (unsigned long) shortkey, (int) (shortkey % 256), "DIRTY", tbuf
 			))
 		{
 			sql_stmt_destroy(rs);
-			return -2;
+			return SQL_TXN_FAIL;
 		}
 		sql_stmt_destroy(rs);
-		return 1;
+		return SQL_TXN_COMMIT;
 	}
-	if(changed)
+	sql_stmt_destroy(rs);
+	/* The entry already exists; update the flags and timestamp if it's been
+	 * changed
+	 */
+	if(data->changed)
 	{
-		if(sql_executef(spindle->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = 0, \"modified\" = %Q WHERE \"id\" = %Q",
-			"DIRTY", tbuf, id))
+		if(sql_executef(db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = 0, \"modified\" = %Q WHERE \"id\" = %Q",
+			"DIRTY", tbuf, data->id))
 		{
-			return -2;
+			return SQL_TXN_FAIL;
 		}
-		return 1;
+		return SQL_TXN_COMMIT;
 	}
-	return 0;
+	return SQL_TXN_ROLLBACK;
 }
 
 static int

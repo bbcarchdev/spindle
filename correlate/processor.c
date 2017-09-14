@@ -119,7 +119,6 @@ spindle_correlate_internal_(struct spindle_correlate_data_struct *cbdata)
 	{
 		if(spindle_proxy_create(cbdata->spindle, cbdata->newset->refs[c].left, cbdata->newset->refs[c].right, cbdata->changes))
 		{
-			twine_logf(LOG_ERR, PLUGIN_NAME ": correlation failed; may re-try\n");
 			return SQL_TXN_FAIL;
 		}
 	}
