@@ -92,7 +92,7 @@ spindle_correlate(twine_graph *graph, void *data)
 	cbdata.newset = newset;
 	cbdata.changes = changes;
 	r = 0;
-	if(spindle_correlate_internal_(&cbdata))
+	if(spindle_correlate_internal_(&cbdata) < 0)
 	{
 		r = -1;
 	}
