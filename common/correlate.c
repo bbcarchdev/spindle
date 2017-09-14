@@ -130,7 +130,7 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 
 	if(spindle->db)
 	{
-		return spindle_proxy_db_create_(spindle, uri1, uri2, changeset);
+		return spindle_db_proxy_create(spindle, uri1, uri2, changeset);
 	}
 	u1 = spindle_proxy_locate(spindle, uri1);
 	if(uri2)
