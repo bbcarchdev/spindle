@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2016 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -171,19 +171,20 @@ spindle_source_fetch_db_(SPINDLEENTRY *data)
 	{
 		/* Add <ref> owl:sameAs <localname> triples to the proxy model */
 		if(sparql_queryf_model(data->sparql, data->sourcedata,
-			"SELECT DISTINCT ?s ?p ?o ?g\n"
-			" WHERE {\n"
-			"  GRAPH ?g {\n"
-			"  { <%s> ?p ?o .\n"
-			"   BIND(<%s> as ?s)\n"
-			"  }\n"
-			"  UNION\n"
-			"  { ?s ?p <%s> .\n"
-			"   BIND(<%s> as ?o)\n"
-			"  }\n"
-			" }\n"
-			"}",
-			data->refs[c], data->refs[c], data->refs[c], data->refs[c]))
+							   "SELECT DISTINCT ?s ?p ?o ?g\n"
+							   " WHERE {\n"
+							   "  GRAPH ?g {\n"
+							   "  { <%s> ?p ?o .\n"
+							   "   BIND(<%s> as ?s)\n"
+							   "  }\n"
+							   "  UNION\n"
+							   "  { ?s ?p <%s> .\n"
+							   "   FILTER(?p != <" NS_RDF "type>)\n"
+							   "   BIND(<%s> as ?o)\n"
+							   "  }\n"
+							   " }\n"
+							   "}",
+							   data->refs[c], data->refs[c], data->refs[c], data->refs[c]))
 		{
 			r = -1;
 			break;
