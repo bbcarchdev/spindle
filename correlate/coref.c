@@ -25,6 +25,20 @@
 
 static int spindle_coref_add_(struct spindle_corefset_struct *set, const char *l, const char *r);
 
+struct spindle_corefset_struct *
+spindle_coref_create(void)
+{
+	struct spindle_corefset_struct *set;
+	
+	set = (struct spindle_corefset_struct *) calloc(1, sizeof(struct spindle_corefset_struct));
+	if(!set)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate memory for new coreference set\n");
+		return NULL;
+	}
+	return set;
+}
+
 /* Extract a list of co-references from a librdf model */
 struct spindle_corefset_struct *
 spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphuri)
@@ -37,10 +51,9 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 	unsigned char *l, *r;
 	size_t c;
 
-	set = (struct spindle_corefset_struct *) calloc(1, sizeof(struct spindle_corefset_struct));
+	set = spindle_coref_create();
 	if(!set)
 	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to allocate memory for new coreference set\n");
 		return NULL;
 	}
 	/* Loop through each of the co-referencing predicates */

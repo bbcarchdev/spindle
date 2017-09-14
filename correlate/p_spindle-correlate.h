@@ -39,6 +39,7 @@ int spindle_match_sameas(struct spindle_corefset_struct *set, const char *subjec
 int spindle_match_wikipedia(struct spindle_corefset_struct *set, const char *subject, const char *object);
 
 /* Extract a list of co-references from a librdf model */
+struct spindle_corefset_struct *spindle_coref_create(void);
 struct spindle_corefset_struct *spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphuri);
 /* Free the resources used by a co-reference set */
 int spindle_coref_destroy(struct spindle_corefset_struct *set);

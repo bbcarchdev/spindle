@@ -32,17 +32,14 @@ struct spindle_correlate_data_struct
 	struct spindle_strset_struct *changes;
 };
 
-
 static int spindle_correlate_txn_(SQL *restrict sql, void *restrict userdata);
 static int spindle_correlate_internal_(struct spindle_correlate_data_struct *cbdata);
 
-/* Post-processing hook, invoked by Twine operations
+/* "spindle-correlate" workflow processor
  *
  * This hook is invoked once (preprocessed) RDF has been pushed into the
- * quad-store and is responsible for:
- *
- * - correlating references against each other and generating proxy URIs
- * - caching and transforming source data and storing it with the proxies
+ * quad-store and is responsible for correlating references against each
+ * other and generating proxy URIs
  */
 int
 spindle_correlate(twine_graph *graph, void *data)
@@ -62,13 +59,20 @@ spindle_correlate(twine_graph *graph, void *data)
 		return -1;
 	}
 	/* find all owl:sameAs refs where either side is same-origin as graph */
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": extracting references from existing graph\n");
-	oldset = spindle_coref_extract(spindle, graph->old, graph->uri);
-	if(!oldset)
+	if(graph->old)
 	{
-		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to extract co-references from previous graph state\n");
-		spindle_strset_destroy(changes);
-		return -1;
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": extracting references from existing graph\n");
+		oldset = spindle_coref_extract(spindle, graph->old, graph->uri);
+		if(!oldset)
+		{
+			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to extract co-references from previous graph state\n");
+			spindle_strset_destroy(changes);
+			return -1;
+		}
+	}
+	else
+	{
+		oldset = spindle_coref_create();
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": extracting references from new graph\n");
 	newset = spindle_coref_extract(spindle, graph->store, graph->uri);
@@ -121,18 +125,11 @@ static int
 spindle_correlate_txn_(SQL *restrict sql, void *restrict userdata)
 {
 	struct spindle_correlate_data_struct *cbdata;
-	int r;
 	
 	(void) sql;
 	
 	cbdata = (struct spindle_correlate_data_struct *) userdata;
-	r = spindle_correlate_internal_(cbdata);
-	if(r == -2 && sql_deadlocked(sql))
-	{
-		/* Force a retry in the event of a deadlock */
-		return -1;
-	}
-	return r;
+	return spindle_correlate_internal_(cbdata);
 }
 
 static int
@@ -144,8 +141,9 @@ spindle_correlate_internal_(struct spindle_correlate_data_struct *cbdata)
 	{
 		if(spindle_proxy_create(cbdata->spindle, cbdata->newset->refs[c].left, cbdata->newset->refs[c].right, cbdata->changes))
 		{
-			return -2;
+			twine_logf(LOG_ERR, PLUGIN_NAME ": correlation failed; may re-try\n");
+			return SQL_TXN_FAIL;
 		}
 	}
-	return 1;
+	return SQL_TXN_COMMIT;
 }
