@@ -102,6 +102,7 @@ spindle_generate_init_(SPINDLEGENERATE *generate)
 		twine_logf(LOG_INFO, PLUGIN_NAME ": creative works will be 'about' themselves\n");
 	}
 	generate->describedby = twine_config_get_bool(PLUGIN_NAME ":describedby", twine_config_get_bool("spindle:describedby", 1));
+	generate->describeinbound = twine_config_get_bool(PLUGIN_NAME ":describe-inbound", twine_config_get_bool("spindle:describe-inbound", 0));
 	return 0;
 }
 

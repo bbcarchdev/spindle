@@ -67,6 +67,11 @@ struct spindle_generate_struct
 	int aboutself;
 	/* Should we add POWDER describedby statements to the proxy graph? */
 	int describedby;
+	/* Should we consider references to be descriptive?
+	 * i.e., do we treat graphs containing statements whose objects are
+	 * one of our corefs to be 'source data'?
+	 */
+	int describeinbound;
 };
 
 /* State used while generating a single proxy entry */
