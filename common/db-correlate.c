@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2016 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,6 +23,15 @@
 
 #include "p_spindle.h"
 
+struct spindle_create_struct
+{
+	SPINDLE *spindle;
+	const char *uri1;
+	const char *uri2;
+	struct spindle_strset_struct *changeset;
+	char id[36];
+};
+
 struct relate_struct
 {
 	SPINDLE *spindle;
@@ -30,7 +39,38 @@ struct relate_struct
 	const char *uri;
 };
 
+static int spindle_db_perform_proxy_create_(SQL *restrict db, void *restrict userdata);
 static int spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict userdata);
+
+int
+spindle_db_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struct spindle_strset_struct *changeset)
+{
+	struct spindle_create_struct data;
+	
+	/* Perform the actual correlation within a transaction,
+	 * and THEN update state if needed
+	 */
+	data.spindle = spindle;
+	data.uri1 = uri1;
+	data.uri2 = uri2;
+	data.changeset = changeset;
+	data.id[0] = 0;
+	if(sql_perform(spindle->db, spindle_db_perform_proxy_create_, (void *) &data, -1, SQL_TXN_CONSISTENT) < 0)
+	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": DB: failed to create proxy\n");
+		return -1;
+	}
+	if(data.id[0])
+	{
+		/* Now update the index state if required */
+		if(spindle_db_proxy_state_(spindle, data.id, 1))
+		{
+			twine_logf(LOG_ERR, PLUGIN_NAME ": DB: failed to update proxy state\n");
+			return -1;
+		}
+	}
+	return 0;
+}
 
 char *
 spindle_db_proxy_locate(SPINDLE *spindle, const char *uri)
@@ -39,6 +79,10 @@ spindle_db_proxy_locate(SPINDLE *spindle, const char *uri)
 	char *buf, *p;
 	const char *s;
 	
+	if(!uri)
+	{
+		return NULL;
+	}
 	rs = sql_queryf(spindle->db, "SELECT \"id\" FROM \"proxy\" WHERE %Q = ANY(\"sameas\")", uri);
 	if(!rs)
 	{
@@ -96,11 +140,10 @@ spindle_db_proxy_locate(SPINDLE *spindle, const char *uri)
 int
 spindle_db_proxy_relate(SPINDLE *spindle, const char *remote, const char *local)
 {
-	char *id;
+	char id[36];
 	struct relate_struct data;
 
-	id = spindle_db_id(local);
-	if(!id)
+	if(spindle_db_id_copy(id, local))
 	{
 		return -1;
 	}
@@ -111,10 +154,8 @@ spindle_db_proxy_relate(SPINDLE *spindle, const char *remote, const char *local)
 	if(spindle_db_perform_proxy_relate_(spindle->db, (void *) &data) < 0)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to relate <%s> to %s\n", remote, id);
-		free(id);
 		return -1;
 	}
-	free(id);
 	return 0;
 }
 
@@ -277,11 +318,154 @@ spindle_db_proxy_state_(SPINDLE *spindle, const char *id, int changed)
 }
 
 static int
+spindle_db_perform_proxy_create_(SQL *restrict db, void *restrict userdata)
+{
+	SPINDLE *spindle;
+	struct spindle_create_struct *data;
+	char *u1, *u2, *uu;
+	unsigned flags = SF_REFRESHED;
+
+	(void) db;
+
+	data = (struct spindle_create_struct *) userdata;
+	spindle = data->spindle;
+	data->id[0] = 0;
+	/* Locate the existing identifiers for our URIs, if they exist */
+	u1 = spindle_db_proxy_locate(spindle, data->uri1);
+	u2 = spindle_db_proxy_locate(spindle, data->uri2);
+	if(u1 && u2 && !strcmp(u1, u2))
+	{
+		/* The coreference already exists */
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": DB: <%s> <=> <%s> already exists\n", data->uri1, data->uri2);
+		if(data->changeset)
+		{
+			spindle_strset_add_flags(data->changeset, u1, flags);
+		}
+		spindle_db_id_copy(data->id, u1);
+		/* No database changes needed */
+		free(u1);
+		free(u2);
+		return SQL_TXN_ROLLBACK;
+	}
+	else if(!data->uri2 && u1)
+	{
+		/* The lone subject already exists */
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": DB: <%s> already exists\n", data->uri1);
+		if(data->changeset)
+		{
+			spindle_strset_add_flags(data->changeset, u1, flags);
+		}
+		spindle_db_id_copy(data->id, u1);
+		free(u1);
+		free(u2);
+		return SQL_TXN_ROLLBACK;
+	}
+	/* If both entities already have local proxies, we just pick the first
+	 * to use as the new unified proxy.
+	 *
+	 * If only one entity has a proxy, just use that and attach the new
+	 * referencing triples to it.
+	 *
+	 * If neither does, generate a new local name and populate it.
+	 */
+	uu = (u1 ? u1 : (u2 ? u2 : NULL));
+	if(!uu)
+	{
+		/* Generate a new URI for uri1 */
+		uu = spindle_proxy_generate(spindle, data->uri1);
+		if(!uu)
+		{
+			free(u1);
+			free(u2);
+			return SQL_TXN_FAIL;
+		}
+		flags |= SF_MOVED;
+	}
+	/* Store the proxy UUID in data->id so that its state will be updated */
+	spindle_db_id_copy(data->id, uu);
+	if(data->uri2)
+	{
+		twine_logf(LOG_INFO, PLUGIN_NAME ": DB: <%s> => (<%s>, <%s>)\n", uu, data->uri1, data->uri2);
+	}
+	else
+	{
+		twine_logf(LOG_INFO, PLUGIN_NAME ": <%s> => (<%s>)\n", uu, data->uri1);
+	}
+	/* If the first entity didn't previously have a local proxy, attach it */
+	if(!u1)
+	{
+		twine_logf(LOG_DEBUG, PLUGIN_NAME ": DB: relating %s to %s\n", data->uri1, uu);
+		if(spindle_db_proxy_relate(spindle, data->uri1, uu) < 0)
+		{
+			free(u1);
+			free(u2);
+			if(uu != u1 && uu != u2)
+			{
+				free(uu);
+			}
+			return SQL_TXN_FAIL;
+		}
+		flags |= SF_MOVED;
+	}
+	/* If the second entity didn't previously have a local proxy, attach it */
+	if(!u2)
+	{
+		if(data->uri2)
+		{
+			twine_logf(LOG_DEBUG, PLUGIN_NAME ": relating %s to %s\n", data->uri2, uu);
+			if(spindle_db_proxy_relate(spindle, data->uri2, uu))
+			{
+				free(u1);
+				free(u2);
+				if(uu != u1 && uu != u2)
+				{
+					free(uu);
+				}
+				return SQL_TXN_FAIL;
+			}
+		}
+	}
+	else if(strcmp(u2, uu))
+	{
+		/* However, if it did have a local proxy and it was different to
+		 * the one we've chosen, migrate its references over, leaving a single
+		 * unified proxy.
+		 */
+		twine_logf(LOG_INFO, PLUGIN_NAME ": DB: relocating references from <%s> to <%s>\n", u2, uu);
+		if(spindle_db_proxy_migrate(spindle, u2, uu, NULL))
+		{
+			free(u1);
+			free(u2);
+			if(uu != u1 && uu != u2)
+			{
+				free(uu);
+			}
+			return -1;
+		}
+		flags |= SF_MOVED;
+		if(data->changeset)
+		{
+			spindle_strset_add_flags(data->changeset, u2, flags);
+		}
+	}
+	if(data->changeset)
+	{
+		spindle_strset_add_flags(data->changeset, uu, flags);
+	}
+	free(u1);
+	free(u2);
+	if(uu != u1 && uu != u2)
+	{
+		free(uu);
+	}
+	return SQL_TXN_COMMIT;
+}
+
+static int
 spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict userdata)
 {
 	struct relate_struct *data;
 	SQL_STATEMENT *rs;
-	int r;
 	
 	data = (struct relate_struct *) userdata;
 	rs = sql_queryf(db, "SELECT \"id\" FROM \"proxy\" WHERE \"id\" = %Q", data->id);
@@ -312,11 +496,6 @@ spindle_db_perform_proxy_relate_(SQL *restrict db, void *restrict userdata)
 		return -2;
 	}
 	if(sql_executef(db, "UPDATE \"licenses_audiences\" SET \"audienceid\" = %Q WHERE \"uri\" = %Q", data->id, data->uri))
-	{
-		return -2;
-	}
-	r = spindle_db_proxy_state_(data->spindle, data->id, 1);
-	if(r < 0)
 	{
 		return -2;
 	}

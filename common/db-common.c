@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -245,7 +245,7 @@ spindle_db_id(const char *localname)
 	}
 	if(!(t = strrchr(localname, '/')))
 	{
-		t = id;
+		t = localname;
 	}
 	else
 	{
@@ -258,7 +258,7 @@ spindle_db_id(const char *localname)
 			*p = tolower(*t);
 			p++;
 		}
-		else if(*t == '#')
+		else if(*t == '#' || *t == '/')
 		{
 			break;
 		}
@@ -277,6 +277,48 @@ spindle_db_id(const char *localname)
 		return NULL;
 	}
 	return id;
+}
+
+int
+spindle_db_id_copy(char *dest, const char *localname)
+{
+	char *p;
+	const char *t;
+
+	if(!(t = strrchr(localname, '/')))
+	{
+		t = localname;
+	}
+	else
+	{
+		t++;
+	}
+	for(p = dest; *t; t++)
+	{
+		if(isxdigit(*t))
+		{
+			*p = tolower(*t);
+			p++;
+		}
+		else if(*t == '#' || *t == '/')
+		{
+			break;
+		}
+		else
+		{
+			/* invalid character - this can't be a local UUID */
+			dest[0] = 0;
+			return -1;
+		}
+	}
+	*p = 0;
+	if(strlen(dest) != 32)
+	{
+		/* the extracted UUID is the wrong length to be valid */
+		dest[0] = 0;
+		return -1;
+	}
+	return 0;
 }
 
 static int

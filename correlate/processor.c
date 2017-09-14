@@ -32,7 +32,6 @@ struct spindle_correlate_data_struct
 	struct spindle_strset_struct *changes;
 };
 
-static int spindle_correlate_txn_(SQL *restrict sql, void *restrict userdata);
 static int spindle_correlate_internal_(struct spindle_correlate_data_struct *cbdata);
 
 /* "spindle-correlate" workflow processor
@@ -93,19 +92,9 @@ spindle_correlate(twine_graph *graph, void *data)
 	cbdata.newset = newset;
 	cbdata.changes = changes;
 	r = 0;
-	if(spindle->db)
+	if(spindle_correlate_internal_(&cbdata))
 	{
-		if(sql_perform(spindle->db, spindle_correlate_txn_, &cbdata, -1, SQL_TXN_CONSISTENT))
-		{
-			r = -1;
-		}
-	}
-	else
-	{
-		if(spindle_correlate_internal_(&cbdata))
-		{
-			r = -1;
-		}
+		r = -1;
 	}
 	spindle_coref_destroy(oldset);
 	spindle_coref_destroy(newset);
@@ -119,17 +108,6 @@ spindle_correlate(twine_graph *graph, void *data)
 		twine_logf(LOG_INFO, PLUGIN_NAME ": processing complete for graph <%s>\n", graph->uri);
 	}
 	return r;
-}
-
-static int
-spindle_correlate_txn_(SQL *restrict sql, void *restrict userdata)
-{
-	struct spindle_correlate_data_struct *cbdata;
-	
-	(void) sql;
-	
-	cbdata = (struct spindle_correlate_data_struct *) userdata;
-	return spindle_correlate_internal_(cbdata);
 }
 
 static int

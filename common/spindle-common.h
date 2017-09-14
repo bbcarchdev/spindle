@@ -250,6 +250,7 @@ int spindle_db_init(SPINDLE *spindle);
 int spindle_db_cleanup(SPINDLE *spindle);
 int spindle_db_local(SPINDLE *spindle, const char *localname);
 char *spindle_db_id(const char *localname);
+int spindle_db_id_copy(char *dest, const char *localname);
 char *spindle_db_literalset(struct spindle_literalset_struct *set);
 char *spindle_db_strset(struct spindle_strset_struct *set);
 size_t spindle_db_esclen(const char *src);
