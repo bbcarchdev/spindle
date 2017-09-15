@@ -48,7 +48,10 @@ spindle_source_fetch_entry(SPINDLEENTRY *data)
 		}
 		if(r > 0)
 		{
-			/* N-Quads were retrieved from the cache */
+			/* N-Quads were retrieved from the cache, post-process them
+			 * before handing them back
+			 */
+			twine_logf(LOG_DEBUG, PLUGIN_NAME ": Fetched source data from the cache\n");
 			if(spindle_source_refs_(data))
 			{
 				return -1;
@@ -60,6 +63,7 @@ spindle_source_fetch_entry(SPINDLEENTRY *data)
 			return 0;
 		}
 	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": cache is not available for this entity, fetching source data from graph store\n");
 	if(data->db)
 	{
 		if(spindle_source_refs_(data))
@@ -86,6 +90,7 @@ spindle_source_fetch_entry(SPINDLEENTRY *data)
 	{
 		return -1;
 	}
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": caching source data\n");
 	if(spindle_cache_store(data, "source", data->sourcedata))
 	{
 		return -1;
@@ -134,7 +139,9 @@ spindle_source_graphs_(SPINDLEENTRY *data)
 	librdf_node *node;
 	librdf_uri *nodeuri;
 	const char *nodeuristr;
-
+	size_t count;
+	
+	count = 0;
 	iter = librdf_model_get_contexts(data->sourcedata);
 	while(!librdf_iterator_end(iter))
 	{
@@ -152,8 +159,15 @@ spindle_source_graphs_(SPINDLEENTRY *data)
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding graph <%s> to sources list\n", nodeuristr);
 		spindle_strset_add(data->sources, nodeuristr);
 		librdf_iterator_next(iter);
+		count++;
 	}
 	librdf_free_iterator(iter);
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": discovered %d graphs containing source data\n", count);
+	if(!count)
+	{
+		twine_logf(LOG_ERR, PLUGIN_NAME ": entity %s has no source graphs\n", data->id);
+		return -1;
+	}
 	return 0;
 }
 
