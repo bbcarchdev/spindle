@@ -65,12 +65,17 @@ spindle_generate_init_(SPINDLEGENERATE *generate)
 		return -1;
 	}
 	generate->spindle = &spindle;
-	spindle.rules = spindle_rulebase_create(NULL, NULL);
+	spindle.rules = spindle_rulebase_create();
 	if(!spindle.rules)
 	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to load rule-base\n");
 		return -1;
 	}
+	if(spindle_rulebase_add_config(spindle.rules))
+	{
+		spindle_rulebase_destroy(spindle.rules);
+		return -1;
+	}
+	spindle_rulebase_finalise(spindle.rules);
 	generate->rules = spindle.rules;
 	if(spindle_cache_init(generate))
 	{

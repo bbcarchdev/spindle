@@ -231,7 +231,21 @@ int spindle_init(SPINDLE *spindle);
 int spindle_cleanup(SPINDLE *spindle);
 
 /* Load and parse the rulebase */
-SPINDLERULES *spindle_rulebase_create(const char *path, const struct coref_match_struct *match_types);
+SPINDLERULES *spindle_rulebase_create(void);
+/* Set the list of matching callbacks used by the correlation engine */
+int spindle_rulebase_set_matchtypes(SPINDLERULES *rules, const struct coref_match_struct *match_types);
+/* Add the statements from a librdf_model to a rulebase */
+int spindle_rulebase_add_model(SPINDLERULES *rules, librdf_model *model, const char *sourcefile);
+/* Add a buffer containing Turtle to the rulebase */
+int spindle_rulebase_add_turtle(SPINDLERULES *rules, const char *buf, const char *sourcefile);
+/* Add the statements from a Turtle file to the rulebase */
+int spindle_rulebase_add_file(SPINDLERULES *rules, const char *path);
+/* Add all of the rules from the default file(s) */
+int spindle_rulebase_add_config(SPINDLERULES *rules);
+/* Once all rules have been loaded, finalise the rulebase so that it can be
+ * used to process source graphs.
+ */
+int spindle_rulebase_finalise(SPINDLERULES *rules);
 /* Free resources used by the rulebase */
 int spindle_rulebase_destroy(SPINDLERULES *rules);
 /* Dump the contents of the loaded rulebase */

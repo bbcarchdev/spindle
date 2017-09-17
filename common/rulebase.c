@@ -26,14 +26,11 @@
 static char *spindle_rulebase_loadfile_(const char *filename);
 static int spindle_rulebase_add_statement_(SPINDLERULES *rules, librdf_model *model, librdf_statement *statement);
 
+/* Create a new rulebase instance */
 SPINDLERULES *
-spindle_rulebase_create(const char *path, const struct coref_match_struct *match_types)
+spindle_rulebase_create(void)
 {
 	SPINDLERULES *rules;
-	char *rulebase, *buf;
-	librdf_model *model;
-	librdf_stream *stream;
-	librdf_statement *statement;
 
 	rules = (SPINDLERULES *) calloc(1, sizeof(SPINDLERULES));
 	if(!rules)
@@ -41,57 +38,120 @@ spindle_rulebase_create(const char *path, const struct coref_match_struct *match
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create rulebase object\n");
 		return NULL;
 	}
-	rules->match_types = match_types;
-	/* Always cache these predicates, regardless of what the rulebase states */
+	/* Always cache these predicates */
 	spindle_rulebase_cachepred_add(rules, NS_RDF "type");
-	spindle_rulebase_cachepred_add(rules, NS_OWL "sameAs");
+	spindle_rulebase_cachepred_add(rules, NS_OWL "sameAs");	
+	return rules;
+}
 
+/* Set the list of matching callbacks used by the correlation engine */
+int
+spindle_rulebase_set_matchtypes(SPINDLERULES *rules, const struct coref_match_struct *match_types)
+{
+	rules->match_types = match_types;
+	return 0;
+}
+
+/* Add the statements from a librdf_model to a rulebase */
+int
+spindle_rulebase_add_model(SPINDLERULES *rules, librdf_model *model, const char *sourcefile)
+{
+	librdf_stream *stream;
+	librdf_statement *statement;
+	int r;
+
+	if(!sourcefile)
+	{
+		sourcefile = "*builtin*";
+	}
+	stream = librdf_model_as_stream(model);
+	if(!stream)
+	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to obtain stream from rulebase model for %s\n", sourcefile);
+		return -1;
+	}
+	for(r = 0; !librdf_stream_end(stream); librdf_stream_next(stream))
+	{
+		statement = librdf_stream_get_object(stream);
+		if(spindle_rulebase_add_statement_(rules, model, statement) < 0)
+		{
+			r = -1;
+			break;
+		}
+	}
+	librdf_free_stream(stream);	
+	return r;
+}
+
+/* Add a buffer containing Turtle to the rulebase */
+int
+spindle_rulebase_add_turtle(SPINDLERULES *rules, const char *buf, const char *sourcefile)
+{
+	librdf_model *model;
+	int r;
+
+	if(!sourcefile)
+	{
+		sourcefile = "*builtin*";
+	}
 	model = twine_rdf_model_create();
 	if(!model)
 	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create new RDF model\n");
-		free(rules);
-		return NULL;
-	}
-	if(path)
-	{
-		buf = spindle_rulebase_loadfile_(path);
-	}
-	else
-	{
-		rulebase = twine_config_geta("spindle:rulebase", TWINEMODULEDIR "/rulebase.ttl");
-		buf = spindle_rulebase_loadfile_(rulebase);
-		free(rulebase);
-	}
-	if(!buf)
-	{
-		/* spindle_loadfile_() will have already logged the error */
-		twine_rdf_model_destroy(model);
-		spindle_rulebase_destroy(rules);
-		return NULL;
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create new RDF model for %s\n", sourcefile);
+		return -1;
 	}
 	if(twine_rdf_model_parse(model, MIME_TURTLE, buf, strlen(buf)))
 	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to parse rulebase as " MIME_TURTLE "\n");
-		free(buf);
-		twine_rdf_model_destroy(model);
-		return NULL;
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to parse rulebase %s as " MIME_TURTLE "\n", sourcefile);	
+		librdf_free_model(model);
+		return -1;
 	}
-	free(buf);
-	/* Parse the model, adding data to the match lists */
-	stream = librdf_model_as_stream(model);
-	while(!librdf_stream_end(stream))
+	r = spindle_rulebase_add_model(rules, model, sourcefile);
+	librdf_free_model(model);
+	return r;
+}
+
+/* Add the statements from a Turtle file to the rulebase */
+int
+spindle_rulebase_add_file(SPINDLERULES *rules, const char *path)
+{
+	int r;
+	char *buf;
+
+	buf = spindle_rulebase_loadfile_(path);
+	if(!buf)
 	{
-		statement = librdf_stream_get_object(stream);
-		spindle_rulebase_add_statement_(rules, model, statement);
-		librdf_stream_next(stream);
+		return -1;
 	}
-	librdf_free_stream(stream);
-	twine_rdf_model_destroy(model);
+	r = spindle_rulebase_add_turtle(rules, buf, path);
+	free(buf);
+	return r;
+}
+
+/* Add all of the rules from the default file(s) */
+int
+spindle_rulebase_add_config(SPINDLERULES *rules)
+{
+	char *path;
+	int r;
+
+	path = twine_config_geta("spindle:rulebase", TWINEMODULEDIR "/rulebase.ttl");
+	r = spindle_rulebase_add_file(rules, path);
+	free(path);
+	return r;
+}
+
+/* Once all rules have been loaded, finalise the
+ * rulebase so that it can be used to process
+ * source graphs.
+ */
+int
+spindle_rulebase_finalise(SPINDLERULES *rules)
+{
 	spindle_rulebase_class_finalise(rules);
 	spindle_rulebase_pred_finalise(rules);
-	spindle_rulebase_cachepred_finalise(rules);
-	return rules;
+	spindle_rulebase_cachepred_finalise(rules);	
+	return 0;
 }
 
 int

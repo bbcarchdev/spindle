@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2016 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -42,12 +42,18 @@ twine_plugin_init(void)
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": initialisation failed\n");
 		return -1;
 	}
-	spindle.rules = spindle_rulebase_create(NULL, coref_match_types);
+	spindle.rules = spindle_rulebase_create();
 	if(!spindle.rules)
 	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to load rule-base\n");
 		return -1;
 	}
+	spindle_rulebase_set_matchtypes(spindle.rules, coref_match_types);
+	if(spindle_rulebase_add_config(spindle.rules))
+	{
+		spindle_rulebase_destroy(spindle.rules);
+		return -1;
+	}
+	spindle_rulebase_finalise(spindle.rules);
 	if(spindle_db_init(&spindle))
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to connect to database\n");

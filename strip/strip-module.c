@@ -30,12 +30,17 @@ int
 twine_plugin_init(void)
 {
 	twine_logf(LOG_DEBUG, PLUGIN_NAME " plug-in: initialising\n");
-	rulebase = spindle_rulebase_create(NULL, NULL);
+	rulebase = spindle_rulebase_create();
 	if(!rulebase)
 	{
-		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to load rule-base\n");
 		return -1;
 	}
+	if(spindle_rulebase_add_config(rulebase))
+	{
+		spindle_rulebase_destroy(rulebase);
+		return -1;
+	}
+	spindle_rulebase_finalise(rulebase);
 	if(twine_config_get_bool(PLUGIN_NAME ":dumprules", twine_config_get_bool("spindle:dumprules", 0)))
 	{
 		spindle_rulebase_dump(rulebase);
