@@ -48,3 +48,6 @@ checkout:
 		git pull && \
 		cd .. ; \
 	done
+
+reconf:
+	(cd $(top_srcdir) && autoreconf -i ) && $(SHELL) $(top_builddir)/config.status --recheck && $(SHELL) $(top_builddir)/config.status

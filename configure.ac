@@ -2,7 +2,7 @@
 ##
 ##  Author: Mo McRoberts
 ##
-##  Copyright (c) 2014-2015 BBC
+##  Copyright (c) 2014-2017 BBC
 ##
 ##  Licensed under the Apache License, Version 2.0 (the "License");
 ##  you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 
 AC_INIT([spindle],m4_esyscmd([/bin/sh m4/get-version.sh]),[RESFeedback@bbc.co.uk],,[https://github.com/bbcarchdev/spindle])
 AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_AUX_DIR([scripts])
 AM_INIT_AUTOMAKE([foreign])
 AM_MAINTAINER_MODE
 
