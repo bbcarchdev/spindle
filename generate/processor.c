@@ -39,6 +39,7 @@ int
 spindle_generate_update(const char *name, const char *identifier, void *data)
 {
 	SPINDLEGENERATE *generate;
+	int r;
 
 	(void) name;
 

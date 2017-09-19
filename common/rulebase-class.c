@@ -76,7 +76,7 @@ spindle_rulebase_class_add_node(SPINDLERULES *rules, librdf_model *model, const 
 	}
 	librdf_free_stream(stream);
 	librdf_free_statement(query);
-	if(r)
+	if(r < 0)
 	{
 		return -1;
 	}

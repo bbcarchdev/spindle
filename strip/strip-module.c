@@ -37,6 +37,7 @@ twine_plugin_init(void)
 	}
 	if(spindle_rulebase_add_config(rulebase))
 	{
+		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to initialise rulebase\n");
 		spindle_rulebase_destroy(rulebase);
 		return -1;
 	}

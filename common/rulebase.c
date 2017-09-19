@@ -75,6 +75,7 @@ spindle_rulebase_add_model(SPINDLERULES *rules, librdf_model *model, const char 
 		statement = librdf_stream_get_object(stream);
 		if(spindle_rulebase_add_statement_(rules, model, statement) < 0)
 		{
+			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to process triple into rulebase\n");
 			r = -1;
 			break;
 		}
@@ -185,6 +186,7 @@ spindle_rulebase_loadfile_(const char *filename)
 	buffer = NULL;
 	bufsize = 0;
 	buflen = 0;
+	twine_logf(LOG_INFO, PLUGIN_NAME ": loading rules from %s\n", filename);
 	f = fopen(filename, "rb");
 	if(!f)
 	{
@@ -281,6 +283,7 @@ spindle_rulebase_add_statement_(SPINDLERULES *rules, librdf_model *model, librdf
 			/* Create a new class entry */
 			if(spindle_rulebase_class_add_node(rules, model, subjuri, subject) < 0)
 			{
+				twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to add class entry for <%s>\n", subjuri);
 				return -1;
 			}
 			return 1;
@@ -290,6 +293,7 @@ spindle_rulebase_add_statement_(SPINDLERULES *rules, librdf_model *model, librdf
 			/* Create a new property entry */
 			if(spindle_rulebase_pred_add_node(rules, model, subjuri, subject) < 0)
 			{
+				twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to add predicate entry for <%s>\n", subjuri);
 				return -1;
 			}
 			return 1;
@@ -305,7 +309,12 @@ spindle_rulebase_add_statement_(SPINDLERULES *rules, librdf_model *model, librdf
 		{
 			return 0;
 		}
-		return spindle_rulebase_class_add_matchnode(rules, model, subjuri, object);
+		if(spindle_rulebase_class_add_matchnode(rules, model, subjuri, object) < 0)
+		{
+			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to add class-match rule for <%s>\n", subjuri);
+			return -1;
+		}
+		return 1;
 	}
 	/* ex:predicate spindle:property [ ... ]
 	 * Add a property match rule

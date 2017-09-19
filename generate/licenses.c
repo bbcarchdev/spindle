@@ -55,6 +55,7 @@ spindle_license_init(SPINDLEGENERATE *generate)
 	char *pred;
 	size_t c;
 
+	/* XXX specify this in the rulebase rather than in the config */
 	pred = twine_config_geta("spindle:predicates:license", NS_DCTERMS "rights");
 	for(c = 0; c < generate->rules->predcount; c++)
 	{
