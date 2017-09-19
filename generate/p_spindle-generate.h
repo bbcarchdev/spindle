@@ -82,6 +82,7 @@ struct spindle_entry_struct
 	SPINDLERULES *rules;
 	SPARQL *sparql;
 	SQL *db;
+	CLUSTERJOB *job;
 	char *graphname;
 	char *docname;
 	char *title;
