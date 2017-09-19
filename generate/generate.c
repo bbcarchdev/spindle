@@ -209,19 +209,15 @@ spindle_generate_txn_(SQL *restrict sql, void *restrict userdata)
 	entry = (SPINDLEENTRY *) userdata;
 	if(spindle_generate_entry_(entry))
 	{
-		if(sql_deadlocked(sql))
+		/* Reset the models before retrying */
+		if (spindle_entry_reset(entry))
 		{
-			/* Reset the models before retrying */
-			if (spindle_entry_reset(entry))
-			{
-				return -2;
-			}
-			/* Retry in the event of a deadlock */
-			return -1;
+			return SQL_TXN_ABORT;
 		}
-		return -2;
+		/* Retry in the event of a deadlock */
+		return SQL_TXN_FAIL;
 	}
-	return 1;
+	return SQL_TXN_COMMIT;
 }
 
 /* Re-build the data for the proxy entity identified by cache->localname;
