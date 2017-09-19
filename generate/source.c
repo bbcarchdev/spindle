@@ -165,8 +165,8 @@ spindle_source_graphs_(SPINDLEENTRY *data)
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": discovered %d graphs containing source data\n", count);
 	if(!count)
 	{
-		twine_logf(LOG_ERR, PLUGIN_NAME ": entity %s has no source graphs\n", data->id);
-		return -1;
+		twine_logf(LOG_WARNING, PLUGIN_NAME ": entity %s has no source graphs\n", data->id);
+		return 0;
 	}
 	return 0;
 }
