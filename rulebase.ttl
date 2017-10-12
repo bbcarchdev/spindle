@@ -55,6 +55,7 @@
 @prefix media: <http://purl.org/media#> .
 @prefix video: <http://purl.org/media/video#> .
 @prefix audio: <http://purl.org/media/audio#> .
+@prefix rdac: <http://rdaregistry.info/Elements/c/> .
 
 #### Co-reference predicates
 
@@ -103,6 +104,7 @@ foaf:Person
 		spindle:prominence 20 .
 
 po:Person spindle:expressedAs foaf:Person .
+schema:Person spindle:expressedAs foaf:Person .
 
 ## Groups
 
@@ -207,13 +209,14 @@ frbr:Work
 <http://dbpedia.org/ontology/Work> spindle:expressedAs frbr:Work .
 schema:CreativeWork spindle:expressedAs frbr:Work .
 bibo:Document spindle:expressedAs frbr:Work .
+rdac:Work spindle:expressedAs frbr:Work .
 
 # AV works
 
 po:Clip
 	spindle:expressedAs frbr:Work ;
 	spindle:prominence 15 .
-	
+
 po:Episode
 	spindle:expressedAs frbr:Work ;
 	spindle:prominence 25 .
@@ -276,7 +279,7 @@ bibo:Chapter
 
 bibo:BookSection
 	spindle:expressedAs frbr:Work .
-	
+
 # Pictures
 
 schema:VisualArtwork
@@ -294,7 +297,7 @@ bibo:Image
 schema:Painting
 	spindle:expressedAs frbr:Work ;
 	spindle:prominence 30 .
-	
+
 schema:Photograph
 	spindle:expressedAs frbr:Work ;
 	spindle:prominence 30 .
