@@ -75,7 +75,7 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 	SQL_STATEMENT *rs;
 	int flags;
 	const char *id;
-	
+
 	if(!entry->generate->db)
 	{
 		return 0;
@@ -106,7 +106,7 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q WHERE \"id\" = %Q", "DIRTY", id);
 		}
 	}
-	
+
 	sql_stmt_destroy(rs);
 
 	return 0;
@@ -117,7 +117,7 @@ int
 spindle_triggers_update(SPINDLEENTRY *data)
 {
 	size_t c;
-	
+
 	if(!data->generate->spindle->db)
 	{
 		return 0;
@@ -163,8 +163,8 @@ spindle_triggers_index(SQL *sql, const char *id, SPINDLEENTRY *data)
 		{
 			return -1;
 		}
-		if (sql_stmt_eof(rs)) {
-			if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\", \"flags\", \"triggerid\""") VALUES (%Q, %Q, '%d', %Q)",
+		if(sql_stmt_eof(rs)) {
+			if(sql_executef(sql, "INSERT INTO \"triggers\" (\"id\", \"uri\", \"flags\", \"triggerid\") VALUES (%Q, %Q, '%d', %Q)",
 				id, data->triggers[c].uri, data->triggers[c].kind, data->triggers[c].id))
 			{
 				sql_stmt_destroy(rs);
