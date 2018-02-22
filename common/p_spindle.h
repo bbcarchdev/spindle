@@ -32,6 +32,7 @@
 # include <uuid/uuid.h>
 
 # include "spindle-common.h"
+# include "p_rulebase.h"
 
 /* The name of this plug-in */
 # define PLUGIN_NAME                    "spindle"
@@ -41,27 +42,6 @@
 
 /* The number of entries in the graph cache */
 # define SPINDLE_GRAPHCACHE_SIZE        16
-
-/* Internal rule-base processing */
-int spindle_rulebase_class_add_node(SPINDLERULES *rules, librdf_model *model, const char *uri, librdf_node *node);
-int spindle_rulebase_class_add_matchnode(SPINDLERULES *rules, librdf_model *model, const char *matchuri, librdf_node *node);
-int spindle_rulebase_class_finalise(SPINDLERULES *rules);
-int spindle_rulebase_class_cleanup(SPINDLERULES *rules);
-int spindle_rulebase_class_dump(SPINDLERULES *rules);
-
-int spindle_rulebase_pred_add_node(SPINDLERULES *rules, librdf_model *model, const char *uri, librdf_node *node);
-int spindle_rulebase_pred_add_matchnode(SPINDLERULES *rules, librdf_model *model, const char *matchuri, librdf_node *matchnode, int inverse);
-int spindle_rulebase_pred_finalise(SPINDLERULES *rules);
-int spindle_rulebase_pred_cleanup(SPINDLERULES *rules);
-int spindle_rulebase_pred_dump(SPINDLERULES *rules);
-
-int spindle_rulebase_cachepred_add(SPINDLERULES *rules, const char *uri);
-int spindle_rulebase_cachepred_finalise(SPINDLERULES *rules);
-int spindle_rulebase_cachepred_cleanup(SPINDLERULES *rules);
-int spindle_rulebase_cachepred_dump(SPINDLERULES *rules);
-
-int spindle_rulebase_coref_add_node(SPINDLERULES *rules, const char *predicate, librdf_node *node);
-int spindle_rulebase_coref_dump(SPINDLERULES *rules);
 
 /* Database schema update */
 int spindle_db_schema_update_(SPINDLE *spindle);

@@ -18,9 +18,9 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-DIST_SUBDIRS = m4 common strip correlate generate docbook-html5 docs
+DIST_SUBDIRS = m4 rulebase common strip correlate generate docbook-html5 docs
 
-SUBDIRS = common strip correlate generate migrate docs
+SUBDIRS = rulebase common strip correlate generate migrate docs
 
 EXTRA_DIST = LICENSE-2.0 README.md old-README.md
 

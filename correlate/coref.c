@@ -76,7 +76,7 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 				l = librdf_uri_as_string(uri);
 				uri = librdf_node_get_uri(obj);
 				r = librdf_uri_as_string(uri);
-/*				twine_logf(LOG_DEBUG, PLUGIN_NAME ": found coref (<%s>, <%s>) with <%s>\n", (const char *) l, (const char *) r, spindle->coref[c].predicate); */
+/*				twine_logf(LOG_DEBUG, PLUGIN_NAME ": found coref (<%s>, <%s>) with <%s>\n", (const char *) l, (const char *) r, spindle->rules->coref[c].predicate); */
 				if(spindle->rules->coref[c].callback(set, (const char *) l, (const char *) r))
 				{
 					spindle_coref_destroy(set);

@@ -16,7 +16,7 @@
 ##  See the License for the specific language governing permissions and
 ##  limitations under the License.
 
-AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ @LIBMQ_CPPFLAGS@ -I$(srcdir)/../common
+AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ @LIBMQ_CPPFLAGS@ -I$(srcdir)/../common -I$(srcdir)/../rulebase
 
 twinemodule_LTLIBRARIES = spindle-correlate.la
 

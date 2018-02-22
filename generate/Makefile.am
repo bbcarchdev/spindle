@@ -18,7 +18,7 @@
 
 EXTRA_DIST = README.md
 
-AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ @LIBMQ_CPPFLAGS@ -I$(srcdir)/../common
+AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ @LIBMQ_CPPFLAGS@ -I$(srcdir)/../common -I$(srcdir)/../rulebase
 
 twinemodule_LTLIBRARIES = spindle-generate.la
 

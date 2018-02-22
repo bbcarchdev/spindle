@@ -72,6 +72,7 @@ BT_DEFINE_PREFIX
 AC_DEFINE_UNQUOTED([SPINDLE_ENABLE_ABOUT_SELF], [0], [Whether to enable 'items are about themselves' in the index])
 
 AC_CONFIG_FILES([Makefile
+rulebase/Makefile
 common/Makefile
 strip/Makefile
 correlate/Makefile

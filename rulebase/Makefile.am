@@ -1,8 +1,6 @@
 ## Spindle: The RES Linked Open Data Aggregation Engine
 ##
-## Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
-##
-## Copyright (c) 2014-2016 BBC
+## Copyright (c) 2018 BBC
 ##
 ##  Licensed under the Apache License, Version 2.0 (the "License");
 ##  you may not use this file except in compliance with the License.
@@ -16,12 +14,15 @@
 ##  See the License for the specific language governing permissions and
 ##  limitations under the License.
 
-AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ -I$(srcdir)/../rulebase
+AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ -I$(srcdir)/../common
 
-noinst_LTLIBRARIES = libspindle-common.la
+noinst_LTLIBRARIES = librulebase.la
 
-libspindle_common_la_SOURCES = p_spindle.h spindle-common.h \
-	context.c db-common.c db-schema.c db-correlate.c \
-	correlate.c graphcache.c
+librulebase_la_SOURCES = rulebase.h rulebase.c \
+	rulebase-cachepred.c rulebase-class.c rulebase-coref.c \
+	rulebase-pred.c strset.c
 
-libspindle_common_la_LIBADD = ../rulebase/librulebase.la
+librulebase_la_LIBADD = @LIBTWINE_LOCAL_LIBS@ @LIBTWINE_LIBS@ \
+	@LIBAWSCLIENT_LOCAL_LIBS@ @LIBAWSCLIENT_LIBS@ \
+	@LIBSQL_LOCAL_LIBS@ @LIBSQL_LIBS@ \
+	@LIBURI_LOCAL_LIBS@ @LIBURI_LIBS@
