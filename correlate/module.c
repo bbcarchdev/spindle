@@ -25,7 +25,7 @@
 
 static SPINDLE spindle;
 
-static struct coref_match_struct coref_match_types[] = 
+static struct coref_match_struct coref_match_types[] =
 {
 	{ NS_SPINDLE "resourceMatch", spindle_match_sameas },
 	{ NS_SPINDLE "wikipediaMatch", spindle_match_wikipedia },
@@ -35,14 +35,14 @@ static struct coref_match_struct coref_match_types[] =
 /* Twine plug-in entry-point */
 int
 twine_plugin_init(void)
-{	
+{
 	twine_logf(LOG_DEBUG, PLUGIN_NAME " plug-in: initialising\n");
 	if(spindle_init(&spindle))
 	{
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": initialisation failed\n");
 		return -1;
 	}
-	spindle.rules = spindle_rulebase_create();
+	spindle.rules = rulebase_create();
 	if(!spindle.rules)
 	{
 		return -1;
@@ -64,7 +64,7 @@ twine_plugin_init(void)
 	twine_graph_register(PLUGIN_NAME, spindle_correlate, &spindle);
 	if(twine_config_get_bool(PLUGIN_NAME ":dumprules", twine_config_get_bool("spindle:dumprules", 0)))
 	{
-		spindle_rulebase_dump(spindle.rules);
+		rulebase_dump(spindle.rules);
 	}
 	return 0;
 }

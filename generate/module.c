@@ -32,7 +32,7 @@ static SPINDLEGENERATE generate;
 /* Twine plug-in entry-point */
 int
 twine_plugin_init(void)
-{	
+{
 	twine_logf(LOG_DEBUG, PLUGIN_NAME " plug-in: initialising\n");
 	if(spindle_generate_init_(&generate))
 	{
@@ -65,7 +65,7 @@ spindle_generate_init_(SPINDLEGENERATE *generate)
 		return -1;
 	}
 	generate->spindle = &spindle;
-	spindle.rules = spindle_rulebase_create();
+	spindle.rules = rulebase_create();
 	if(!spindle.rules)
 	{
 		return -1;
@@ -94,12 +94,12 @@ spindle_generate_init_(SPINDLEGENERATE *generate)
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to connect to database\n");
 		return -1;
-	}	
+	}
 	generate->db = spindle.db;
 	generate->sparql = spindle.sparql;
 	if(twine_config_get_bool(PLUGIN_NAME ":dumprules", twine_config_get_bool("spindle:dumprules", 0)))
 	{
-		spindle_rulebase_dump(generate->rules);
+		rulebase_dump(generate->rules);
 	}
 	generate->aboutself = twine_config_get_bool(PLUGIN_NAME ":about-self", twine_config_get_bool("spindle:about-self", 0));
 	if(generate->aboutself)

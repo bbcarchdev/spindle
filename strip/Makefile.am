@@ -16,7 +16,10 @@
 ##  See the License for the specific language governing permissions and
 ##  limitations under the License.
 
-AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ -I$(srcdir)/../common -I$(srcdir)/../rulebase
+AM_CPPFLAGS = @AM_CPPFLAGS@ \
+	@LIBRULEBASE_CPPFLAGS@ \
+	@LIBTWINE_CPPFLAGS@ \
+	-I$(srcdir)/../common
 
 twinemodule_LTLIBRARIES = spindle-strip.la
 
@@ -28,4 +31,5 @@ spindle_strip_la_SOURCES = p_spindle-strip.h \
 
 spindle_strip_la_LDFLAGS = -no-undefined -module -avoid-version
 
-spindle_strip_la_LIBADD = ../common/libspindle-common.la
+spindle_strip_la_LIBADD = ../common/libspindle-common.la \
+	@LIBRULEBASE_LOCAL_LIBS@ @LIBRULEBASE_LIBS@

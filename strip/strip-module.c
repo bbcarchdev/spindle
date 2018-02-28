@@ -30,7 +30,7 @@ int
 twine_plugin_init(void)
 {
 	twine_logf(LOG_DEBUG, PLUGIN_NAME " plug-in: initialising\n");
-	rulebase = spindle_rulebase_create();
+	rulebase = rulebase_create();
 	if(!rulebase)
 	{
 		return -1;
@@ -44,7 +44,7 @@ twine_plugin_init(void)
 	spindle_rulebase_finalise(rulebase);
 	if(twine_config_get_bool(PLUGIN_NAME ":dumprules", twine_config_get_bool("spindle:dumprules", 0)))
 	{
-		spindle_rulebase_dump(rulebase);
+		rulebase_dump(rulebase);
 	}
 	twine_preproc_register("spindle", spindle_strip, rulebase);
 	twine_graph_register(PLUGIN_NAME, spindle_strip, rulebase);
@@ -57,7 +57,7 @@ twine_plugin_done(void)
 	twine_logf(LOG_DEBUG, PLUGIN_NAME " plug-in: cleaning up\n");
 	if(rulebase)
 	{
-		spindle_rulebase_destroy(rulebase);
+		rulebase_destroy(rulebase);
 	}
 	return 0;
 }

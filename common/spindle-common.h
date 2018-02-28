@@ -20,48 +20,16 @@
 #ifndef SPINDLE_COMMON_H_
 # define SPINDLE_COMMON_H_              1
 
-# include <liburi.h>
 # include <libsql.h>
-
-# include "libtwine.h"
-# include "rulebase.h"
-
-/* Flags on strsets */
-# define SF_NONE                        0
-# define SF_MOVED                       (1<<0)
-# define SF_UPDATED                     (1<<1)
-# define SF_REFRESHED                   (1<<2)
-# define SF_DONE                        (1<<3)
+# include <libsparqlclient.h>
+# include <libtwine.h>
+# include <rulebase/librulebase.h>
 
 /* Trigger kinds */
 # define TK_PROXY                       (1<<0)
 # define TK_TOPICS                      (1<<1)
 # define TK_MEDIA                       (1<<2)
 # define TK_MEMBERSHIP                  (1<<3)
-
-/* Namespaces */
-# define NS_RDF                         "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-# define NS_XSD                         "http://www.w3.org/2001/XMLSchema#"
-# define NS_RDFS                        "http://www.w3.org/2000/01/rdf-schema#"
-# define NS_FOAF                        "http://xmlns.com/foaf/0.1/"
-# define NS_POWDER                      "http://www.w3.org/2007/05/powder-s#"
-# define NS_MRSS                        "http://search.yahoo.com/mrss/"
-# define NS_OWL                         "http://www.w3.org/2002/07/owl#"
-# define NS_SPINDLE                     "http://bbcarchdev.github.io/ns/spindle#"
-# define NS_OLO                         "http://purl.org/ontology/olo/core#"
-# define NS_DCTERMS                     "http://purl.org/dc/terms/"
-# define NS_GEO                         "http://www.w3.org/2003/01/geo/wgs84_pos#"
-# define NS_DCMITYPE                    "http://purl.org/dc/dcmitype/"
-# define NS_MIME                        "http://purl.org/NET/mediatypes/"
-# define NS_ODRL                        "http://www.w3.org/ns/odrl/2/"
-# define NS_EVENT                       "http://purl.org/NET/c4dm/event.owl#"
-# define NS_PO                          "http://purl.org/ontology/po/"
-# define NS_FRBR                        "http://purl.org/vocab/frbr/core#"
-# define NS_VOID                        "http://rdfs.org/ns/void#"
-
-/* MIME types */
-# define MIME_TURTLE                    "text/turtle"
-# define MIME_NQUADS                    "application/n-quads"
 
 typedef struct spindle_context_struct SPINDLE;
 

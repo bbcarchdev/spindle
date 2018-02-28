@@ -29,8 +29,6 @@
 # undef PLUGIN_NAME
 # define PLUGIN_NAME                    "spindle-correlate"
 
-# define SET_BLOCKSIZE                  4
-
 /* Perform coreference correlation on a graph */
 int spindle_correlate(twine_graph *graph, void *data);
 

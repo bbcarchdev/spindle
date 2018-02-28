@@ -18,11 +18,9 @@ AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ -I$(srcdir)/../common
 
 noinst_LTLIBRARIES = librulebase.la
 
-librulebase_la_SOURCES = rulebase.h rulebase.c \
-	rulebase-cachepred.c rulebase-class.c rulebase-coref.c \
-	rulebase-pred.c strset.c
+librulebase_la_SOURCES = rulebase.h rulebase.c
 
 librulebase_la_LIBADD = @LIBTWINE_LOCAL_LIBS@ @LIBTWINE_LIBS@ \
-	@LIBAWSCLIENT_LOCAL_LIBS@ @LIBAWSCLIENT_LIBS@ \
-	@LIBSQL_LOCAL_LIBS@ @LIBSQL_LIBS@ \
-	@LIBURI_LOCAL_LIBS@ @LIBURI_LIBS@
+    @LIBAWSCLIENT_LOCAL_LIBS@ @LIBAWSCLIENT_LIBS@ \
+    @LIBSQL_LOCAL_LIBS@ @LIBSQL_LIBS@ \
+    @LIBURI_LOCAL_LIBS@ @LIBURI_LIBS@

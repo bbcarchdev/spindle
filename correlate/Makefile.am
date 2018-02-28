@@ -16,7 +16,11 @@
 ##  See the License for the specific language governing permissions and
 ##  limitations under the License.
 
-AM_CPPFLAGS = @AM_CPPFLAGS@ @LIBTWINE_CPPFLAGS@ @LIBMQ_CPPFLAGS@ -I$(srcdir)/../common -I$(srcdir)/../rulebase
+AM_CPPFLAGS = @AM_CPPFLAGS@ \
+	@LIBMQ_CPPFLAGS@ \
+	@LIBRULEBASE_CPPFLAGS@ \
+	@LIBTWINE_CPPFLAGS@ \
+	-I$(srcdir)/../common
 
 twinemodule_LTLIBRARIES = spindle-correlate.la
 
@@ -29,5 +33,8 @@ spindle_correlate_la_SOURCES = p_spindle-correlate.h \
 
 spindle_correlate_la_LDFLAGS = -no-undefined -module -avoid-version
 
-spindle_correlate_la_LIBADD = ../common/libspindle-common.la
+spindle_correlate_la_LIBADD = ../common/libspindle-common.la \
+	@LIBAWSCLIENT_LOCAL_LIBS@ @LIBAWSCLIENT_LIBS@ \
+	@LIBMQ_LOCAL_LIBS@ @LIBMQ_LIBS@ \
+	@LIBRULEBASE_LOCAL_LIBS@ @LIBRULEBASE_LIBS@
 

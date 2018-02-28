@@ -32,13 +32,9 @@
 # include <uuid/uuid.h>
 
 # include "spindle-common.h"
-# include "p_rulebase.h"
 
 /* The name of this plug-in */
 # define PLUGIN_NAME                    "spindle"
-
-/* The number of co-references allocated at a time when extending a set */
-# define SET_BLOCKSIZE                  4
 
 /* The number of entries in the graph cache */
 # define SPINDLE_GRAPHCACHE_SIZE        16

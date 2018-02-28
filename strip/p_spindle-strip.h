@@ -24,6 +24,7 @@
 # include <stdlib.h>
 # include <string.h>
 
+# include "p_spindle.h"
 # include "spindle-common.h"
 
 # undef PLUGIN_NAME

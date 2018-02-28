@@ -118,7 +118,7 @@ spindle_cleanup(SPINDLE *spindle)
 	}
 	if(spindle->rules)
 	{
-		spindle_rulebase_destroy(spindle->rules);
+		rulebase_destroy(spindle->rules);
 	}
 	if(spindle->graphcache)
 	{
