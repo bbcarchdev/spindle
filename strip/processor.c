@@ -23,9 +23,9 @@
 
 #include "p_spindle-strip.h"
 
-typedef int (*SPINDLESTRIPFN)(SPINDLERULES *restrict rules, librdf_statement *restrict statement, const char *restrict uristr);
+typedef int (*SPINDLESTRIPFN)(RULEBASE *restrict rules, librdf_statement *restrict statement, const char *restrict uristr);
 
-static int spindle_strip_is_cachepred_(SPINDLERULES *restrict rules, librdf_statement *restrict st, const char *restrict uristr);
+static int spindle_strip_is_cachepred_(RULEBASE *restrict rules, librdf_statement *restrict st, const char *restrict uristr);
 
 static SPINDLESTRIPFN spindle_strip_rules_[] = {
 	spindle_strip_is_cachepred_,
@@ -45,10 +45,10 @@ spindle_strip(twine_graph *graph, void *data)
 	const char *uristr;
 	int r, n, keep;
 	size_t c;
-	SPINDLERULES *rules;
+	RULEBASE *rules;
 	librdf_model *filtered_model;
 
-	rules = (SPINDLERULES *) data;
+	rules = (RULEBASE *) data;
 
 	filtered_model = twine_rdf_model_create();
 
@@ -154,7 +154,7 @@ spindle_strip(twine_graph *graph, void *data)
  * in the 'cachepred' list from the rulebase
  */
 static int
-spindle_strip_is_cachepred_(SPINDLERULES *rules, librdf_statement *st, const char *uristr)
+spindle_strip_is_cachepred_(RULEBASE *rules, librdf_statement *st, const char *uristr)
 {
 	size_t c;
 	int r;

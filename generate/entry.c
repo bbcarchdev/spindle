@@ -87,7 +87,7 @@ spindle_entry_init(SPINDLEENTRY *data, SPINDLEGENERATE *generate, const char *lo
 	{
 		return -1;
 	}
-	if(!(data->sources = spindle_strset_create()))
+	if(!(data->sources = strset_create()))
 	{
 		return -1;
 	}
@@ -134,7 +134,7 @@ spindle_entry_reset(SPINDLEENTRY *data)
 	/* Clean up classes before they're recreated in classes.c */
 	if(data->classes)
 	{
-		spindle_strset_destroy(data->classes);
+		strset_destroy(data->classes);
 		data->classes = NULL;
 	}
 	/* Initialise all models */
@@ -156,7 +156,7 @@ spindle_entry_cleanup(SPINDLEENTRY *data)
 	spindle_entry_cleanup_literalset_(&(data->descset));
 	if(data->sources)
 	{
-		spindle_strset_destroy(data->sources);
+		strset_destroy(data->sources);
 	}
 	if(data->refs)
 	{
@@ -174,7 +174,7 @@ spindle_entry_cleanup(SPINDLEENTRY *data)
 	spindle_entry_cleanup_models_(data);
 	if(data->classes)
 	{
-		spindle_strset_destroy(data->classes);
+		strset_destroy(data->classes);
 	}
 	for(c = 0; c < data->ntriggers; c++)
 	{

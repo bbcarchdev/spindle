@@ -123,7 +123,7 @@ spindle_proxy_locate(SPINDLE *spindle, const char *uri)
 
 /* Assert that two URIs are equivalent */
 int
-spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struct spindle_strset_struct *changeset)
+spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struct strset_struct *changeset)
 {
 	char *u1, *u2, *uu, *id;
 	unsigned flags = SF_REFRESHED;
@@ -147,7 +147,7 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": <%s> <=> <%s> already exists\n", uri1, uri2);
 		if(changeset)
 		{
-			spindle_strset_add_flags(changeset, u1, flags);
+			strset_add_flags(changeset, u1, flags);
 		}
 		/* Ensure that proxy state is up to date */
 		if(spindle->db)
@@ -169,7 +169,7 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": <%s> already exists\n", uri1);
 		if(changeset)
 		{
-			spindle_strset_add_flags(changeset, u1, flags);
+			strset_add_flags(changeset, u1, flags);
 		}
 		/* Ensure that the proxy state is up to date */
 		if(spindle->db)
@@ -265,12 +265,12 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		flags |= SF_MOVED;
 		if(changeset)
 		{
-			spindle_strset_add_flags(changeset, u2, flags);
+			strset_add_flags(changeset, u2, flags);
 		}
 	}
 	if(changeset)
 	{
-		spindle_strset_add_flags(changeset, uu, flags);
+		strset_add_flags(changeset, uu, flags);
 	}
 	free(u1);
 	free(u2);

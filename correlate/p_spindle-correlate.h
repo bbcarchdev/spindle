@@ -33,16 +33,16 @@
 int spindle_correlate(twine_graph *graph, void *data);
 
 /* Matching callbacks */
-int spindle_match_sameas(struct spindle_corefset_struct *set, const char *subject, const char *object);
-int spindle_match_wikipedia(struct spindle_corefset_struct *set, const char *subject, const char *object);
+int spindle_match_sameas(struct rulebase_corefset_struct *set, const char *subject, const char *object);
+int spindle_match_wikipedia(struct rulebase_corefset_struct *set, const char *subject, const char *object);
 
 /* Extract a list of co-references from a librdf model */
-struct spindle_corefset_struct *spindle_coref_create(void);
-struct spindle_corefset_struct *spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphuri);
+struct rulebase_corefset_struct *spindle_coref_create(void);
+struct rulebase_corefset_struct *spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphuri);
 /* Free the resources used by a co-reference set */
-int spindle_coref_destroy(struct spindle_corefset_struct *set);
+int spindle_coref_destroy(struct rulebase_corefset_struct *set);
 
 int spindle_graph_discard(SPINDLE *spindle, const char *uri);
-int spindle_cache_update_set(SPINDLE *spindle, struct spindle_strset_struct *set);
+int spindle_cache_update_set(SPINDLE *spindle, struct strset_struct *set);
 
 #endif /*!P_SPINDLE_CORRELATE_H_*/

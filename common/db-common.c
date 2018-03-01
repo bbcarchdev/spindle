@@ -126,7 +126,7 @@ spindle_db_literalset(struct spindle_literalset_struct *set)
 }
 
 char *
-spindle_db_strset(struct spindle_strset_struct *set)
+spindle_db_strset(struct strset_struct *set)
 {
 	size_t c, nbytes;
 	char *str, *p;

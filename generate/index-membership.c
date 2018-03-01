@@ -26,7 +26,7 @@
 static int spindle_index_membership_add_uri_(SPINDLEENTRY *data, SQL *sql, const char *id, const char *uristr);
 static int spindle_index_membership_add_(SQL *sql, const char *id, const char *collid);
 static int spindle_index_membership_query_(SQL *sql, const char *id, SPINDLEENTRY *data, librdf_model *model, librdf_node *graph, const char *predicate, int inverse, int matchrefs);
-static int spindle_index_membership_strset_(SQL *sql, const char *id, SPINDLEENTRY *data, struct spindle_strset_struct *set);
+static int spindle_index_membership_strset_(SQL *sql, const char *id, SPINDLEENTRY *data, struct strset_struct *set);
 
 /* Add information to the database about this entities membership in
  * collections.
@@ -209,7 +209,7 @@ spindle_index_membership_query_(SQL *sql, const char *id, SPINDLEENTRY *data, li
  * it's translated to a UUID), or a remote URI which needs to be looked up.
  */
 static int
-spindle_index_membership_strset_(SQL *sql, const char *id, SPINDLEENTRY *data, struct spindle_strset_struct *set)
+spindle_index_membership_strset_(SQL *sql, const char *id, SPINDLEENTRY *data, struct strset_struct *set)
 {
 	int r;
 	size_t c;

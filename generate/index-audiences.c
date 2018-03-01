@@ -24,10 +24,10 @@
 #include "p_spindle-generate.h"
 
 static char *spindle_index_audiences_origin_(const char *uristr);
-static int spindle_index_audiences_interp_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject, struct spindle_strset_struct *audiences);
-static int spindle_index_audiences_permission_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject, struct spindle_strset_struct *audiences);
+static int spindle_index_audiences_interp_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject, struct strset_struct *audiences);
+static int spindle_index_audiences_permission_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject, struct strset_struct *audiences);
 static int spindle_index_audiences_action_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject);
-static int spindle_index_audiences_assignee_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject, struct spindle_strset_struct *audiences);
+static int spindle_index_audiences_assignee_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject, struct strset_struct *audiences);
 
 /* Determine who can access a digital object based upon data about licenses; invoked by spindle_index_media() */
 int
@@ -85,7 +85,7 @@ spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data)
 	int r, match;
 	char **bases;
 	size_t c, d;
-	struct spindle_strset_struct *audiences;
+	struct strset_struct *audiences;
 	SQL_STATEMENT *rs;
 	
 	(void) id;
@@ -96,7 +96,7 @@ spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data)
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": faled to allocate buffer for base URI strings\n");
 		return -1;
 	}
-	audiences = spindle_strset_create();
+	audiences = strset_create();
 	if(!audiences)
 	{
 		free(bases);
@@ -124,7 +124,7 @@ spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data)
 			free(bases[c]);
 		}
 		free(bases);
-		spindle_strset_destroy(audiences);
+		strset_destroy(audiences);
 		return -1;
 	}
 	/* Next, iterate all of the graphs in the source data we have */
@@ -256,7 +256,7 @@ spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data)
 	twine_rdf_node_destroy(node);
 	twine_rdf_model_destroy(model);
 	free(base); */
-	spindle_strset_destroy(audiences);
+	strset_destroy(audiences);
 	for(c = 0; c < data->refcount; c++)
 	{
 		free(bases[c]);
@@ -352,7 +352,7 @@ spindle_index_audiences_origin_(const char *uristr)
  * Note that the <object> must appear in the same graph.
  */
 static int
-spindle_index_audiences_interp_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject, struct spindle_strset_struct *audiences)
+spindle_index_audiences_interp_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject, struct strset_struct *audiences)
 {
 	librdf_statement *query, *st;
 	librdf_stream *stream;
@@ -412,7 +412,7 @@ spindle_index_audiences_interp_(SPINDLEGENERATE *generate, librdf_model *model, 
 
 /* Interpret an individual odrl:Permission instance */
 static int
-spindle_index_audiences_permission_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject, struct spindle_strset_struct *audiences)
+spindle_index_audiences_permission_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject, struct strset_struct *audiences)
 {
 	int r;
 
@@ -523,7 +523,7 @@ spindle_index_audiences_action_(SPINDLEGENERATE *generate, librdf_model *model, 
  * 0 if not found, -1 on error.
  */
 static int
-spindle_index_audiences_assignee_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject, struct spindle_strset_struct *audiences)
+spindle_index_audiences_assignee_(SPINDLEGENERATE *generate, librdf_model *model, librdf_node *subject, struct strset_struct *audiences)
 {
 	librdf_node *node;
 	librdf_statement *query, *st;
@@ -574,7 +574,7 @@ spindle_index_audiences_assignee_(SPINDLEGENERATE *generate, librdf_model *model
 		}
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": found odrl:assignee <%s>\n", uristr);
 		r = 1;
-		if(spindle_strset_add(audiences, uristr))
+		if(strset_add(audiences, uristr))
 		{
 			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to add assignee URI string to set\n");
 			r = -1;

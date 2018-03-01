@@ -23,13 +23,13 @@
 
 #include "p_spindle-correlate.h"
 
-static int spindle_coref_add_(struct spindle_corefset_struct *set, const char *l, const char *r);
+static int spindle_coref_add_(struct rulebase_corefset_struct *set, const char *l, const char *r);
 
 struct spindle_corefset_struct *
 spindle_coref_create(void)
 {
 	struct spindle_corefset_struct *set;
-	
+
 	set = (struct spindle_corefset_struct *) calloc(1, sizeof(struct spindle_corefset_struct));
 	if(!set)
 	{
@@ -40,10 +40,10 @@ spindle_coref_create(void)
 }
 
 /* Extract a list of co-references from a librdf model */
-struct spindle_corefset_struct *
+struct rulebase_corefset_struct *
 spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphuri)
 {
-	struct spindle_corefset_struct *set;
+	struct rulebase_corefset_struct *set;
 	librdf_statement *query, *st;
 	librdf_stream *stream;
 	librdf_node *subj, *obj, *pred;
@@ -152,7 +152,7 @@ spindle_coref_extract(SPINDLE *spindle, librdf_model *model, const char *graphur
 
 /* Free the resources used by a co-reference set */
 int
-spindle_coref_destroy(struct spindle_corefset_struct *set)
+spindle_coref_destroy(struct rulebase_corefset_struct *set)
 {
 	size_t c;
 
@@ -168,7 +168,7 @@ spindle_coref_destroy(struct spindle_corefset_struct *set)
 
 /* Callback invoked when owl:sameAs references are found */
 int
-spindle_match_sameas(struct spindle_corefset_struct *set, const char *subject, const char *object)
+spindle_match_sameas(struct rulebase_corefset_struct *set, const char *subject, const char *object)
 {
 	if(spindle_coref_add_(set, subject, object))
 	{
@@ -178,7 +178,7 @@ spindle_match_sameas(struct spindle_corefset_struct *set, const char *subject, c
 }
 
 int
-spindle_match_wikipedia(struct spindle_corefset_struct *set, const char *subject, const char *object)
+spindle_match_wikipedia(struct rulebase_corefset_struct *set, const char *subject, const char *object)
 {
 	char *buf;
 
@@ -205,9 +205,9 @@ spindle_match_wikipedia(struct spindle_corefset_struct *set, const char *subject
 
 /* Add a single co-reference to a set (or if r is NULL, a lone subject) */
 static int
-spindle_coref_add_(struct spindle_corefset_struct *set, const char *l, const char *r)
+spindle_coref_add_(struct rulebase_corefset_struct *set, const char *l, const char *r)
 {
-	struct spindle_coref_struct *p;
+	struct rulebase_coref_struct *p;
 	size_t c;
 
 	for(c = 0; c < set->refcount; c++)
@@ -221,7 +221,7 @@ spindle_coref_add_(struct spindle_corefset_struct *set, const char *l, const cha
 	}
 	if(set->refcount >= set->size)
 	{
-		p = (struct spindle_coref_struct *) realloc(set->refs, sizeof(struct spindle_coref_struct) * (set->size + SET_BLOCKSIZE));
+		p = (struct rulebase_coref_struct *) realloc(set->refs, sizeof(struct rulebase_coref_struct) * (set->size + SET_BLOCKSIZE));
 		if(!p)
 		{
 			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to expand size of coreference set\n");
@@ -231,7 +231,7 @@ spindle_coref_add_(struct spindle_corefset_struct *set, const char *l, const cha
 		set->size += SET_BLOCKSIZE;
 	}
 	p = &(set->refs[set->refcount]);
-	memset(p, 0, sizeof(struct spindle_coref_struct));
+	memset(p, 0, sizeof(struct rulebase_coref_struct));
 	p->left = strdup(l);
 	if(r)
 	{

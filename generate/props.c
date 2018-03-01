@@ -37,7 +37,7 @@
  */
 struct propmatch_struct
 {
-	struct spindle_predicatemap_struct *map;
+	struct rulebase_predicatemap_struct *map;
 	int priority;
 	int prominence;
 	librdf_node *resource;
@@ -64,7 +64,7 @@ struct propdata_struct
 	librdf_model *source;
 	librdf_model *proxymodel;
 	librdf_model *rootmodel;
-	struct spindle_predicatemap_struct *maps;
+	struct rulebase_predicatemap_struct *maps;
 	struct propmatch_struct *matches;
 	/* Property-matching structures for specific cached predicates */
 	struct propmatch_struct *titlematch;
@@ -77,10 +77,10 @@ static int spindle_prop_init_(struct propdata_struct *data, SPINDLEENTRY *cache)
 static int spindle_prop_cleanup_(struct propdata_struct *data);
 static int spindle_prop_loop_(struct propdata_struct *data);
 static int spindle_prop_test_(struct propdata_struct *data, librdf_statement *st, const char *predicate, int inverse);
-static int spindle_prop_candidate_(struct propdata_struct *data, struct propmatch_struct *match, struct spindle_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj);
-static int spindle_prop_candidate_uri_(struct propdata_struct *data, struct propmatch_struct *match, struct spindle_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj);
-static int spindle_prop_candidate_literal_(struct propdata_struct *data, struct propmatch_struct *match, struct spindle_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj);
-static int spindle_prop_candidate_lang_(struct propdata_struct *data, struct propmatch_struct *match, struct spindle_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj, const char *lang);
+static int spindle_prop_candidate_(struct propdata_struct *data, struct propmatch_struct *match, struct rulebase_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj);
+static int spindle_prop_candidate_uri_(struct propdata_struct *data, struct propmatch_struct *match, struct rulebase_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj);
+static int spindle_prop_candidate_literal_(struct propdata_struct *data, struct propmatch_struct *match, struct rulebase_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj);
+static int spindle_prop_candidate_lang_(struct propdata_struct *data, struct propmatch_struct *match, struct rulebase_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj, const char *lang);
 
 static int spindle_prop_apply_(struct propdata_struct *data);
 static int spindle_prop_copystrings_(struct spindle_literalset_struct *dest, struct propmatch_struct *source);
@@ -465,7 +465,7 @@ spindle_prop_test_(struct propdata_struct *data, librdf_statement *st, const cha
  * beaten by a high-priority alternative, store it
  */
 static int
-spindle_prop_candidate_(struct propdata_struct *data, struct propmatch_struct *match, struct spindle_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj)
+spindle_prop_candidate_(struct propdata_struct *data, struct propmatch_struct *match, struct rulebase_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj)
 {
 	switch(match->map->expected)
 	{
@@ -492,7 +492,7 @@ spindle_prop_candidate_(struct propdata_struct *data, struct propmatch_struct *m
 }
 
 static int
-spindle_prop_candidate_uri_(struct propdata_struct *data, struct propmatch_struct *match, struct spindle_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj)
+spindle_prop_candidate_uri_(struct propdata_struct *data, struct propmatch_struct *match, struct rulebase_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj)
 {
 	librdf_node *node, *newobj;
 	librdf_statement *newst;
@@ -632,7 +632,7 @@ spindle_dt_is_int(const char *dtstr)
 }
 
 static int
-spindle_prop_candidate_literal_(struct propdata_struct *data, struct propmatch_struct *match, struct spindle_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj)
+spindle_prop_candidate_literal_(struct propdata_struct *data, struct propmatch_struct *match, struct rulebase_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj)
 {
 	char *lang;
 	librdf_uri *dturi, *uri;
@@ -709,7 +709,7 @@ spindle_prop_candidate_literal_(struct propdata_struct *data, struct propmatch_s
 }
 
 static int
-spindle_prop_candidate_lang_(struct propdata_struct *data, struct propmatch_struct *match, struct spindle_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj, const char *lang)
+spindle_prop_candidate_lang_(struct propdata_struct *data, struct propmatch_struct *match, struct rulebase_predicatematch_struct *criteria, librdf_statement *st, librdf_node *obj, const char *lang)
 {
 	struct literal_struct *entry, *p;
 	size_t c;

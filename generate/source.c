@@ -157,7 +157,7 @@ spindle_source_graphs_(SPINDLEENTRY *data)
 			continue;
 		}
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": adding graph <%s> to sources list\n", nodeuristr);
-		spindle_strset_add(data->sources, nodeuristr);
+		strset_add(data->sources, nodeuristr);
 		librdf_iterator_next(iter);
 		count++;
 	}

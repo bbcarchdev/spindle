@@ -25,7 +25,7 @@
 
 /* Determine the class of something */
 int
-spindle_class_match(SPINDLEENTRY *cache, struct spindle_strset_struct *classes)
+spindle_class_match(SPINDLEENTRY *cache, struct strset_struct *classes)
 {
 	librdf_statement *query, *st;
 	librdf_node *node;
@@ -33,7 +33,7 @@ spindle_class_match(SPINDLEENTRY *cache, struct spindle_strset_struct *classes)
 	librdf_uri *uri;
 	unsigned char *uristr;
 	size_t c, d, n;
-	struct spindle_classmap_struct *mapentry;
+	struct rulebase_classmap_struct *mapentry;
 	struct spindle_classmatch_struct *match;
 	int score;
 
@@ -54,7 +54,7 @@ spindle_class_match(SPINDLEENTRY *cache, struct spindle_strset_struct *classes)
 		{
 			if(classes)
 			{
-				spindle_strset_add(classes, (const char *) uristr);
+				strset_add(classes, (const char *) uristr);
 			}
 			for(c = 0; c < cache->rules->classcount; c++)
 			{
@@ -71,7 +71,7 @@ spindle_class_match(SPINDLEENTRY *cache, struct spindle_strset_struct *classes)
 						score = cache->rules->classes[c].score;
 						if(classes)
 						{
-							spindle_strset_add(classes, mapentry->uri);
+							strset_add(classes, mapentry->uri);
 						}
 						break;
 					}
@@ -119,7 +119,7 @@ spindle_class_match(SPINDLEENTRY *cache, struct spindle_strset_struct *classes)
 				}
 			}
 		}
-	}	
+	}
 	if(!match)
 	{
 		twine_logf(LOG_WARNING, PLUGIN_NAME ": no class match for object <%s>\n", cache->localname);
@@ -147,12 +147,12 @@ spindle_class_match(SPINDLEENTRY *cache, struct spindle_strset_struct *classes)
 int
 spindle_class_update_entry(SPINDLEENTRY *cache)
 {
-	struct spindle_strset_struct *classes;
+	struct strset_struct *classes;
 	size_t c;
 	librdf_node *node;
 	librdf_statement *base, *st;
 
-	classes = spindle_strset_create();
+	classes = strset_create();
 	if(!classes)
 	{
 		return -1;
@@ -177,7 +177,7 @@ spindle_class_update_entry(SPINDLEENTRY *cache)
 			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to add rdf:type <%s> statement to model\n", classes->strings[c]);
 			librdf_free_statement(st);
 			librdf_free_statement(base);
-			spindle_strset_destroy(classes);
+			strset_destroy(classes);
 			return -1;
 		}
 		if(cache->spindle->multigraph && cache->classname && !strcmp(cache->classname, classes->strings[c]))

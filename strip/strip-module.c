@@ -23,7 +23,7 @@
 
 #include "p_spindle-strip.h"
 
-static SPINDLERULES *rulebase;
+static RULEBASE *rulebase;
 
 /* Twine plug-in entry-point */
 int

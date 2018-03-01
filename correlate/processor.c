@@ -27,9 +27,9 @@ struct spindle_correlate_data_struct
 {
 	SPINDLE *spindle;
 	twine_graph *graph;
-	struct spindle_corefset_struct *oldset;
-	struct spindle_corefset_struct *newset;
-	struct spindle_strset_struct *changes;
+	struct rulebase_corefset_struct *oldset;
+	struct rulebase_corefset_struct *newset;
+	struct strset_struct *changes;
 };
 
 static int spindle_correlate_internal_(struct spindle_correlate_data_struct *cbdata);
@@ -44,15 +44,15 @@ int
 spindle_correlate(twine_graph *graph, void *data)
 {
 	SPINDLE *spindle;
-	struct spindle_corefset_struct *oldset, *newset;
-	struct spindle_strset_struct *changes;
+	struct rulebase_corefset_struct *oldset, *newset;
+	struct strset_struct *changes;
 	int r;
 	struct spindle_correlate_data_struct cbdata;
 
 	spindle = (SPINDLE *) data;
 	twine_logf(LOG_INFO, PLUGIN_NAME ": evaluating updated graph <%s>\n", graph->uri);
 	spindle_graph_discard(spindle, graph->uri);
-	changes = spindle_strset_create();
+	changes = strset_create();
 	if(!changes)
 	{
 		return -1;
@@ -65,7 +65,7 @@ spindle_correlate(twine_graph *graph, void *data)
 		if(!oldset)
 		{
 			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to extract co-references from previous graph state\n");
-			spindle_strset_destroy(changes);
+			strset_destroy(changes);
 			return -1;
 		}
 	}
@@ -78,7 +78,7 @@ spindle_correlate(twine_graph *graph, void *data)
 	if(!newset)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to extract co-references from new graph state\n");
-		spindle_strset_destroy(changes);
+		strset_destroy(changes);
 		spindle_coref_destroy(oldset);
 		return -1;
 	}
@@ -98,7 +98,7 @@ spindle_correlate(twine_graph *graph, void *data)
 	}
 	spindle_coref_destroy(oldset);
 	spindle_coref_destroy(newset);
-	spindle_strset_destroy(changes);
+	strset_destroy(changes);
 	if(r)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to create proxy entities for graph <%s>\n", graph->uri);
@@ -114,7 +114,7 @@ static int
 spindle_correlate_internal_(struct spindle_correlate_data_struct *cbdata)
 {
 	size_t c;
-	
+
 	for(c = 0; c < cbdata->newset->refcount; c++)
 	{
 		if(spindle_proxy_create(cbdata->spindle, cbdata->newset->refs[c].left, cbdata->newset->refs[c].right, cbdata->changes))

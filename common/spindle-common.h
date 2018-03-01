@@ -56,7 +56,7 @@ struct spindle_context_struct
 	/* Whether to store each proxy in its own graph */
 	int multigraph;
 	/* The rulebase */
-	SPINDLERULES *rules;
+	RULEBASE *rules;
 	/* Cached information about graphs */
 	struct spindle_graphcache_struct *graphcache;
 };
@@ -92,13 +92,13 @@ int spindle_db_local(SPINDLE *spindle, const char *localname);
 char *spindle_db_id(const char *localname);
 int spindle_db_id_copy(char *dest, const char *localname);
 char *spindle_db_literalset(struct spindle_literalset_struct *set);
-char *spindle_db_strset(struct spindle_strset_struct *set);
+char *spindle_db_strset(struct strset_struct *set);
 size_t spindle_db_esclen(const char *src);
 char *spindle_db_escstr(char *dest, const char *src);
 char *spindle_db_escstr_lower(char *dest, const char *src);
 
 /* Assert that two URIs are equivalent */
-int spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struct spindle_strset_struct *changeset);
+int spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struct strset_struct *changeset);
 /* Generate a new local URI for an external URI */
 char *spindle_proxy_generate(SPINDLE *spindle, const char *uri);
 /* Look up the local URI for an external URI in the store */

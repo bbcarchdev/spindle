@@ -49,7 +49,7 @@ typedef struct spindle_entry_struct SPINDLEENTRY;
 struct spindle_generate_struct
 {
 	SPINDLE *spindle;
-	SPINDLERULES *rules;
+	RULEBASE *rules;
 	/* Connection objects from the Spindle context */
 	SQL *db;
 	SPARQL *sparql;
@@ -60,7 +60,7 @@ struct spindle_generate_struct
 	char *cachepath;
 	/* Names of specific predicates */
 	char *titlepred;
-	struct spindle_predicatemap_struct *licensepred;
+	struct rulebase_predicatemap_struct *licensepred;
 	struct spindle_license_struct *licenses;
 	size_t nlicenses;
 	/* Should creative works be 'about' themselves? */
@@ -79,7 +79,7 @@ struct spindle_entry_struct
 {
 	SPINDLEGENERATE *generate;
 	SPINDLE *spindle;
-	SPINDLERULES *rules;
+	RULEBASE *rules;
 	SPARQL *sparql;
 	SQL *db;
 	char *graphname;
@@ -125,7 +125,7 @@ struct spindle_entry_struct
 	/* Copies of literal predicates we need to keep */
 	struct spindle_literalset_struct titleset;
 	struct spindle_literalset_struct descset;
-	struct spindle_strset_struct *classes;	
+	struct strset_struct *classes;	
 	/* Geographical co-ordinates */
 	int has_geo;
 	double lat, lon;
@@ -133,7 +133,7 @@ struct spindle_entry_struct
 	size_t ntriggers;
 	struct spindle_trigger_struct *triggers;
 	/* List of URIs which describe this entity */
-	struct spindle_strset_struct *sources;
+	struct strset_struct *sources;
 };
 
 struct spindle_trigger_struct
@@ -192,7 +192,7 @@ int spindle_cache_store_buf(SPINDLEENTRY *data, const char *suffix, char *quadbu
 int spindle_cache_fetch(SPINDLEENTRY *data, const char *suffix, librdf_model *destmodel);
 
 /* Determine the class of something (storing in cache->classname) */
-int spindle_class_match(SPINDLEENTRY *cache, struct spindle_strset_struct *classes);
+int spindle_class_match(SPINDLEENTRY *cache, struct strset_struct *classes);
 /* Update the classes of a proxy (updates cache->classname) */
 int spindle_class_update_entry(SPINDLEENTRY *cache);
 

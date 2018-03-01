@@ -25,7 +25,7 @@
 
 static SPINDLE spindle;
 
-static struct coref_match_struct coref_match_types[] =
+static struct rulebase_coref_match_struct coref_match_types[] =
 {
 	{ NS_SPINDLE "resourceMatch", spindle_match_sameas },
 	{ NS_SPINDLE "wikipediaMatch", spindle_match_wikipedia },
