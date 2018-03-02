@@ -25,6 +25,9 @@
 # include <libtwine.h>
 # include <rulebase/librulebase.h>
 
+/* The number of co-references allocated at a time when extending a set */
+# define REFLIST_BLOCKSIZE              4
+
 /* Trigger kinds */
 # define TK_PROXY                       (1<<0)
 # define TK_TOPICS                      (1<<1)

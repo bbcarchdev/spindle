@@ -221,14 +221,14 @@ spindle_coref_add_(struct rulebase_corefset_struct *set, const char *l, const ch
 	}
 	if(set->refcount >= set->size)
 	{
-		p = (struct rulebase_coref_struct *) realloc(set->refs, sizeof(struct rulebase_coref_struct) * (set->size + SET_BLOCKSIZE));
+		p = (struct rulebase_coref_struct *) realloc(set->refs, sizeof(struct rulebase_coref_struct) * (set->size + REFLIST_BLOCKSIZE));
 		if(!p)
 		{
 			twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to expand size of coreference set\n");
 			return -1;
 		}
 		set->refs = p;
-		set->size += SET_BLOCKSIZE;
+		set->size += REFLIST_BLOCKSIZE;
 	}
 	p = &(set->refs[set->refcount]);
 	memset(p, 0, sizeof(struct rulebase_coref_struct));

@@ -39,7 +39,7 @@ spindle_proxy_generate(SPINDLE *spindle, const char *uri)
 
 	uuid_generate(uu);
 	uuid_unparse_lower(uu, uubuf);
-	
+
 	p = (char *) calloc(1, strlen(spindle->root) + 48);
 	if(!p)
 	{
@@ -109,7 +109,7 @@ spindle_proxy_locate(SPINDLE *spindle, const char *uri)
 		   librdf_node_is_resource(node) &&
 		   (ruri = librdf_node_get_uri(node)) &&
 		   (uristr = (const char *) librdf_uri_as_string(ruri)))
-		{			
+		{
 			localname = strdup((const char *) uristr);
 			if(!localname)
 			{
@@ -134,7 +134,7 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 	}
 	u1 = spindle_proxy_locate(spindle, uri1);
 	if(uri2)
-	{		
+	{
 		u2 = spindle_proxy_locate(spindle, uri2);
 	}
 	else
@@ -410,7 +410,7 @@ spindle_proxy_refs(SPINDLE *spindle, const char *uri)
 			}
 			if(count + 1 >= size)
 			{
-				p = (char **) realloc(refs, sizeof(char *) * (size + SET_BLOCKSIZE));
+				p = (char **) realloc(refs, sizeof(char *) * (size + REFLIST_BLOCKSIZE));
 				if(!p)
 				{
 					twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to extend reference list\n");
@@ -419,7 +419,7 @@ spindle_proxy_refs(SPINDLE *spindle, const char *uri)
 					break;
 				}
 				refs = p;
-				size += SET_BLOCKSIZE;				
+				size += REFLIST_BLOCKSIZE;
 			}
 			refs[count] = strdup(str);
 			if(!refs[count])
@@ -427,7 +427,7 @@ spindle_proxy_refs(SPINDLE *spindle, const char *uri)
 				twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to duplicate <%s>\n", str);
 				spindle_proxy_refs_destroy(refs);
 				refs = NULL;
-				break;				
+				break;
 			}
 			count++;
 			refs[count] = NULL;
