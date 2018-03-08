@@ -55,14 +55,14 @@ spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data)
 	int r;
 
 	r = 0;
-	if(!data->classname || strcmp(data->classname, NS_FOAF "Document"))
+	if(!data->proxy->classname || strcmp(data->proxy->classname, NS_FOAF "Document"))
 	{
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": item is not a digital asset\n");
 		/* This isn't a digital asset */
 		return spindle_index_media_refs_(sql, id, data);
 	}
 	/* Find the source URI (there can be only one) */
-	refs = spindle_proxy_refs(data->spindle, data->localname);
+	refs = spindle_proxy_refs(data->spindle, data->proxy->localname);
 	if(!refs)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to retrieve co-reference set for digital object\n");
@@ -88,7 +88,7 @@ spindle_index_media(SQL *sql, const char *id, SPINDLEENTRY *data)
 	}
 	type = spindle_index_media_type_(data);
 	duration = spindle_index_media_duration_(data);
-	
+
 	/* XXX TODO: handle multiple licenses */
 	license = spindle_index_media_license_(data);
 	if(license)
@@ -136,14 +136,14 @@ spindle_index_media_refs_(SQL *sql, const char *id, SPINDLEENTRY *data)
 	{
 		return -1;
 	}
-	if(!(node = librdf_new_node_from_node(data->self)))
+	if(!(node = librdf_new_node_from_node(data->proxy->self)))
 	{
 		librdf_free_statement(query);
 		return -1;
 	}
 	librdf_statement_set_subject(query, node);
 	r = 0;
-	for(stream = librdf_model_find_statements_in_context(data->proxydata, query, data->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
+	for(stream = librdf_model_find_statements_in_context(data->proxy->proxydata, query, data->proxy->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
 	{
 		if(!(st = librdf_stream_get_object(stream))) continue;
 		if(!(node = librdf_statement_get_predicate(st))) continue;
@@ -212,7 +212,7 @@ spindle_index_media_kind_(SPINDLEENTRY *data)
 	{
 		return NULL;
 	}
-	if(!(node = librdf_new_node_from_node(data->self)))
+	if(!(node = librdf_new_node_from_node(data->proxy->self)))
 	{
 		librdf_free_statement(query);
 		return NULL;
@@ -224,7 +224,7 @@ spindle_index_media_kind_(SPINDLEENTRY *data)
 		return NULL;
 	}
 	librdf_statement_set_predicate(query, node);
-	for(stream = librdf_model_find_statements_in_context(data->proxydata, query, data->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
+	for(stream = librdf_model_find_statements_in_context(data->proxy->proxydata, query, data->proxy->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
 	{
 		st = librdf_stream_get_object(stream);
 		if((node = librdf_statement_get_object(st)) &&
@@ -246,7 +246,7 @@ spindle_index_media_kind_(SPINDLEENTRY *data)
 		}
 	}
 	librdf_free_stream(stream);
-	librdf_free_statement(query);	
+	librdf_free_statement(query);
 	if(!kind)
 	{
 		kind = strdup(NS_FOAF "Document");
@@ -279,7 +279,7 @@ spindle_index_media_duration_(SPINDLEENTRY *data)
 	{
 		return NULL;
 	}
-	if(!(node = librdf_new_node_from_node(data->self)))
+	if(!(node = librdf_new_node_from_node(data->proxy->self)))
 	{
 		librdf_free_statement(query);
 		return NULL;
@@ -291,7 +291,7 @@ spindle_index_media_duration_(SPINDLEENTRY *data)
 		return NULL;
 	}
 	librdf_statement_set_predicate(query, node);
-	for(stream = librdf_model_find_statements_in_context(data->proxydata, query, data->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
+	for(stream = librdf_model_find_statements_in_context(data->proxy->proxydata, query, data->proxy->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
 	{
 		st = librdf_stream_get_object(stream);
 		if((node = librdf_statement_get_object(st)) &&
@@ -356,7 +356,7 @@ spindle_index_media_type_(SPINDLEENTRY *data)
 	{
 		return NULL;
 	}
-	if(!(node = librdf_new_node_from_node(data->self)))
+	if(!(node = librdf_new_node_from_node(data->proxy->self)))
 	{
 		librdf_free_statement(query);
 		return NULL;
@@ -370,7 +370,7 @@ spindle_index_media_type_(SPINDLEENTRY *data)
 	}
 	librdf_statement_set_predicate(query, node);
 	l = strlen(NS_MIME);
-	for(stream = librdf_model_find_statements_in_context(data->proxydata, query, data->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
+	for(stream = librdf_model_find_statements_in_context(data->proxy->proxydata, query, data->proxy->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
 	{
 		st = librdf_stream_get_object(stream);
 		if((node = librdf_statement_get_object(st)) &&
@@ -389,7 +389,7 @@ spindle_index_media_type_(SPINDLEENTRY *data)
 		}
 	}
 	librdf_free_stream(stream);
-	librdf_free_statement(query);	
+	librdf_free_statement(query);
 	return NULL;
 }
 
@@ -411,7 +411,7 @@ spindle_index_media_license_(SPINDLEENTRY *data)
 	{
 		return NULL;
 	}
-	if(!(node = librdf_new_node_from_node(data->self)))
+	if(!(node = librdf_new_node_from_node(data->proxy->self)))
 	{
 		librdf_free_statement(query);
 		return NULL;
@@ -425,7 +425,7 @@ spindle_index_media_license_(SPINDLEENTRY *data)
 	}
 	librdf_statement_set_predicate(query, node);
 	l = strlen(NS_MIME);
-	for(stream = librdf_model_find_statements_in_context(data->proxydata, query, data->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
+	for(stream = librdf_model_find_statements_in_context(data->proxy->proxydata, query, data->proxy->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
 	{
 		st = librdf_stream_get_object(stream);
 		if((node = librdf_statement_get_object(st)) &&
@@ -438,6 +438,6 @@ spindle_index_media_license_(SPINDLEENTRY *data)
 		}
 	}
 	librdf_free_stream(stream);
-	librdf_free_statement(query);	
+	librdf_free_statement(query);
 	return license;
 }

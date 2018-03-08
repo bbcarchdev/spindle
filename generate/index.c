@@ -38,7 +38,7 @@ spindle_index_entry(SPINDLEENTRY *data)
 		return 0;
 	}
 	sql = data->spindle->db;
-	id = spindle_db_id(data->localname);
+	id = spindle_db_id(data->proxy->localname);
 	if(!id)
 	{
 		return -1;

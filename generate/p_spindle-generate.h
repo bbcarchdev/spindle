@@ -79,56 +79,21 @@ struct spindle_entry_struct
 {
 	SPINDLEGENERATE *generate;
 	SPINDLE *spindle;
-	RULEBASE *rules;
+	PROXYENTRY *proxy;
 	SPARQL *sparql;
 	SQL *db;
 	char *graphname;
 	char *docname;
-	char *title;
-	char *title_en;
 	char *id;
-	const char *localname;
-	const char *classname;
-	char **refs;
-	size_t refcount;
 	time_t modified;
 	int flags;
-	
-	/* Data which will be inserted into the root graph, always in the form
-	 * <proxy> pred obj
-	 */
-	librdf_model *rootdata;
-	/* Proxy data: all of the generated information about the proxy entity;
-	 * stored in the proxy graph.
-	 */
-	librdf_model *proxydata;
-	/* Data about the source graphs - only populated (and used) if we're
-	 * stashing data in an S3 bucket
-	 */
-	librdf_model *sourcedata;
-	/* Extra data: information about related entities, only used when caching
-	 * to an S3 bucket.
-	 */
-	librdf_model *extradata;
-	/* The name of the graph we store information in */
-	librdf_node *graph;
+
 	/* The name of the information resource which contains the proxy (will
 	 * be the same as 'graph' if multigraph is true)
 	 */
 	librdf_node *doc;
-	/* The name of the proxy, including the fragment */
-	librdf_node *self;
 	/* A precomposed owl:sameAs node */
 	librdf_node *sameas;
-	/* The proxy's prominence score */
-	int score;
-	/* Copies of literal predicates we need to keep */
-	struct spindle_literalset_struct titleset;
-	struct spindle_literalset_struct descset;
-	struct strset_struct *classes;	
-	/* Geographical co-ordinates */
-	int has_geo;
-	double lat, lon;
 	/* List of URIs which trigger updates to this entity */
 	size_t ntriggers;
 	struct spindle_trigger_struct *triggers;
@@ -190,14 +155,6 @@ int spindle_cache_init(SPINDLEGENERATE *spindle);
 int spindle_cache_store(SPINDLEENTRY *data, const char *suffix, librdf_model *model);
 int spindle_cache_store_buf(SPINDLEENTRY *data, const char *suffix, char *quadbuf, size_t bufsize);
 int spindle_cache_fetch(SPINDLEENTRY *data, const char *suffix, librdf_model *destmodel);
-
-/* Determine the class of something (storing in cache->classname) */
-int spindle_class_match(SPINDLEENTRY *cache, struct strset_struct *classes);
-/* Update the classes of a proxy (updates cache->classname) */
-int spindle_class_update_entry(SPINDLEENTRY *cache);
-
-/* Update the properties of a proxy */
-int spindle_prop_update_entry(SPINDLEENTRY *cache);
 
 /* Update the information resource describing the proxy */
 int spindle_doc_init(SPINDLEGENERATE *spindle);

@@ -35,7 +35,7 @@ spindle_index_audiences(SPINDLEGENERATE *generate, const char *license, const ch
 {
 	SQL_STATEMENT *rs;
 	char *uri, *id;
-	
+
 	uri = spindle_proxy_locate(generate->spindle, license);
 	if(!uri)
 	{
@@ -61,7 +61,7 @@ spindle_index_audiences(SPINDLEGENERATE *generate, const char *license, const ch
 	for(; !sql_stmt_eof(rs); sql_stmt_next(rs))
 	{
 		sql_executef(generate->spindle->db, "INSERT INTO \"media\" (\"id\", \"uri\", \"class\", \"type\", \"audience\", \"audienceid\", \"duration\") VALUES (%Q, %Q, %Q, %Q, %Q, %Q, %Q)",
-					 mediaid, mediauri, mediakind, mediatype, sql_stmt_str(rs, 0), 
+					 mediaid, mediauri, mediakind, mediatype, sql_stmt_str(rs, 0),
 					 sql_stmt_str(rs, 1), duration);
 	}
 	sql_stmt_destroy(rs);
@@ -87,10 +87,10 @@ spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data)
 	size_t c, d;
 	struct strset_struct *audiences;
 	SQL_STATEMENT *rs;
-	
+
 	(void) id;
-	
-	bases = (char **) calloc(sizeof(char *), data->refcount + 1);
+
+	bases = (char **) calloc(sizeof(char *), data->proxy->refcount + 1);
 	if(!bases)
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": faled to allocate buffer for base URI strings\n");
@@ -103,14 +103,14 @@ spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data)
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": faled to allocate string-set for audience URIs\n");
 		return -1;
 	}
-	
+
 	r = 0;
 	/* For each of our external co-referenced URIs, determine an origin (base)
 	 * URI for it for same-origin comparison purposes
 	 */
-	for(c = 0; c < data->refcount; c++)
+	for(c = 0; c < data->proxy->refcount; c++)
 	{
-		bases[c] = spindle_index_audiences_origin_(data->refs[c]);
+		bases[c] = spindle_index_audiences_origin_(data->proxy->refs[c]);
 		if(!bases[c])
 		{
 			continue;
@@ -119,7 +119,7 @@ spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data)
 	}
 	if(r)
 	{
-		for(c = 0; c < data->refcount; c++)
+		for(c = 0; c < data->proxy->refcount; c++)
 		{
 			free(bases[c]);
 		}
@@ -128,7 +128,7 @@ spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data)
 		return -1;
 	}
 	/* Next, iterate all of the graphs in the source data we have */
-	for(iter = librdf_model_get_contexts(data->sourcedata);
+	for(iter = librdf_model_get_contexts(data->proxy->sourcedata);
 		!librdf_iterator_end(iter);
 		librdf_iterator_next(iter))
 	{
@@ -148,7 +148,7 @@ spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data)
 		/* Check that the supplied graph URI's origin matches one that we
 		 * are interested in (i.e., it passes a same-origin test)
 		 */
-		for(c = 0; c < data->refcount; c++)
+		for(c = 0; c < data->proxy->refcount; c++)
 		{
 			if(!bases[c])
 			{
@@ -174,16 +174,16 @@ spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data)
 			 * that this candidate graph authoratitively describes,
 			 * attempt to extract audience permission data from it
 			 */
-			for(d = 0; d < data->refcount; d++)
+			for(d = 0; d < data->proxy->refcount; d++)
 			{
 				if(bases[d] && !strcmp(bases[d], base))
 				{
-					/* The subject's (data->refs[d]) base URI (bases[d])
+					/* The subject's (data->proxy->refs[d]) base URI (bases[d])
 					 * matches this graph's URI (base), so we can
 					 * walk the graph starting from this subject node.
 					 */
-					twine_logf(LOG_DEBUG, PLUGIN_NAME ": walking graph, starting at <%s>\n", data->refs[d]);
-					node = twine_rdf_node_createuri(data->refs[d]);
+					twine_logf(LOG_DEBUG, PLUGIN_NAME ": walking graph, starting at <%s>\n", data->proxy->refs[d]);
+					node = twine_rdf_node_createuri(data->proxy->refs[d]);
 					if(spindle_index_audiences_interp_(data->generate, model, node, audiences) > 0)
 					{
 						/* Available to everyone */
@@ -257,7 +257,7 @@ spindle_index_audiences_licence(SQL *sql, const char *id, SPINDLEENTRY *data)
 	twine_rdf_model_destroy(model);
 	free(base); */
 	strset_destroy(audiences);
-	for(c = 0; c < data->refcount; c++)
+	for(c = 0; c < data->proxy->refcount; c++)
 	{
 		free(bases[c]);
 	}
@@ -273,7 +273,7 @@ spindle_index_audiences_origin_(const char *uristr)
 	URI *uri;
 	URI_INFO *info;
 	char *base, *p;
-	
+
 	uri = uri_create_str(uristr, NULL);
 	if(!uri)
 	{

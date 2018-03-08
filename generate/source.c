@@ -35,13 +35,13 @@ int
 spindle_source_fetch_entry(SPINDLEENTRY *data)
 {
 	int r;
-	
+
 	if(!(data->flags & TK_PROXY))
 	{
 		/* If the co-references haven't changed, we can use cached
 		 * source data if it's available.
 		 */
-		r = spindle_cache_fetch(data, "source", data->sourcedata);
+		r = spindle_cache_fetch(data, "source", data->proxy->sourcedata);
 		if(r < 0)
 		{
 			return -1;
@@ -91,7 +91,7 @@ spindle_source_fetch_entry(SPINDLEENTRY *data)
 		return -1;
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": caching source data\n");
-	if(spindle_cache_store(data, "source", data->sourcedata))
+	if(spindle_cache_store(data, "source", data->proxy->sourcedata))
 	{
 		return -1;
 	}
@@ -104,25 +104,25 @@ spindle_source_refs_(SPINDLEENTRY *data)
 	size_t c;
 	librdf_statement *st;
 
-	if(!data->refs)
+	if(!data->proxy->refs)
 	{
-		data->refs = spindle_proxy_refs(data->spindle, data->localname);
-		if(!data->refs)
+		data->proxy->refs = spindle_proxy_refs(data->spindle, data->proxy->localname);
+		if(!data->proxy->refs)
 		{
-			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to obtain co-references for <%s>\n", data->localname);
+			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to obtain co-references for <%s>\n", data->proxy->localname);
 			return -1;
 		}
 	}
-	data->refcount = 0;
-	for(c = 0; data->refs[c]; c++)
+	data->proxy->refcount = 0;
+	for(c = 0; data->proxy->refs[c]; c++)
 	{
-		data->refcount++;
+		data->proxy->refcount++;
 		/* Add <ref> owl:sameAs <localname> triples to the proxy model */
 		st = twine_rdf_st_create();
-		librdf_statement_set_subject(st, twine_rdf_node_createuri(data->refs[c]));
+		librdf_statement_set_subject(st, twine_rdf_node_createuri(data->proxy->refs[c]));
 		librdf_statement_set_predicate(st, twine_rdf_node_clone(data->spindle->sameas));
-		librdf_statement_set_object(st, twine_rdf_node_createuri(data->localname));
-		librdf_model_context_add_statement(data->proxydata, data->graph, st);
+		librdf_statement_set_object(st, twine_rdf_node_createuri(data->proxy->localname));
+		librdf_model_context_add_statement(data->proxy->proxydata, data->proxy->graph, st);
 		twine_rdf_st_destroy(st);
 	}
 	return 0;
@@ -140,9 +140,9 @@ spindle_source_graphs_(SPINDLEENTRY *data)
 	librdf_uri *nodeuri;
 	const char *nodeuristr;
 	size_t count;
-	
+
 	count = 0;
-	iter = librdf_model_get_contexts(data->sourcedata);
+	iter = librdf_model_get_contexts(data->proxy->sourcedata);
 	while(!librdf_iterator_end(iter))
 	{
 		node = librdf_iterator_get_object(iter);
@@ -181,38 +181,46 @@ spindle_source_fetch_db_(SPINDLEENTRY *data)
 	size_t c;
 
 	r = 0;
-	for(c = 0; data->refs[c]; c++)
+	for(c = 0; data->proxy->refs[c]; c++)
 	{
 		if(data->generate->describeinbound)
-		{	   
-			r = sparql_queryf_model(data->sparql, data->sourcedata,
-									"SELECT DISTINCT ?s ?p ?o ?g\n"
-									" WHERE {\n"
-									"  GRAPH ?g {\n"
-									"  { <%s> ?p ?o .\n"
-									"   BIND(<%s> as ?s)\n"
-									"  }\n"
-									"  UNION\n"
-									"  { ?s ?p <%s> .\n"
-									"   FILTER(?p != <" NS_RDF "type>)\n"
-									"   BIND(<%s> as ?o)\n"
-									"  }\n"
-									" }\n"
-									"}",
-									data->refs[c], data->refs[c], data->refs[c], data->refs[c]);
+		{
+			r = sparql_queryf_model(
+				data->sparql,
+				data->sourcedata,
+				"SELECT DISTINCT ?s ?p ?o ?g\n"
+				" WHERE {\n"
+				"  GRAPH ?g {\n"
+				"  { <%s> ?p ?o .\n"
+				"   BIND(<%s> as ?s)\n"
+				"  }\n"
+				"  UNION\n"
+				"  { ?s ?p <%s> .\n"
+				"   FILTER(?p != <" NS_RDF "type>)\n"
+				"   BIND(<%s> as ?o)\n"
+				"  }\n"
+				" }\n"
+				"}",
+				data->proxy->refs[c],
+				data->proxy->refs[c],
+				data->proxy->refs[c],
+				data->proxy->refs[c]);
 		}
 		else
 		{
-			r = sparql_queryf_model(data->sparql, data->sourcedata,
-									"SELECT DISTINCT ?s ?p ?o ?g\n"
-									" WHERE {\n"
-									"  GRAPH ?g {\n"
-									"  { <%s> ?p ?o .\n"
-									"   BIND(<%s> as ?s)\n"
-									"  }\n"
-									" }\n"
-									"}",
-									data->refs[c], data->refs[c]);
+			r = sparql_queryf_model(
+				data->sparql,
+				data->sourcedata,
+				"SELECT DISTINCT ?s ?p ?o ?g\n"
+				" WHERE {\n"
+				"  GRAPH ?g {\n"
+				"  { <%s> ?p ?o .\n"
+				"   BIND(<%s> as ?s)\n"
+				"  }\n"
+				" }\n"
+				"}",
+				data->proxy->refs[c],
+				data->proxy->refs[c]);
 		}
 		if(r)
 		{
@@ -234,7 +242,7 @@ spindle_source_fetch_sparql_(SPINDLEENTRY *data)
 	 * Note that this includes data in both the root and proxy graphs,
 	 * but they will be removed by spindle_cache_source_clean_().
 	 */
-	if(sparql_queryf_model(data->sparql, data->sourcedata,
+	if(sparql_queryf_model(data->sparql, data->proxy->sourcedata,
 						   "SELECT DISTINCT ?s ?p ?o ?g\n"
 						   " WHERE {\n"
 						   "  GRAPH %V {\n"
@@ -244,7 +252,7 @@ spindle_source_fetch_sparql_(SPINDLEENTRY *data)
 						   "   ?s ?p ?o .\n"
 						   "  }\n"
 						   "}",
-						   data->spindle->rootgraph, data->sameas, data->self))
+						   data->spindle->rootgraph, data->sameas, data->proxy->self))
 	{
 		return -1;
 	}
@@ -264,7 +272,7 @@ spindle_source_sameas_(SPINDLEENTRY *data)
 	librdf_statement *query, *st;
 	librdf_node *node;
 	librdf_stream *stream;
-	
+
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": **** caching sameAs triples ****\n");
 	query = twine_rdf_st_create();
 	if(!query)
@@ -278,7 +286,7 @@ spindle_source_sameas_(SPINDLEENTRY *data)
 		return -1;
 	}
 	librdf_statement_set_predicate(query, node);
-	node = twine_rdf_node_clone(data->self);
+	node = twine_rdf_node_clone(data->proxy->self);
 	if(!node)
 	{
 		twine_rdf_st_destroy(query);
@@ -288,7 +296,7 @@ spindle_source_sameas_(SPINDLEENTRY *data)
 	/* Create a stream querying for (?s owl:sameAs <self>) in the root graph
 	 * from the source data
 	 */
-	stream = librdf_model_find_statements_with_options(data->sourcedata, query, data->spindle->rootgraph, NULL);
+	stream = librdf_model_find_statements_with_options(data->proxy->sourcedata, query, data->spindle->rootgraph, NULL);
 	if(!stream)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to query model\n");
@@ -300,7 +308,7 @@ spindle_source_sameas_(SPINDLEENTRY *data)
 		st = librdf_stream_get_object(stream);
 		/* Add the statement to the proxy graph */
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": *** adding sameAs statement to proxy graph\n");
-		if(twine_rdf_model_add_st(data->proxydata, st, data->graph))
+		if(twine_rdf_model_add_st(data->proxy->proxydata, st, data->proxy->graph))
 		{
 			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to add statement to proxy model\n");
 			librdf_free_stream(stream);
@@ -310,7 +318,7 @@ spindle_source_sameas_(SPINDLEENTRY *data)
 		librdf_stream_next(stream);
 	}
 	librdf_free_stream(stream);
-	twine_rdf_st_destroy(query);	
+	twine_rdf_st_destroy(query);
 	return 0;
 }
 
@@ -323,7 +331,7 @@ spindle_source_clean_(SPINDLEENTRY *data)
 	librdf_uri *uri;
 	const char *uristr;
 
-	iterator = librdf_model_get_contexts(data->sourcedata);
+	iterator = librdf_model_get_contexts(data->proxy->sourcedata);
 	while(!librdf_iterator_end(iterator))
 	{
 		node = librdf_iterator_get_object(iterator);
@@ -331,7 +339,7 @@ spindle_source_clean_(SPINDLEENTRY *data)
 		uristr = (const char *) librdf_uri_as_string(uri);
 		if(!strncmp(uristr, data->spindle->root, strlen(data->spindle->root)))
 		{
-			librdf_model_context_remove_statements(data->sourcedata, node);
+			librdf_model_context_remove_statements(data->proxy->sourcedata, node);
 		}
 		librdf_iterator_next(iterator);
 	}

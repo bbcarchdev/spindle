@@ -37,7 +37,7 @@ spindle_doc_init(SPINDLEGENERATE *generate)
 }
 
 /* Cache information about the document containing the proxy */
-int 
+int
 spindle_doc_apply(SPINDLEENTRY *cache)
 {
 	if(spindle_doc_modified_(cache))
@@ -100,11 +100,11 @@ spindle_doc_modified_(SPINDLEENTRY *cache)
 		return -1;
 	}
 	librdf_statement_set_object(st, obj);
-	twine_rdf_model_add_st(cache->proxydata, st, cache->graph);
+	twine_rdf_model_add_st(cache->proxy->proxydata, st, cache->proxy->graph);
 	if(cache->spindle->multigraph)
 	{
 		/* Also add the statement to the root graph */
-		twine_rdf_model_add_st(cache->rootdata, st, cache->spindle->rootgraph);
+		twine_rdf_model_add_st(cache->proxy->rootdata, st, cache->spindle->rootgraph);
 	}
 	twine_rdf_st_destroy(st);
 	return 0;
@@ -133,18 +133,18 @@ spindle_doc_topic_(SPINDLEENTRY *cache)
 		return -1;
 	}
 	librdf_statement_set_predicate(st, obj);
-	obj = twine_rdf_node_clone(cache->self);
+	obj = twine_rdf_node_clone(cache->proxy->self);
 	if(!obj)
 	{
 		twine_rdf_st_destroy(st);
 		return -1;
 	}
 	librdf_statement_set_object(st, obj);
-	twine_rdf_model_add_st(cache->proxydata, st, cache->graph);
+	twine_rdf_model_add_st(cache->proxy->proxydata, st, cache->proxy->graph);
 	if(cache->spindle->multigraph)
 	{
 		/* Also add the statement to the root graph */
-		twine_rdf_model_add_st(cache->rootdata, st, cache->spindle->rootgraph);
+		twine_rdf_model_add_st(cache->proxy->rootdata, st, cache->spindle->rootgraph);
 	}
 	twine_rdf_st_destroy(st);
 	return 0;
@@ -180,11 +180,11 @@ spindle_doc_type_(SPINDLEENTRY *cache)
 		return -1;
 	}
 	librdf_statement_set_object(st, obj);
-	twine_rdf_model_add_st(cache->proxydata, st, cache->graph);
+	twine_rdf_model_add_st(cache->proxy->proxydata, st, cache->proxy->graph);
 	if(cache->spindle->multigraph)
 	{
 		/* Also add the statement to the root graph */
-		twine_rdf_model_add_st(cache->rootdata, st, cache->spindle->rootgraph);
+		twine_rdf_model_add_st(cache->proxy->rootdata, st, cache->spindle->rootgraph);
 	}
 	twine_rdf_st_destroy(st);
 	return 0;
@@ -199,13 +199,13 @@ spindle_doc_label_(SPINDLEENTRY *cache)
 	const char *s;
 
 	/* Add a statement stating that <doc> rdfs:label "Information about 'foo' */
-	if(cache->title_en)
+	if(cache->proxy->title_en)
 	{
-		s = cache->title_en;
+		s = cache->proxy->title_en;
 	}
-	else if(cache->title)
+	else if(cache->proxy->title)
 	{
-		s = cache->title;
+		s = cache->proxy->title;
 	}
 	else
 	{
@@ -247,11 +247,11 @@ spindle_doc_label_(SPINDLEENTRY *cache)
 		return -1;
 	}
 	librdf_statement_set_object(st, obj);
-	twine_rdf_model_add_st(cache->proxydata, st, cache->graph);
+	twine_rdf_model_add_st(cache->proxy->proxydata, st, cache->proxy->graph);
 	if(cache->spindle->multigraph)
 	{
 		/* Also add the statement to the root graph */
-		twine_rdf_model_add_st(cache->rootdata, st, cache->spindle->rootgraph);
+		twine_rdf_model_add_st(cache->proxy->rootdata, st, cache->spindle->rootgraph);
 	}
 	twine_rdf_st_destroy(st);
 	free(strbuf);
@@ -267,12 +267,12 @@ spindle_doc_score_(SPINDLEENTRY *data)
 	librdf_uri *dturi;
 	librdf_node *node;
 
-	if(data->score < 1)
+	if(data->proxy->score < 1)
 	{
-		data->score = 1;
+		data->proxy->score = 1;
 	}
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": proxy prominence score is %d\n", data->score);
-	sprintf(scorebuf, "%d", data->score);
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": proxy prominence score is %d\n", data->proxy->score);
+	sprintf(scorebuf, "%d", data->proxy->score);
 	world = twine_rdf_world();
 	st = twine_rdf_st_create();
 	librdf_statement_set_subject(st, twine_rdf_node_clone(data->doc));
@@ -281,7 +281,7 @@ spindle_doc_score_(SPINDLEENTRY *data)
 	node = librdf_new_node_from_typed_literal(world, (const unsigned char *) scorebuf, NULL, dturi);
 	librdf_statement_set_object(st, node);
 	/* This information's only added to the root graph */
-	twine_rdf_model_add_st(data->rootdata, st, data->spindle->rootgraph);
+	twine_rdf_model_add_st(data->proxy->rootdata, st, data->spindle->rootgraph);
 	twine_rdf_st_destroy(st);
 	return 0;
 }

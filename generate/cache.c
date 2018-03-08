@@ -50,7 +50,7 @@ spindle_cache_init(SPINDLEGENERATE *generate)
 	URI *base, *uri;
 	URI_INFO *info;
 	int r;
-	
+
 	t = twine_config_geta("spindle:cache", NULL);
 	if(t)
 	{
@@ -97,7 +97,7 @@ spindle_cache_store(SPINDLEENTRY *data, const char *suffix, librdf_model *model)
 	char *buf;
 	size_t bufsize;
 	int r;
-	
+
 	if(!data->generate->bucket && !data->generate->cachepath)
 	{
 		/* No cache available */
@@ -136,7 +136,7 @@ spindle_cache_fetch(SPINDLEENTRY *data, const char *suffix, librdf_model *destmo
 	char *buf;
 	size_t bufsize;
 	int r;
-	
+
 	buf = NULL;
 	bufsize = 0;
 	if(data->generate->bucket)
@@ -179,8 +179,8 @@ spindle_cache_s3path_(SPINDLEENTRY *data, const char *suffix)
 {
 	char *t, *urlbuf;
 	size_t l;
-	
-	l = 1 + strlen(data->localname) + 4 + 1;
+
+	l = 1 + strlen(data->proxy->localname) + 4 + 1;
 	if(suffix)
 	{
 		l += strlen(suffix) + 1;
@@ -192,13 +192,13 @@ spindle_cache_s3path_(SPINDLEENTRY *data, const char *suffix)
 		return NULL;
 	}
 	urlbuf[0] = '/';
-	if((t = strrchr(data->localname, '/')))
+	if((t = strrchr(data->proxy->localname, '/')))
 	{
 		t++;
 	}
 	else
 	{
-		t = (char *) data->localname;
+		t = (char *) data->proxy->localname;
 	}
 	strcpy(&(urlbuf[1]), t);
 	if((t = strchr(urlbuf, '#')))
@@ -230,7 +230,7 @@ spindle_cache_store_s3_buf_(SPINDLEENTRY *data, const char *suffix, char *quadbu
 	struct s3_upload_struct s3data;
 	int r, e;
 	long status;
-	
+
 	s3data.buf = quadbuf;
 	s3data.bufsize = bufsize;
 	s3data.pos = 0;
@@ -284,7 +284,7 @@ spindle_cache_fetch_s3_(SPINDLEENTRY *entry, const char *suffix, char **quadbuf,
 	int r, e;
 	long status;
 	char *urlbuf;
-	
+
 	*quadbuf = NULL;
 	*quadbuflen = 0;
 	memset(&s3data, 0, sizeof(struct s3_upload_struct));
@@ -341,8 +341,8 @@ spindle_cache_filename_(SPINDLEENTRY *data, const char *suffix)
 	size_t l;
 	const char *s;
 	char *path, *t;
-	
-	l = strlen(data->generate->cachepath) + strlen(data->localname) + 8;
+
+	l = strlen(data->generate->cachepath) + strlen(data->proxy->localname) + 8;
 	path = (char *) calloc(1, l);
 	if(!path)
 	{
@@ -350,13 +350,13 @@ spindle_cache_filename_(SPINDLEENTRY *data, const char *suffix)
 		return NULL;
 	}
 	strcpy(path, data->generate->cachepath);
-	if((s = strrchr(data->localname, '/')))
+	if((s = strrchr(data->proxy->localname, '/')))
 	{
 		s++;
 	}
 	else
 	{
-		s = (char *) data->localname;
+		s = (char *) data->proxy->localname;
 	}
 	strcat(path, s);
 	t = strchr(path, '#');
@@ -374,7 +374,7 @@ spindle_cache_filename_(SPINDLEENTRY *data, const char *suffix)
 		t++;
 		strcpy(t, suffix);
 	}
-	twine_logf(LOG_DEBUG, "cache filename for %s + %s is <%s>\n", data->localname, suffix, path);
+	twine_logf(LOG_DEBUG, "cache filename for %s + %s is <%s>\n", data->proxy->localname, suffix, path);
 	return path;
 }
 
@@ -385,7 +385,7 @@ spindle_cache_store_file_buf_(SPINDLEENTRY *data, const char *suffix, char *quad
 	FILE *f;
 	int r;
 	char *path;
-	
+
 	path = spindle_cache_filename_(data, suffix);
 	if(!path)
 	{
@@ -441,7 +441,7 @@ spindle_cache_fetch_file_(SPINDLEENTRY *entry, const char *suffix, char **quadbu
 	FILE *f;
 	size_t bufsize, buflen;
 	ssize_t r;
-	
+
 	path = spindle_cache_filename_(entry, suffix);
 	if(!path)
 	{
@@ -499,7 +499,7 @@ static int
 spindle_cache_init_s3_(SPINDLEGENERATE *generate, const char *bucketname)
 {
 	char *t;
-	
+
 	generate->bucket = aws_s3_create(bucketname);
 	if(!generate->bucket)
 	{
@@ -531,7 +531,7 @@ static int
 spindle_cache_init_file_(SPINDLEGENERATE *generate, const char *path)
 {
 	char *t;
-	
+
 	if(mkdir(path, 0777))
 	{
 		if(errno != EEXIST)
@@ -583,7 +583,7 @@ spindle_cache_s3_download_(char *buffer, size_t size, size_t nitems, void *userd
 {
 	struct s3_upload_struct *data;
 	char *p;
-	
+
 	data = (struct s3_upload_struct *) userdata;
 	size *= nitems;
 	if(data->pos + size >= data->bufsize)

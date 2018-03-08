@@ -48,7 +48,7 @@ spindle_store_sparql_(SPINDLEENTRY *entry)
 	/* First update the root graph - only if we're not using a SQL-based
 	 * index
 	 */
-	
+
 	/* Note that our owl:sameAs statements take the form
 	 * <external> owl:sameAs <proxy>, so we can delete <proxy> ?p ?o with
 	 * impunity.
@@ -57,7 +57,7 @@ spindle_store_sparql_(SPINDLEENTRY *entry)
 					  "WITH %V\n"
 					  " DELETE { %V ?p ?o }\n"
 					  " WHERE { %V ?p ?o }",
-					  entry->spindle->rootgraph, entry->self, entry->self))
+					  entry->spindle->rootgraph, entry->proxy->self, entry->proxy->self))
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to delete previously-cached triples\n");
 		return -1;
@@ -71,16 +71,16 @@ spindle_store_sparql_(SPINDLEENTRY *entry)
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to delete previously-cached triples\n");
 		return -1;
 	}
-	if(sparql_insert_model(entry->sparql, entry->rootdata))
+	if(sparql_insert_model(entry->sparql, entry->proxy->rootdata))
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to push new proxy data into the root graph of the store\n");
 		return -1;
 	}
-	
+
 	/* Now update the proxy data */
 	if(entry->spindle->multigraph)
 	{
-		triples = twine_rdf_model_ntriples(entry->proxydata, &triplen);
+		triples = twine_rdf_model_ntriples(entry->proxy->proxydata, &triplen);
 		if(sparql_put(entry->sparql, entry->graphname, triples, triplen))
 		{
 			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to push new proxy data into the store\n");
@@ -95,13 +95,13 @@ spindle_store_sparql_(SPINDLEENTRY *entry)
 						  "WITH %V\n"
 						  " DELETE { %V ?p ?o }\n"
 						  " WHERE { %V ?p ?o }",
-						  entry->graph, entry->self, entry->self))
+						  entry->proxy->graph, entry->proxy->self, entry->proxy->self))
 		{
 			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to delete previously-cached triples\n");
 			return -1;
 		}
 		/* Insert the new proxy triples, if any */
-		if(sparql_insert_model(entry->sparql, entry->proxydata))
+		if(sparql_insert_model(entry->sparql, entry->proxy->proxydata))
 		{
 			twine_logf(LOG_ERR, PLUGIN_NAME ": failed to push new proxy data into the store\n");
 			return -1;
@@ -120,7 +120,7 @@ spindle_store_cache_(SPINDLEENTRY *data)
 	char *proxy, *source, *extra, *buf;
 	size_t bufsize, proxylen, sourcelen, extralen, l;
 	int r;
-	
+
 	/* If there's no S3 bucket nor cache-path, this is a no-op */
 	if(!data->generate->bucket &&
 		!data->generate->cachepath)
@@ -130,15 +130,15 @@ spindle_store_cache_(SPINDLEENTRY *data)
 	if(data->spindle->multigraph)
 	{
 		/* Remove the root graph from the proxy data model, if it's present */
-		librdf_model_context_remove_statements(data->proxydata, data->spindle->rootgraph);
+		librdf_model_context_remove_statements(data->proxy->proxydata, data->spindle->rootgraph);
 	}
-	proxy = twine_rdf_model_nquads(data->proxydata, &proxylen);
+	proxy = twine_rdf_model_nquads(data->proxy->proxydata, &proxylen);
 	if(!proxy)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to serialise proxy model as N-Quads\n");
 		return -1;
 	}
-	source = twine_rdf_model_nquads(data->sourcedata, &sourcelen);
+	source = twine_rdf_model_nquads(data->proxy->sourcedata, &sourcelen);
 	if(!source)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to serialise source model as N-Quads\n");
@@ -146,7 +146,7 @@ spindle_store_cache_(SPINDLEENTRY *data)
 		return -1;
 	}
 
-	extra = twine_rdf_model_nquads(data->extradata, &extralen);
+	extra = twine_rdf_model_nquads(data->proxy->extradata, &extralen);
 	if(!extra)
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to serialise extra model as N-Quads\n");
@@ -180,7 +180,7 @@ spindle_store_cache_(SPINDLEENTRY *data)
 	}
 	strcpy(&(buf[l + sourcelen]), "\n## Extra:\n");
 	l = strlen(buf);
-	
+
 	if(extralen)
 	{
 		memcpy(&(buf[l]), extra, extralen);

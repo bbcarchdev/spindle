@@ -62,7 +62,7 @@ spindle_strip(twine_graph *graph, void *data)
 			r = -1;
 			break;
 		}
-		
+
 		predicate = librdf_statement_get_predicate(statement);
 		if(!predicate)
 		{
@@ -100,9 +100,9 @@ spindle_strip(twine_graph *graph, void *data)
 		 * If the callback function returns -1, we abort with an error.
 		 *
 		 * If all of the functions return 0, the triple is stripped
-		 * from the graph.		
+		 * from the graph.
 		 */
-		keep = 0;		
+		keep = 0;
 		for(c = 0; spindle_strip_rules_[c]; c++)
 		{
 			n = spindle_strip_rules_[c](rules, statement, uristr);
@@ -170,7 +170,7 @@ spindle_strip_is_cachepred_(RULEBASE *rules, librdf_statement *st, const char *u
 		}
 		if(r > 0)
 		{
-			/* The cachepreds list is lexigraphically sorted */
+			/* The cachepreds list is lexicographically sorted */
 			break;
 		}
 	}

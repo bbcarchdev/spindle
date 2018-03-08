@@ -47,13 +47,13 @@ spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data)
 	size_t c;
 
 	/* XXX should be rulebase-driven -- spindle:TopicProperty */
-	const char *predlist[] = 
+	const char *predlist[] =
 	{
 		NS_FOAF "topic",
 		NS_EVENT "factor",
 		NULL
 	};
-	
+
 	if(data->generate->aboutself && data->classname && !strcmp(data->classname, NS_FRBR "Work"))
 	{
 		/* Force a Creative Work entity to always 'about' itself, so that queries match both
@@ -68,7 +68,7 @@ spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data)
 	{
 		return -1;
 	}
-	if(!(node = librdf_new_node_from_node(data->self)))
+	if(!(node = librdf_new_node_from_node(data->proxy->self)))
 	{
 		librdf_free_statement(query);
 		return -1;
@@ -81,7 +81,7 @@ spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data)
 	}
 	librdf_statement_set_predicate(query, node);
 	r = 0;
-	for(stream = librdf_model_find_statements_in_context(data->proxydata, query, data->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
+	for(stream = librdf_model_find_statements_in_context(data->proxy->proxydata, query, data->proxy->graph); !librdf_stream_end(stream); librdf_stream_next(stream))
 	{
 		st = librdf_stream_get_object(stream);
 		if(!(node = librdf_statement_get_predicate(st)) ||
@@ -101,7 +101,7 @@ spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data)
 		if(!predlist[c])
 		{
 			continue;
-		}			 
+		}
 		if((node = librdf_statement_get_object(st)) &&
 		   librdf_node_is_resource(node) &&
 		   (uri = librdf_node_get_uri(node)) &&

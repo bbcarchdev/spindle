@@ -62,12 +62,12 @@ spindle_index_core(SQL *sql, const char *id, SPINDLEENTRY *data)
 	char lbuf[64];
 	int r;
 
-	title = spindle_db_literalset(&(data->titleset));
-	desc = spindle_db_literalset(&(data->descset));
-	classes = spindle_db_strset(data->classes);
-	if(data->has_geo)
+	title = spindle_db_literalset(&(data->proxy->titleset));
+	desc = spindle_db_literalset(&(data->proxy->descset));
+	classes = spindle_db_strset(data->proxy->classes);
+	if(data->proxy->has_geo)
 	{
-		snprintf(lbuf, sizeof(lbuf), "(%f, %f)", data->lat, data->lon);
+		snprintf(lbuf, sizeof(lbuf), "(%f, %f)", data->proxy->lat, data->proxy->lon);
 		t = lbuf;
 	}
 	else
@@ -75,8 +75,8 @@ spindle_index_core(SQL *sql, const char *id, SPINDLEENTRY *data)
 		t = NULL;
 	}
 	r = sql_executef(sql, "INSERT INTO \"index\" (\"id\", \"version\", \"modified\", \"score\", \"title\", \"description\", \"coordinates\", \"classes\") VALUES (%Q, %d, now(), %d, %Q, %Q, %Q, %Q)",
-					 id, SPINDLE_DB_INDEX_VERSION, data->score, title, desc, t, classes);
-	
+					 id, SPINDLE_DB_INDEX_VERSION, data->proxy->score, title, desc, t, classes);
+
 	free(title);
 	free(desc);
 	free(classes);

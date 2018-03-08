@@ -75,7 +75,7 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 	SQL_STATEMENT *rs;
 	int flags;
 	const char *id;
-	
+
 	if(!entry->generate->db)
 	{
 		return 0;
@@ -88,7 +88,7 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 	for(; !sql_stmt_eof(rs); sql_stmt_next(rs))
 	{
 		// Get the id of the target
-		id = sql_stmt_str(rs, 0);
+		id = (char *) sql_stmt_str(rs, 0);
 
 		// Get the flags to apply
 		flags = (int) sql_stmt_long(rs, 1);
@@ -106,7 +106,7 @@ spindle_trigger_apply(SPINDLEENTRY *entry)
 			sql_executef(entry->generate->db, "UPDATE \"state\" SET \"status\" = %Q WHERE \"id\" = %Q", "DIRTY", id);
 		}
 	}
-	
+
 	sql_stmt_destroy(rs);
 
 	return 0;
@@ -117,20 +117,20 @@ int
 spindle_triggers_update(SPINDLEENTRY *data)
 {
 	size_t c;
-	
+
 	if(!data->generate->spindle->db)
 	{
 		return 0;
 	}
 	if(sql_executef(data->generate->spindle->db, "UPDATE \"triggers\" SET \"triggerid\" = %Q WHERE \"uri\" = %Q",
-		data->id, data->localname))
+		data->id, data->proxy->localname))
 	{
 		return -1;
 	}
-	for(c = 0; c < data->refcount; c++)
+	for(c = 0; c < data->proxy->refcount; c++)
 	{
 		if(sql_executef(data->generate->spindle->db, "UPDATE \"triggers\" SET \"triggerid\" = %Q WHERE \"uri\" = %Q",
-			data->id, data->refs[c]))
+			data->id, data->proxy->refs[c]))
 		{
 			return -1;
 		}

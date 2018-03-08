@@ -180,7 +180,7 @@ spindle_license_add_(SPINDLEGENERATE *generate, const char *name, size_t namelen
 	return p;
 }
 
-static int 
+static int
 spindle_license_add_uri_(struct spindle_license_struct *license, const char *uri)
 {
 	char **p;
@@ -201,13 +201,13 @@ spindle_license_add_uri_(struct spindle_license_struct *license, const char *uri
 	license->uricount++;
 	return 0;
 }
-	
+
 /* For each of the source documents, find the licensing predicates and
  * add information about them to a licensing entry related to the proxy
  */
 int
 spindle_license_apply(SPINDLEENTRY *cache)
-{	
+{
 	librdf_iterator *iter;
 	librdf_node *node, *licenseentry;
 	char *licenseentryname;
@@ -221,7 +221,7 @@ spindle_license_apply(SPINDLEENTRY *cache)
 	licenseentry = twine_rdf_node_createuri(licenseentryname);
 	r = 0;
 
-	iter = librdf_model_get_contexts(cache->sourcedata);
+	iter = librdf_model_get_contexts(cache->proxy->sourcedata);
 	for(; !librdf_iterator_end(iter); librdf_iterator_next(iter))
 	{
 		node = librdf_iterator_get_object(iter);
@@ -231,7 +231,7 @@ spindle_license_apply(SPINDLEENTRY *cache)
 		}
 	}
 	librdf_free_iterator(iter);
-	
+
 	if(!r)
 	{
 		r = spindle_license_apply_list_(cache, &list, licenseentry);
@@ -247,7 +247,7 @@ static int
 spindle_license_apply_context_(SPINDLEENTRY *cache, struct licenselist_struct *list, librdf_node *context, librdf_node *licenseentry, const char *licenseentryname)
 {
 	librdf_node *predicate, *object;
-	librdf_uri *uri, *pred;	
+	librdf_uri *uri, *pred;
 	librdf_statement *query, *statement;
 	librdf_stream *stream;
 	const char *uristr, *preduri;
@@ -257,7 +257,7 @@ spindle_license_apply_context_(SPINDLEENTRY *cache, struct licenselist_struct *l
 	uristr = (const char *) librdf_uri_as_string(uri);
 	query = twine_rdf_st_create();
 	librdf_statement_set_subject(query, librdf_new_node_from_node(context));
-	stream = librdf_model_find_statements_with_options(cache->sourcedata, query, context, NULL);
+	stream = librdf_model_find_statements_with_options(cache->proxy->sourcedata, query, context, NULL);
 	for(; !librdf_stream_end(stream); librdf_stream_next(stream))
 	{
 		statement = librdf_stream_get_object(stream);
@@ -332,26 +332,26 @@ spindle_license_apply_list_(SPINDLEENTRY *cache, struct licenselist_struct *list
 			p++;
 			*p = ' ';
 			p++;
-		}								
+		}
 		p += sprintf(p, "from %s under the terms of %s",
 					 list->entries[c].source, list->entries[c].name);
 	}
-	
+
 	statement = twine_rdf_st_create();
 	librdf_statement_set_subject(statement, librdf_new_node_from_node(subject));
 	librdf_statement_set_predicate(statement, twine_rdf_node_createuri(NS_RDFS "comment"));
 	librdf_statement_set_object(statement, librdf_new_node_from_literal(cache->spindle->world, (const unsigned char *) buf, "en", 0));
-	twine_rdf_model_add_st(cache->proxydata, statement, cache->graph);
+	twine_rdf_model_add_st(cache->proxy->proxydata, statement, cache->proxy->graph);
 	librdf_free_statement(statement);
-	
+
 	statement = twine_rdf_st_create();
 	librdf_statement_set_subject(statement, librdf_new_node_from_node(cache->doc));
 	librdf_statement_set_predicate(statement, twine_rdf_node_createuri(NS_DCTERMS "rights"));
 	librdf_statement_set_object(statement, librdf_new_node_from_node(subject));
-	twine_rdf_model_add_st(cache->proxydata, statement, cache->graph);
+	twine_rdf_model_add_st(cache->proxy->proxydata, statement, cache->proxy->graph);
 	librdf_free_statement(statement);
 	free(buf);
-	
+
 	return spindle_license_label_(cache, subject);
 }
 
@@ -364,13 +364,13 @@ spindle_license_label_(SPINDLEENTRY *cache, librdf_node *subject)
 	char *strbuf;
 	const char *s;
 
-	if(cache->title_en)
+	if(cache->proxy->title_en)
 	{
-		s = cache->title_en;
+		s = cache->proxy->title_en;
 	}
 	else
 	{
-		s = cache->title;
+		s = cache->proxy->title;
 	}
 	strbuf = (char *) calloc(1, strlen(s) + 64);
 	if(!strbuf)
@@ -408,7 +408,7 @@ spindle_license_label_(SPINDLEENTRY *cache, librdf_node *subject)
 		return -1;
 	}
 	librdf_statement_set_object(st, obj);
-	twine_rdf_model_add_st(cache->proxydata, st, cache->graph);
+	twine_rdf_model_add_st(cache->proxy->proxydata, st, cache->proxy->graph);
 	twine_rdf_st_destroy(st);
 	free(strbuf);
 	return 0;
@@ -436,7 +436,7 @@ spindle_license_apply_st_(SPINDLEENTRY *cache, librdf_node *graph, const char *g
 	if(uri)
 	{
 		info = uri_info(uri);
-		if(!info || 
+		if(!info ||
 		   !info->host || !info->host[0] ||
 		   !info->scheme || !info->scheme[0] ||
 		   (strcasecmp(info->scheme, "http") &&
@@ -480,7 +480,7 @@ spindle_license_apply_st_(SPINDLEENTRY *cache, librdf_node *graph, const char *g
 	librdf_statement_set_subject(st, librdf_new_node_from_node(graph));
 	librdf_statement_set_predicate(st, twine_rdf_node_createuri(NS_RDFS "seeAlso"));
 	librdf_statement_set_object(st, librdf_new_node_from_node(object));
-	twine_rdf_model_add_st(cache->proxydata, st, cache->graph);
+	twine_rdf_model_add_st(cache->proxy->proxydata, st, cache->proxy->graph);
 	twine_rdf_st_destroy(st);
 
 	if(uri)

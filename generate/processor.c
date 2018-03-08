@@ -48,7 +48,7 @@ spindle_generate_update(const char *name, const char *identifier, void *data)
 	if(!strcasecmp(identifier, "all"))
 	{
 		if(generate->spindle->db)
-		{			
+		{
 			return spindle_generate_all_(generate);
 		}
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": can only update all items when using the a relational database index\n");
@@ -71,7 +71,7 @@ spindle_generate_graph(twine_graph *graph, void *data)
 	SPINDLEGENERATE *generate;
 
 	generate = (SPINDLEGENERATE *) data;
-	return spindle_generate(data, graph->uri, SF_NONE);
+	return spindle_generate(generate, graph->uri, SF_NONE);
 }
 
 /* Process a message containing Spindle proxy URIs by passing them to the

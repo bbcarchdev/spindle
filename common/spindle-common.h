@@ -70,19 +70,6 @@ struct spindle_graphcache_struct
 	librdf_model *model;
 };
 
-/* A set of literal strings */
-struct spindle_literalset_struct
-{
-	struct spindle_literalstring_struct *literals;
-	size_t nliterals;
-};
-
-struct spindle_literalstring_struct
-{
-	char lang[8];
-	char *str;
-};
-
 /* Initialise a spindle context object */
 int spindle_init(SPINDLE *spindle);
 /* Free resources used by a spindle context object */

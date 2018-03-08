@@ -33,6 +33,7 @@ struct s3_upload_struct
 static char *spindle_generate_uri_(SPINDLEGENERATE *generate, const char *identifier);
 static int spindle_generate_state_fetch_(SPINDLEENTRY *cache);
 static int spindle_generate_state_update_(SPINDLEENTRY *cache);
+static int spindle_generate_proxy_node_locate_(librdf_node **node, struct proxy_node_locator_struct *locator);
 static int spindle_generate_txn_(SQL *restrict sql, void *restrict userdata);
 static int spindle_generate_entry_(SPINDLEENTRY *entry);
 
@@ -88,7 +89,7 @@ spindle_generate(SPINDLEGENERATE *generate, const char *identifier, int mode)
 		twine_logf(LOG_NOTICE, PLUGIN_NAME ": update complete for <%s>\n", idbuf);
 	}
 	free(idbuf);
-	return r;	
+	return r;
 }
 
 static unsigned long long
@@ -203,9 +204,9 @@ static int
 spindle_generate_txn_(SQL *restrict sql, void *restrict userdata)
 {
 	SPINDLEENTRY *entry;
-	
+
 	(void) sql;
-	
+
 	entry = (SPINDLEENTRY *) userdata;
 	if(spindle_generate_entry_(entry))
 	{
@@ -232,9 +233,10 @@ spindle_generate_txn_(SQL *restrict sql, void *restrict userdata)
 static int
 spindle_generate_entry_(SPINDLEENTRY *entry)
 {
+	struct proxy_node_locator_struct locator;
 	unsigned long long start;
 
-	twine_logf(LOG_INFO, PLUGIN_NAME ": updating <%s>\n", entry->localname);
+	twine_logf(LOG_INFO, PLUGIN_NAME ": updating <%s>\n", entry->proxy->localname);
 	/* Obtain cached source data */
 	start = gettimems();
 	/* TODO: when performing a partial update, what sort of data do we need to retrieve in order for indexing to work correctly? */
@@ -258,13 +260,15 @@ spindle_generate_entry_(SPINDLEENTRY *entry)
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update triggers\n", gettimediffms(&start));
 	/* Update proxy classes */
-	if(spindle_class_update_entry(entry) < 0)
+	if(rulebase_class_update_entry(entry->proxy, entry->spindle->world) < 0)
 	{
 		return -1;
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update classes\n", gettimediffms(&start));
 	/* Update proxy properties */
-	if(spindle_prop_update_entry(entry) < 0)
+	locator.localname = entry->proxy->localname;
+	locator.extra_data = entry->spindle;
+	if(rulebase_prop_update_entry(entry->proxy, entry->spindle->world, entry->generate->titlepred, spindle_generate_proxy_node_locate_, &locator) < 0)
 	{
 		return -1;
 	}
@@ -317,7 +321,39 @@ spindle_generate_entry_(SPINDLEENTRY *entry)
 		return -1;
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] apply triggers\n", gettimediffms(&start));
-	twine_logf(LOG_DEBUG, PLUGIN_NAME ": generation complete for <%s>\n", entry->localname);
+	twine_logf(LOG_DEBUG, PLUGIN_NAME ": generation complete for <%s>\n", entry->proxy->localname);
+	return 0;
+}
+
+static int
+spindle_generate_proxy_node_locate_(librdf_node **node, struct proxy_node_locator_struct *locator)
+{
+	librdf_uri *uri;
+
+	*node = NULL;
+	if(!locator
+	->match
+	->map
+	->proxyonly)
+	{
+		/* tell caller to continue with NULL node */
+		return 0;
+	}
+	uri = spindle_proxy_locate((SPINDLE *) locator->extra_data, (const char *) librdf_uri_as_string(librdf_node_get_uri(locator->obj)));
+	if(!uri || !strcmp(uri, locator->localname))
+	{
+		/* tell caller to abort successfully */
+		free(uri);
+		return 1;
+	}
+	*node = rdf_node_createuri_(uri);
+	free(uri);
+	if(!*node)
+	{
+		/* tell caller to abort unsuccessfully */
+		return -1;
+	}
+	/* tell caller to continue with non-NULL node */
 	return 0;
 }
 
@@ -328,7 +364,7 @@ spindle_generate_state_fetch_(SPINDLEENTRY *cache)
 	const char *modified, *state;
 	int flags;
 	struct tm tm;
-	
+
 	if(!cache->id)
 	{
 		/* No database, nothing to do */
@@ -342,7 +378,7 @@ spindle_generate_state_fetch_(SPINDLEENTRY *cache)
 	}
 	if(sql_stmt_eof(rs))
 	{
-		twine_logf(LOG_WARNING, PLUGIN_NAME ": no state entry exists for <%s>\n", cache->localname);
+		twine_logf(LOG_WARNING, PLUGIN_NAME ": no state entry exists for <%s>\n", cache->proxy->localname);
 		cache->flags = -1;
 		sql_stmt_destroy(rs);
 		return 0;
@@ -375,4 +411,3 @@ spindle_generate_state_update_(SPINDLEENTRY *cache)
 {
 	return sql_executef(cache->db, "UPDATE \"state\" SET \"status\" = %Q, \"flags\" = '%d' WHERE \"id\" = %Q", "COMPLETE", 0, cache->id);
 }
-

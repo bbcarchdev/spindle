@@ -55,7 +55,7 @@ spindle_describe_entry(SPINDLEENTRY *data)
 		/* Find all of the triples related to all of the graphs describing
 		 * source data.
 		 */
-		iter = librdf_model_get_contexts(data->sourcedata);
+		iter = librdf_model_get_contexts(data->proxy->sourcedata);
 		while(!librdf_iterator_end(iter))
 		{
 			node = librdf_iterator_get_object(iter);
@@ -69,7 +69,7 @@ spindle_describe_entry(SPINDLEENTRY *data)
 			/* Fetch triples from graph G where the subject of each
 			 * triple is also graph G
 			 */
-			if(spindle_graphcache_description_node(data->spindle, data->sourcedata, node))
+			if(spindle_graphcache_description_node(data->spindle, data->proxy->sourcedata, node))
 			{
 				return -1;
 			}
@@ -80,13 +80,13 @@ spindle_describe_entry(SPINDLEENTRY *data)
 			librdf_statement_set_subject(st, librdf_new_node_from_node(node));
 			librdf_statement_set_predicate(st, twine_rdf_node_createuri(NS_RDF "type"));
 			librdf_statement_set_object(st, twine_rdf_node_createuri(NS_FOAF "Document"));
-			twine_rdf_model_add_st(model, st, data->graph);
+			twine_rdf_model_add_st(model, st, data->proxy->graph);
 			librdf_free_statement(st);
-		
+
 			/* For each subject in the graph, add triples stating that:
 			 *   ex:subject wdrs:describedby ex:graphuri .
 			 */
-			stream = librdf_model_context_as_stream(data->sourcedata, node);
+			stream = librdf_model_context_as_stream(data->proxy->sourcedata, node);
 			for(; !librdf_stream_end(stream); librdf_stream_next(stream))
 			{
 				statement = librdf_stream_get_object(stream);
@@ -103,7 +103,7 @@ spindle_describe_entry(SPINDLEENTRY *data)
 				librdf_statement_set_subject(st, librdf_new_node_from_node(subject));
 				librdf_statement_set_predicate(st, twine_rdf_node_createuri(NS_POWDER "describedby"));
 				librdf_statement_set_object(st, librdf_new_node_from_node(node));
-				twine_rdf_model_add_st(model, st, data->graph);
+				twine_rdf_model_add_st(model, st, data->proxy->graph);
 				librdf_free_statement(st);
 
 				/* Add <doc> rdfs:seeAlso <source> */
@@ -111,7 +111,7 @@ spindle_describe_entry(SPINDLEENTRY *data)
 				librdf_statement_set_subject(st, librdf_new_node_from_node(data->doc));
 				librdf_statement_set_predicate(st, twine_rdf_node_createuri(NS_RDFS "seeAlso"));
 				librdf_statement_set_object(st, librdf_new_node_from_node(node));
-				twine_rdf_model_add_st(model, st, data->graph);
+				twine_rdf_model_add_st(model, st, data->proxy->graph);
 				librdf_free_statement(st);
 			}
 			librdf_free_stream(stream);
@@ -124,11 +124,9 @@ spindle_describe_entry(SPINDLEENTRY *data)
 	if(data->generate->describedby)
 	{
 		stream = librdf_model_as_stream(model);
-		librdf_model_add_statements(data->proxydata, stream);
+		librdf_model_add_statements(data->proxy->proxydata, stream);
 		librdf_free_stream(stream);
 	}
 	twine_rdf_model_destroy(model);
 	return 0;
 }
-
-

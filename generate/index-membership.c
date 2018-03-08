@@ -40,7 +40,7 @@ spindle_index_membership(SQL *sql, const char *id, SPINDLEENTRY *data)
 	/* Find the statements within the proxy model which explicity express
 	 * the fact that our proxy is a member of some collection.
 	 */
-	if(spindle_index_membership_query_(sql, id, data, data->proxydata, data->graph, NS_DCTERMS "isPartOf", 0, 0))
+	if(spindle_index_membership_query_(sql, id, data, data->proxy->proxydata, data->proxy->graph, NS_DCTERMS "isPartOf", 0, 0))
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to query proxy for dct:isPartOf statements\n");
 		return -1;
@@ -48,7 +48,7 @@ spindle_index_membership(SQL *sql, const char *id, SPINDLEENTRY *data)
 	/* Find the statements within the source data which express the fact
 	 * that the document describing our subject is a member of a collection
 	 */
-	if(spindle_index_membership_query_(sql, id, data, data->sourcedata, NULL, NS_FOAF "primaryTopic", 1, 1))
+	if(spindle_index_membership_query_(sql, id, data, data->proxy->sourcedata, NULL, NS_FOAF "primaryTopic", 1, 1))
 	{
 		twine_logf(LOG_ERR, PLUGIN_NAME ": failed to query proxy for foaf:primaryTopic statements\n");
 		return -1;
@@ -84,7 +84,7 @@ spindle_index_membership_query_(SQL *sql, const char *id, SPINDLEENTRY *data, li
 	librdf_uri *uri;
 	const char *uristr;
 	size_t c;
-	int r, match;	
+	int r, match;
 
 	if(!graph)
 	{
@@ -109,7 +109,7 @@ spindle_index_membership_query_(SQL *sql, const char *id, SPINDLEENTRY *data, li
 	}
 	if(!matchrefs)
 	{
-		if(!(node = librdf_new_node_from_node(data->self)))
+		if(!(node = librdf_new_node_from_node(data->proxy->self)))
 		{
 			librdf_free_statement(query);
 			return -1;
@@ -142,7 +142,7 @@ spindle_index_membership_query_(SQL *sql, const char *id, SPINDLEENTRY *data, li
 			/* If 'matchrefs' is set, then the subject (inverse=0) or object
 			 * (inverse=1) of the query is unset, and we should compare its
 			 * value against the external URIs for the entity we're updating,
-			 * as listed in data->refs[]. If we get a match, then the triple
+			 * as listed in data->proxy->refs[]. If we get a match, then the triple
 			 * refers to this entity, and we can proceed with the membership
 			 * addition.
 			 */
@@ -160,9 +160,9 @@ spindle_index_membership_query_(SQL *sql, const char *id, SPINDLEENTRY *data, li
 			   (uristr = (const char *) librdf_uri_as_string(uri)))
 			{
 				match = 0;
-				for(c = 0; data->refs[c]; c++)
+				for(c = 0; data->proxy->refs[c]; c++)
 				{
-					if(!strcmp(uristr, data->refs[c]))
+					if(!strcmp(uristr, data->proxy->refs[c]))
 					{
 						match = 1;
 						break;
@@ -201,7 +201,7 @@ spindle_index_membership_query_(SQL *sql, const char *id, SPINDLEENTRY *data, li
 	}
 	librdf_free_stream(stream);
 	librdf_free_statement(query);
-	
+
 	return r;
 }
 

@@ -31,7 +31,7 @@ spindle_related_fetch_entry(SPINDLEENTRY *data)
 	librdf_uri *uri;
 	const char *uristr;
 	int r;
-	
+
 	/* If there's no cache destination, the extradata model won't be used, so
 	 * there's nothing to do here
 	 */
@@ -45,7 +45,7 @@ spindle_related_fetch_entry(SPINDLEENTRY *data)
 	}
 	else
 	{
-		r = spindle_cache_fetch(data, "related", data->extradata);
+		r = spindle_cache_fetch(data, "related", data->proxy->extradata);
 	}
 	if(r < 0)
 	{
@@ -56,7 +56,7 @@ spindle_related_fetch_entry(SPINDLEENTRY *data)
 		/* Cache information about external resources related to this
 		 * entity, restricted by the predicate used for the relation
 		 */
-		if(sparql_queryf_model(data->spindle->sparql, data->extradata,
+		if(sparql_queryf_model(data->spindle->sparql, data->proxy->extradata,
 							   "SELECT DISTINCT ?s ?p ?o ?g\n"
 							   " WHERE {\n"
 							   "  GRAPH %V {\n"
@@ -72,14 +72,14 @@ spindle_related_fetch_entry(SPINDLEENTRY *data)
 							   "  }\n"
 							   "  FILTER(?g != %V && ?g != %V)\n"
 							   "}",
-							   data->graph, data->self, data->graph, data->spindle->rootgraph))
+							   data->proxy->graph, data->proxy->self, data->proxy->graph, data->spindle->rootgraph))
 		{
 			return -1;
 		}
-		spindle_cache_store(data, "related", data->extradata);
+		spindle_cache_store(data, "related", data->proxy->extradata);
 	}
 	/* Remove anything in a local graph */
-	iterator = librdf_model_get_contexts(data->extradata);
+	iterator = librdf_model_get_contexts(data->proxy->extradata);
 	while(!librdf_iterator_end(iterator))
 	{
 		context = librdf_iterator_get_object(iterator);
@@ -87,7 +87,7 @@ spindle_related_fetch_entry(SPINDLEENTRY *data)
 		uristr = (const char *) librdf_uri_as_string(uri);
 		if(!strncmp(uristr, data->spindle->root, strlen(data->spindle->root)))
 		{
-			librdf_model_context_remove_statements(data->extradata, context);
+			librdf_model_context_remove_statements(data->proxy->extradata, context);
 		}
 		librdf_iterator_next(iterator);
 	}
