@@ -26,6 +26,9 @@
 /* 36 characters plus trailing NUL byte */
 #define UUID_BUFFER_SIZE                37
 
+/* Move a set of references from one proxy to another */
+static int spindle_proxy_migrate_(SPINDLE *spindle, const char *from, const char *to, char **refs);
+
 /* Generate a new local URI for an external URI */
 char *
 spindle_proxy_generate(SPINDLE *spindle, const char *uri)
@@ -252,7 +255,7 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 		 * unified proxy.
 		 */
 		twine_logf(LOG_INFO, PLUGIN_NAME ": relocating references from <%s> to <%s>\n", u2, uu);
-		if(spindle_proxy_migrate(spindle, u2, uu, NULL))
+		if(spindle_proxy_migrate_(spindle, u2, uu, NULL))
 		{
 			free(u1);
 			free(u2);
@@ -282,8 +285,8 @@ spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, struc
 }
 
 /* Move a set of references from one proxy to another */
-int
-spindle_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, char **refs)
+static int
+spindle_proxy_migrate_(SPINDLE *spindle, const char *from, const char *to, char **refs)
 {
 	size_t c, slen, len;
 	int allocated;

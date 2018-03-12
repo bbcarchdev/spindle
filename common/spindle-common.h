@@ -93,8 +93,6 @@ int spindle_proxy_create(SPINDLE *spindle, const char *uri1, const char *uri2, s
 char *spindle_proxy_generate(SPINDLE *spindle, const char *uri);
 /* Look up the local URI for an external URI in the store */
 char *spindle_proxy_locate(SPINDLE *spindle, const char *uri);
-/* Move a set of references from one proxy to another */
-int spindle_proxy_migrate(SPINDLE *spindle, const char *from, const char *to, char **refs);
 /* Store a relationship between a proxy and an external entity */
 int spindle_proxy_relate(SPINDLE *spindle, const char *remote, const char *proxy);
 /* Obtain all of the outbound references (related external entity URIs) from a proxy */
