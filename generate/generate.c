@@ -260,7 +260,7 @@ spindle_generate_entry_(SPINDLEENTRY *entry)
 	}
 	twine_logf(LOG_DEBUG, PLUGIN_NAME ": [%dms] update triggers\n", gettimediffms(&start));
 	/* Update proxy classes */
-	if(rulebase_class_update_entry(entry->proxy, entry->spindle->world) < 0)
+	if(rulebase_class_update_entry(entry->proxy) < 0)
 	{
 		return -1;
 	}
@@ -268,7 +268,7 @@ spindle_generate_entry_(SPINDLEENTRY *entry)
 	/* Update proxy properties */
 	locator.localname = entry->proxy->localname;
 	locator.extra_data = entry->spindle;
-	if(rulebase_prop_update_entry(entry->proxy, entry->spindle->world, entry->generate->titlepred, spindle_generate_proxy_node_locate_, &locator) < 0)
+	if(rulebase_prop_update_entry(entry->proxy, entry->generate->titlepred, spindle_generate_proxy_node_locate_, &locator) < 0)
 	{
 		return -1;
 	}
@@ -328,7 +328,7 @@ spindle_generate_entry_(SPINDLEENTRY *entry)
 static int
 spindle_generate_proxy_node_locate_(librdf_node **node, struct proxy_node_locator_struct *locator)
 {
-	librdf_uri *uri;
+	char *uri;
 
 	*node = NULL;
 	if(!locator
@@ -346,7 +346,7 @@ spindle_generate_proxy_node_locate_(librdf_node **node, struct proxy_node_locato
 		free(uri);
 		return 1;
 	}
-	*node = rdf_node_createuri_(uri);
+	*node = twine_rdf_node_createuri(uri);
 	free(uri);
 	if(!*node)
 	{

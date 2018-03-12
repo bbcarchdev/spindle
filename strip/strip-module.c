@@ -29,8 +29,14 @@ static RULEBASE *rulebase;
 int
 twine_plugin_init(void)
 {
+	SPINDLE spindle;
+
 	twine_logf(LOG_DEBUG, PLUGIN_NAME " plug-in: initialising\n");
-	rulebase = rulebase_create();
+	if(spindle_init(&spindle))
+	{
+		return -1;
+	}
+	rulebase = rulebase_create(spindle.world, spindle.root, spindle.multigraph);
 	if(!rulebase)
 	{
 		return -1;

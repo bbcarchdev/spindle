@@ -42,7 +42,7 @@ twine_plugin_init(void)
 		twine_logf(LOG_DEBUG, PLUGIN_NAME ": initialisation failed\n");
 		return -1;
 	}
-	spindle.rules = rulebase_create();
+	spindle.rules = rulebase_create(spindle.world, spindle.root, spindle.multigraph);
 	if(!spindle.rules)
 	{
 		return -1;

@@ -61,7 +61,7 @@ spindle_init(SPINDLE *spindle)
 	{
 		twine_logf(LOG_CRIT, PLUGIN_NAME ": failed to create node for <%s>\n", spindle->root);
 		return -1;
-	}	
+	}
 	spindle->modified = librdf_new_node_from_uri_string(spindle->world, (const unsigned char *) NS_DCTERMS "modified");
 	if(!spindle->modified)
 	{
@@ -87,7 +87,7 @@ int
 spindle_cleanup(SPINDLE *spindle)
 {
 	size_t c;
-	
+
 	if(spindle->sparql)
 	{
 		sparql_destroy(spindle->sparql);

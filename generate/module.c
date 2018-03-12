@@ -65,7 +65,7 @@ spindle_generate_init_(SPINDLEGENERATE *generate)
 		return -1;
 	}
 	generate->spindle = &spindle;
-	spindle.rules = rulebase_create();
+	spindle.rules = rulebase_create(spindle.world, spindle.root, spindle.multigraph);
 	if(!spindle.rules)
 	{
 		return -1;
