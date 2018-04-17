@@ -19,6 +19,7 @@
 #define librdf_statement void
 #define librdf_stream void
 #define librdf_uri void
+#define librdf_world void
 
 int librdf_free_stream(librdf_stream *stream) {
 	return (int) mock(stream);

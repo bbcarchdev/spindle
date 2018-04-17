@@ -16,22 +16,11 @@
 
 #include <cgreen/cgreen.h>
 #include <cgreen/mocks.h>
+#include <sys/syslog.h>
 
-typedef struct {
-	struct spindle_classmap_struct *classes;
-	size_t classcount;
-	size_t classsize;
-	struct spindle_predicatemap_struct *predicates;
-	size_t predcount;
-	size_t predsize;
-	char **cachepreds;
-	size_t cpcount;
-	size_t cpsize;
-	const struct coref_match_struct *match_types;
-	struct coref_match_struct *coref;
-	size_t corefcount;
-	size_t corefsize;
-} SPINDLERULES;
+/* mocks of dependancies */
+#include "../../t/mock_librdf.h"
+#include "../../t/mock_spindle_core.h"
 
 typedef struct {
 	char *uri;
@@ -39,9 +28,6 @@ typedef struct {
 	void *store;
 	void *old;
 } twine_graph;
-
-/* mocks of dependancies */
-#include "mock_librdf.h"
 
 int twine_logf(int level, char *msg, ...) {
 	return (int) mock(level, msg);
@@ -66,8 +52,6 @@ int mock_processor(SPINDLERULES *rules, librdf_statement *statement, const char 
 /* include file with static functions */
 #define P_SPINDLE_STRIP_H_
 #define PLUGIN_NAME "spindle-strip"
-#define LOG_ERR 1
-#define LOG_DEBUG 1
 #include "../processor.c"
 
 Describe(spindle_strip_processor);
@@ -157,16 +141,20 @@ Ensure(spindle_strip_processor, includes_is_cachepred_function_in_list_of_proces
 }
 
 Ensure(spindle_strip_processor, is_cachepred_function_returns_true_for_cached_predicates) {
-	char *predicate = "test predicate";
-	SPINDLERULES rules = { .cpcount = 1, .cachepreds = &predicate };
-	assert_that(spindle_strip_is_cachepred_(&rules, NULL, predicate), is_equal_to(1));
+	/* ensure same string has different pointers */
+	char *predicate1 = "predicate";
+	char predicate2[10];
+	sprintf(predicate2, "predicate");
+	SPINDLERULES rules = { .cpcount = 1, .cachepreds = &predicate1 };
+	assert_that(spindle_strip_is_cachepred_(&rules, NULL, predicate2), is_true);
 }
 
 Ensure(spindle_strip_processor, is_cachepred_function_returns_false_for_noncached_predicates) {
-	char *predicate = "test predicate 1";
-	char *other_predicate = "test predicate 2";
-	SPINDLERULES rules = { .cpcount = 1, .cachepreds = &predicate };
-	assert_that(spindle_strip_is_cachepred_(&rules, NULL, other_predicate), is_equal_to(0));
+	/* ensure strings differ */
+	char *predicate1 = "predicate 1";
+	char *predicate2 = "predicate 2";
+	SPINDLERULES rules = { .cpcount = 1, .cachepreds = &predicate1 };
+	assert_that(spindle_strip_is_cachepred_(&rules, NULL, predicate2), is_false);
 }
 
 int main(int argc, char **argv) {
