@@ -19,31 +19,10 @@
 #include <sys/syslog.h>
 
 /* mocks of dependancies */
+#include "../../t/mock_libsql.h"
 #include "../../t/mock_librdf.h"
+#include "../../t/mock_libtwine.h"
 #include "../../t/mock_spindle_core.h"
-
-typedef struct {
-	char *uri;
-	void *reserved;
-	void *store;
-	void *old;
-} twine_graph;
-
-int twine_logf(int level, char *msg, ...) {
-	return (int) mock(level, msg);
-}
-
-int twine_plugin_init(void) {
-	return (int) mock();
-}
-
-librdf_model *twine_rdf_model_create(void) {
-	return (librdf_model *) mock();
-}
-
-int twine_rdf_model_destroy(librdf_model *model) {
-	return (int) mock(model);
-}
 
 int mock_processor(SPINDLERULES *rules, librdf_statement *statement, const char *uri) {
 	return (int) mock(rules, statement, uri);

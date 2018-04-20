@@ -15,7 +15,6 @@
  */
 
 #include <sys/time.h>
-#include "mock_libsql.h"
 
 #define AWSS3BUCKET void
 #define SPARQL void
@@ -47,29 +46,17 @@ typedef struct {
 } SPINDLERULES;
 
 typedef struct {
-	/* The librdf execution context from Twine */
 	librdf_world *world;
-	/* The URI of our root graph, and prefix for proxy entities */
 	char *root;
-	/* The SPARQL connection handle from Twine */
 	SPARQL *sparql;
-	/* The RDBMS connection */
 	SQL *db;
-	/* rdf:type */
 	librdf_node *rdftype;
-	/* owl:sameAs */
 	librdf_node *sameas;
-	/* dct:modified */
 	librdf_node *modified;
-	/* xsd:dateTime */
 	librdf_uri *xsd_dateTime;
-	/* The root URI as a librdf_node */
 	librdf_node *rootgraph;
-	/* Whether to store each proxy in its own graph */
 	int multigraph;
-	/* The rulebase */
 	SPINDLERULES *rules;
-	/* Cached information about graphs */
 	struct spindle_graphcache_struct *graphcache;
 } SPINDLE;
 
@@ -123,62 +110,32 @@ typedef struct {
 	struct spindle_strset_struct *sources;
 } SPINDLEENTRY;
 
-int spindle_class_update_entry(SPINDLEENTRY *entry) {
-	return (int) mock(entry);
-}
+struct spindle_trigger_struct {
+	char *uri;
+	unsigned int kind;
+	char *id;
+};
 
-int spindle_doc_apply(SPINDLEENTRY *entry) {
-	return (int) mock(entry);
-}
+struct spindle_strset_struct
+{
+	char **strings;
+	unsigned *flags;
+	size_t count;
+	size_t size;
+};
 
-int spindle_describe_entry(SPINDLEENTRY *entry) {
-	return (int) mock(entry);
-}
+struct spindle_classmap_struct
+{
+	char *uri;
+	struct spindle_classmatch_struct *match;
+	size_t matchcount;
+	size_t matchsize;
+	int score;
+	int prominence;
+};
 
-int spindle_index_entry(SPINDLEENTRY *entry) {
-	return (int) mock(entry);
-}
-
-int spindle_entry_init(SPINDLEENTRY *entry, SPINDLEGENERATE *generate, const char *localname) {
-	return (int) mock(entry, generate, localname);
-}
-
-int spindle_entry_reset(SPINDLEENTRY *entry) {
-	return (int) mock(entry);
-}
-
-int spindle_entry_cleanup(SPINDLEENTRY *entry) {
-	return (int) mock(entry);
-}
-
-int spindle_license_apply(SPINDLEENTRY *entry) {
-	return (int) mock(entry);
-}
-
-int spindle_prop_update_entry(SPINDLEENTRY *entry) {
-	return (int) mock(entry);
-}
-
-char *spindle_proxy_locate(SPINDLE *spindle, const char *uri) {
-	return (char *) mock(spindle, uri);
-}
-
-int spindle_related_fetch_entry(SPINDLEENTRY *entry) {
-	return (int) mock(entry);
-}
-
-int spindle_source_fetch_entry(SPINDLEENTRY *entry) {
-	return (int) mock(entry);
-}
-
-int spindle_store_entry(SPINDLEENTRY *entry) {
-	return (int) mock(entry);
-}
-
-int spindle_trigger_apply(SPINDLEENTRY *entry) {
-	return (int) mock(entry);
-}
-
-int spindle_triggers_update(SPINDLEENTRY *entry) {
-	return (int) mock(entry);
-}
+struct spindle_classmatch_struct
+{
+	char *uri;
+	int prominence;
+};

@@ -22,7 +22,9 @@
 
 /* mocks of dependancies */
 #include "../../t/mock_librdf.h"
+#include "../../t/mock_libsql.h"
 #include "../../t/mock_spindle_core.h"
+#include "../../t/mock_spindle_methods.h"
 
 int twine_logf(int level, char *msg, ...) {
 	return (int) mock(level, msg);
@@ -61,7 +63,7 @@ Ensure(spindle_generate_generator, generates_a_proxy_entry_and_invokes_an_SQL_tr
 	assert_that(spindle_generate(&generate, ident, 0x222), is_equal_to(0));
 }
 
-Ensure(spindle_generate_generator, generates_and_attempts_to_store_a_proxy_entry_even_when_db_is_unavailable_MAYBE_BUG) {
+Ensure(spindle_generate_generator, generates_and_attempts_to_store_a_proxy_entry_even_when_db_is_unavailable_MAY_BE_BUG) {
 	SQL *db = (SQL *) NULL;
 	SQL_STATEMENT *stmt = (SQL_STATEMENT *) 0x444;
 	SPINDLE spindle = { .root = "root" };
@@ -602,10 +604,10 @@ Ensure(spindle_generate_generator, keeps_state_and_sets_all_flags_when_db_flags_
 	assert_that(entry.flags, is_equal_to(-1));
 }
 
-int main(int argc, char **argv) {
+int generate_test(void) {
 	TestSuite *suite = create_test_suite();
 	add_test_with_context(suite, spindle_generate_generator, generates_a_proxy_entry_and_invokes_an_SQL_transaction_to_store_it_if_a_db_connection_exists);
-	add_test_with_context(suite, spindle_generate_generator, generates_and_attempts_to_store_a_proxy_entry_even_when_db_is_unavailable_MAYBE_BUG);
+	add_test_with_context(suite, spindle_generate_generator, generates_and_attempts_to_store_a_proxy_entry_even_when_db_is_unavailable_MAY_BE_BUG);
 	add_test_with_context(suite, spindle_generate_generator, URI_generator_creates_a_valid_URI_given_a_valid_UUID);
 	add_test_with_context(suite, spindle_generate_generator, URI_generator_creates_a_valid_URI_given_a_valid_UUID_and_a_root_ending_with_a_slash);
 	add_test_with_context(suite, spindle_generate_generator, URI_generator_creates_a_server_relative_URI_given_a_valid_UUID_and_an_empty_root);
@@ -637,4 +639,8 @@ int main(int argc, char **argv) {
 	add_test_with_context(suite, spindle_generate_generator, keeps_state_and_sets_all_flags_when_db_state_is_clean);
 	add_test_with_context(suite, spindle_generate_generator, keeps_state_and_sets_all_flags_when_db_flags_are_empty);
 	return run_test_suite(suite, create_text_reporter());
+}
+
+int main(int argc, char **argv) {
+	return generate_test();
 }

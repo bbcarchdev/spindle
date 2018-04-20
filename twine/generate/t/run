@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cc entry_test.c -o entry_test -lcgreen && ./entry_test
+cc generate_test.c -o generate_test -lcgreen && ./generate_test
