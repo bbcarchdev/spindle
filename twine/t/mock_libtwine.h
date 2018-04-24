@@ -29,10 +29,38 @@ int twine_plugin_init(void) {
 	return (int) mock();
 }
 
+int twine_rdf_model_add_st(librdf_model *model, librdf_statement *statement, librdf_node *ctx) {
+	return (int) mock(model, statement, ctx);
+}
+
 librdf_model *twine_rdf_model_create(void) {
 	return (librdf_model *) mock();
 }
 
 int twine_rdf_model_destroy(librdf_model *model) {
 	return (int) mock(model);
+}
+
+librdf_node *twine_rdf_node_createuri(const char *uri) {
+	return (librdf_node *) mock(uri);
+}
+
+librdf_node *twine_rdf_node_clone(librdf_node *node) {
+	return (librdf_node *) mock(node);
+}
+
+int twine_rdf_node_destroy(librdf_node *node) {
+	return (int) mock(node);
+}
+
+librdf_statement *twine_rdf_st_create(void) {
+	return (librdf_statement *) mock();
+}
+
+librdf_statement *twine_rdf_st_clone(librdf_statement *src) {
+	return (librdf_statement *) mock(src);
+}
+
+int twine_rdf_st_destroy(librdf_statement *statement) {
+	return (int) mock(statement);
 }

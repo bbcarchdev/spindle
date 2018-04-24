@@ -116,16 +116,14 @@ struct spindle_trigger_struct {
 	char *id;
 };
 
-struct spindle_strset_struct
-{
+struct spindle_strset_struct {
 	char **strings;
 	unsigned *flags;
 	size_t count;
 	size_t size;
 };
 
-struct spindle_classmap_struct
-{
+struct spindle_classmap_struct {
 	char *uri;
 	struct spindle_classmatch_struct *match;
 	size_t matchcount;
@@ -134,8 +132,29 @@ struct spindle_classmap_struct
 	int prominence;
 };
 
-struct spindle_classmatch_struct
-{
+struct spindle_classmatch_struct {
 	char *uri;
 	int prominence;
+};
+
+struct spindle_predicatemap_struct {
+	char *target;
+	struct spindle_predicatematch_struct *matches;
+	size_t matchcount;
+	size_t matchsize;
+	raptor_term_type expected;
+	char *datatype;
+	int indexed;
+	int proxyonly;
+	int score;
+	int prominence;
+	int inverse;
+};
+
+struct spindle_predicatematch_struct {
+	int priority;
+	char *predicate;
+	char *onlyfor;
+	int prominence;
+	int inverse;
 };

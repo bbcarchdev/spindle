@@ -33,6 +33,10 @@ int librdf_free_stream(librdf_stream *stream) {
 	return (int) mock(stream);
 }
 
+void librdf_free_uri(librdf_uri *uri) {
+	return (void) mock(uri);
+}
+
 int librdf_model_add_statement(librdf_model *model, librdf_statement *statement) {
 	return (int) mock(model, statement);
 }
@@ -53,6 +57,10 @@ librdf_node *librdf_new_node_from_node(librdf_node *node) {
 	return (librdf_node *) mock(node);
 }
 
+librdf_node *librdf_new_node_from_typed_literal(librdf_world *world, const unsigned char *value, const char *xml_language, librdf_uri *datatype_uri) {
+	return (librdf_node *) mock(world, value, xml_language, datatype_uri);
+}
+
 librdf_node *librdf_new_node_from_uri_string(librdf_world *world, const unsigned char *uri) {
 	return (librdf_node *) mock(world, uri);
 }
@@ -65,8 +73,28 @@ librdf_statement *librdf_new_statement_from_statement(librdf_statement *statemen
 	return (librdf_statement *) mock(statement);
 }
 
+librdf_uri *librdf_new_uri(librdf_world *world, const unsigned char *uri_string) {
+	return (librdf_uri *) mock(world, uri_string);
+}
+
+unsigned char *librdf_node_get_literal_value(librdf_node *node) {
+	return (unsigned char *) mock(node);
+}
+
+librdf_uri *librdf_node_get_literal_value_datatype_uri(librdf_node *node) {
+	return (librdf_uri *) mock(node);
+}
+
+char *librdf_node_get_literal_value_language(librdf_node *node) {
+	return (char *) mock(node);
+}
+
 librdf_uri *librdf_node_get_uri(librdf_node *node) {
 	return (librdf_uri *) mock(node);
+}
+
+int librdf_node_is_literal(librdf_node *node) {
+	return (int) mock(node);
 }
 
 int librdf_node_is_resource(librdf_node *node) {

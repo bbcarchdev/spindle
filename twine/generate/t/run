@@ -3,3 +3,4 @@
 cc classes_test.c -o classes_test -lcgreen && ./classes_test
 cc entry_test.c -o entry_test -lcgreen && ./entry_test
 cc generate_test.c -o generate_test -lcgreen && ./generate_test
+cc props_test.c -o props_test -lcgreen && ./props_test

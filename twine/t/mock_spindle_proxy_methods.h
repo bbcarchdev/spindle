@@ -14,6 +14,10 @@
  *  limitations under the License.
  */
 
+char *spindle_proxy_locate(SPINDLE *spindle, const char *uri) {
+	return (char *) mock(spindle, uri);
+}
+
 void spindle_proxy_refs_destroy(char **refs) {
 	return (void) mock(refs);
 }
