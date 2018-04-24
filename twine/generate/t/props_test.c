@@ -55,18 +55,90 @@ AfterEach(spindle_generate_props) {}
 #pragma mark -
 #pragma mark spindle_prop_copystrings_
 
-Ensure(spindle_generate_props, does_a_thing) {
-	struct spindle_literalset_struct dest = { 0 };
+Ensure(spindle_generate_props, literal_copy_with_NULL_source_does_not_copy_and_returns_no_error) {
+	struct spindle_literalset_struct dest = {
+		.literals = (struct spindle_literalstring_struct *) 0xA01,
+		.nliterals = 0xA02
+	};
+	struct spindle_literalset_struct expected = {
+		.literals = dest.literals,
+		.nliterals = dest.nliterals
+	};
+	int r = spindle_prop_copystrings_(&dest, NULL);
+	assert_that(r, is_equal_to(0));
+	assert_that(&dest, is_equal_to_contents_of(&expected, sizeof expected));
+}
+
+Ensure(spindle_generate_props, literal_copy_with_no_source_literals_does_not_copy_and_returns_no_error) {
+	struct spindle_literalset_struct dest = {
+		.literals = (struct spindle_literalstring_struct *) 0xA01,
+		.nliterals = 0xA02
+	};
+	struct spindle_literalset_struct expected = {
+		.literals = dest.literals,
+		.nliterals = dest.nliterals
+	};
 	struct propmatch_struct source = { 0 };
 	int r = spindle_prop_copystrings_(&dest, &source);
 	assert_that(r, is_equal_to(0));
+	assert_that(&dest, is_equal_to_contents_of(&expected, sizeof expected));
+}
+
+Ensure(spindle_generate_props, literal_copy_copies_all_source_literals_and_returns_no_error) {
+	struct spindle_literalset_struct dest = { 0 };
+	struct spindle_literalset_struct expected = { .nliterals = 5 };
+	size_t ptr_size = expected.nliterals * sizeof (struct spindle_literalstring_struct);
+	expected.literals = malloc(ptr_size);
+	struct literal_struct src_literals[expected.nliterals];
+	struct propmatch_struct source = {
+		.literals = src_literals,
+		.nliterals = expected.nliterals
+	};
+	expected.literals[0].str = "Bore da";
+	expected.literals[1].str = "G'day";
+	expected.literals[2].str = "Доброе утро";
+	expected.literals[3].str = "お早うございます";
+	expected.literals[4].str = "👍🏻🌄";
+	strcpy((char *) &(expected.literals[0].lang), "cy");
+	strcpy((char *) &(expected.literals[1].lang), "en-AU");
+	strcpy((char *) &(expected.literals[2].lang), "ru");
+	strcpy((char *) &(expected.literals[3].lang), "ja");
+	strcpy((char *) &(expected.literals[4].lang), "x-emoji");
+
+	expect(librdf_node_get_literal_value, will_return(expected.literals[0].str));
+	expect(librdf_node_get_literal_value, will_return(expected.literals[1].str));
+	expect(librdf_node_get_literal_value, will_return(expected.literals[2].str));
+	expect(librdf_node_get_literal_value, will_return(expected.literals[3].str));
+	expect(librdf_node_get_literal_value, will_return(expected.literals[4].str));
+	strcpy((char *) &(source.literals[0].lang), (char *) &(expected.literals[0].lang));
+	strcpy((char *) &(source.literals[1].lang), (char *) &(expected.literals[1].lang));
+	strcpy((char *) &(source.literals[2].lang), (char *) &(expected.literals[2].lang));
+	strcpy((char *) &(source.literals[3].lang), (char *) &(expected.literals[3].lang));
+	strcpy((char *) &(source.literals[4].lang), (char *) &(expected.literals[4].lang));
+
+	int r = spindle_prop_copystrings_(&dest, &source);
+	assert_that(r, is_equal_to(0));
+	assert_that(dest.nliterals, is_equal_to(expected.nliterals));
+	assert_that(dest.literals[0].lang, is_equal_to_string(expected.literals[0].lang));
+	assert_that(dest.literals[1].lang, is_equal_to_string(expected.literals[1].lang));
+	assert_that(dest.literals[2].lang, is_equal_to_string(expected.literals[2].lang));
+	assert_that(dest.literals[3].lang, is_equal_to_string(expected.literals[3].lang));
+	assert_that(dest.literals[4].lang, is_equal_to_string(expected.literals[4].lang));
+	assert_that(dest.literals[0].str, is_equal_to_string(expected.literals[0].str));
+	assert_that(dest.literals[1].str, is_equal_to_string(expected.literals[1].str));
+	assert_that(dest.literals[2].str, is_equal_to_string(expected.literals[2].str));
+	assert_that(dest.literals[3].str, is_equal_to_string(expected.literals[3].str));
+	assert_that(dest.literals[4].str, is_equal_to_string(expected.literals[4].str));
+	free(expected.literals);
 }
 
 #pragma mark -
 
 int props_test(void) {
 	TestSuite *suite = create_test_suite();
-	add_test_with_context(suite, spindle_generate_props, does_a_thing);
+	add_test_with_context(suite, spindle_generate_props, literal_copy_with_NULL_source_does_not_copy_and_returns_no_error);
+	add_test_with_context(suite, spindle_generate_props, literal_copy_with_no_source_literals_does_not_copy_and_returns_no_error);
+	add_test_with_context(suite, spindle_generate_props, literal_copy_copies_all_source_literals_and_returns_no_error);
 	return run_test_suite(suite, create_text_reporter());
 }
 
