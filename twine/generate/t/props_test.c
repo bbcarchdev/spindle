@@ -133,12 +133,68 @@ Ensure(spindle_generate_props, literal_copy_copies_all_source_literals_and_retur
 }
 
 #pragma mark -
+#pragma mark spindle_prop_candidate_lang_
+
+Ensure(spindle_generate_props, language_tag_test_returns_error_on_unsupported_value) {
+	// whilst they are valid BCP-47 tags, values like "de-DE-1901" and "es-419" are not supported
+	int r = spindle_prop_candidate_lang_(NULL, NULL, NULL, NULL, NULL, "de-1996");
+	assert_that(r, is_equal_to(-1));
+}
+
+Ensure(spindle_generate_props, language_tag_test_returns_error_on_too_short_string_length) {
+	int r = spindle_prop_candidate_lang_(NULL, NULL, NULL, NULL, NULL, "a");
+	assert_that(r, is_equal_to(-1));
+}
+
+Ensure(spindle_generate_props, language_tag_test_returns_error_on_too_long_string_length) {
+	// Spindle does not support language tags longer than 7 characters
+	int r = spindle_prop_candidate_lang_(NULL, NULL, NULL, NULL, NULL, "abcdefgh");
+	assert_that(r, is_equal_to(-1));
+}
+
+Ensure(spindle_generate_props, language_tag_test_returns_false_if_matching_language_has_lower_priority_than_criterion) {
+	struct literal_struct literal = { .lang = "en", .priority = 1 };
+	struct propmatch_struct match = { .nliterals = 1, .literals = &literal };
+	struct spindle_predicatematch_struct criterion = { .priority = literal.priority + 1 };
+
+	int r = spindle_prop_candidate_lang_(NULL, &match, &criterion, NULL, NULL, literal.lang);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, language_tag_test_returns_false_if_matching_language_has_equal_priority_to_criterion) {
+	struct literal_struct literal = { .lang = "en", .priority = 1 };
+	struct propmatch_struct match = { .nliterals = 1, .literals = &literal };
+	struct spindle_predicatematch_struct criterion = { .priority = literal.priority };
+
+	int r = spindle_prop_candidate_lang_(NULL, &match, &criterion, NULL, NULL, literal.lang);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, language_tag_test_returns_error_if_twine_rdf_node_clone_fails) {
+	struct literal_struct literal = { .lang = "en", .priority = 2 };
+	struct propmatch_struct match = { .nliterals = 1, .literals = &literal };
+	struct spindle_predicatematch_struct criterion = { .priority = literal.priority - 1 };
+	librdf_node *obj = (librdf_node *) 0xA01;
+
+	expect(twine_rdf_node_clone, will_return(NULL), when(node, is_equal_to(obj)));
+
+	int r = spindle_prop_candidate_lang_(NULL, &match, &criterion, NULL, obj, literal.lang);
+	assert_that(r, is_equal_to(-1));
+}
+
+#pragma mark -
 
 int props_test(void) {
 	TestSuite *suite = create_test_suite();
 	add_test_with_context(suite, spindle_generate_props, literal_copy_with_NULL_source_does_not_copy_and_returns_no_error);
 	add_test_with_context(suite, spindle_generate_props, literal_copy_with_no_source_literals_does_not_copy_and_returns_no_error);
 	add_test_with_context(suite, spindle_generate_props, literal_copy_copies_all_source_literals_and_returns_no_error);
+	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_error_on_unsupported_value);
+	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_error_on_too_short_string_length);
+	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_error_on_too_long_string_length);
+	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_false_if_matching_language_has_lower_priority_than_criterion);
+	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_false_if_matching_language_has_equal_priority_to_criterion);
+	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_error_if_twine_rdf_node_clone_fails);
 	return run_test_suite(suite, create_text_reporter());
 }
 
