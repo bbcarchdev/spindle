@@ -238,6 +238,31 @@ Ensure(spindle_generate_props, language_tag_test_uses_map_prominence_if_criterio
 	assert_that(match.prominence, is_equal_to(predicate_map.prominence));
 }
 
+Ensure(spindle_generate_props, language_tag_test_appends_candidate_language_to_propmatch_literals_if_no_match_found) {
+	struct propmatch_struct match = { .nliterals = 1 };
+	match.literals = calloc(match.nliterals, sizeof (struct literal_struct));
+	match.literals[0].lang[0] = 'e';
+	match.literals[0].lang[1] = 'n';
+	match.literals[0].lang[2] = '\0';
+	match.literals[0].priority = 5;
+	struct spindle_predicatematch_struct criterion = { .priority = match.literals[0].priority - 1, .prominence = 5 };
+	librdf_node *clone = (librdf_node *) 0xA02;
+	SPINDLEGENERATE generate = { 0 };
+	SPINDLEENTRY entry = { .generate = &generate };
+	struct propdata_struct data = { .entry = &entry };
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_node_destroy);
+
+	const char *input_lang = "ga-latg";
+	int r = spindle_prop_candidate_lang_(&data, &match, &criterion, NULL, NULL, input_lang);
+	assert_that(r, is_equal_to(1));
+	assert_that(match.nliterals, is_equal_to(2));
+	assert_that(match.literals[1].lang, is_equal_to_string(input_lang));
+	assert_that(match.literals[1].node, is_equal_to(clone));
+	assert_that(match.literals[1].priority, is_equal_to(4));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -254,6 +279,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_true_on_success);
 	add_test_with_context(suite, spindle_generate_props, language_tag_test_converts_language_tag_to_canonical_form_for_comparison);
 	add_test_with_context(suite, spindle_generate_props, language_tag_test_uses_map_prominence_if_criterion_prominence_is_zero);
+	add_test_with_context(suite, spindle_generate_props, language_tag_test_appends_candidate_language_to_propmatch_literals_if_no_match_found);
 	return run_test_suite(suite, create_text_reporter());
 }
 
