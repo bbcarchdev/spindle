@@ -220,6 +220,24 @@ Ensure(spindle_generate_props, language_tag_test_converts_language_tag_to_canoni
 	assert_that(r, is_equal_to(1));
 }
 
+Ensure(spindle_generate_props, language_tag_test_uses_map_prominence_if_criterion_prominence_is_zero) {
+	struct literal_struct literal = { .lang = "en", .priority = 2 };
+	struct spindle_predicatemap_struct predicate_map = { .prominence = 5 };
+	struct propmatch_struct match = { .nliterals = 1, .literals = &literal, .map = &predicate_map };
+	struct spindle_predicatematch_struct criterion = { .priority = literal.priority - 1 };
+	librdf_node *clone = (librdf_node *) 0xA02;
+	SPINDLEGENERATE generate = { 0 };
+	SPINDLEENTRY entry = { .generate = &generate };
+	struct propdata_struct data = { .entry = &entry };
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_node_destroy);
+
+	int r = spindle_prop_candidate_lang_(&data, &match, &criterion, NULL, NULL, literal.lang);
+	assert_that(r, is_equal_to(1));
+	assert_that(match.prominence, is_equal_to(predicate_map.prominence));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -235,6 +253,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_error_if_twine_rdf_node_clone_fails);
 	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_true_on_success);
 	add_test_with_context(suite, spindle_generate_props, language_tag_test_converts_language_tag_to_canonical_form_for_comparison);
+	add_test_with_context(suite, spindle_generate_props, language_tag_test_uses_map_prominence_if_criterion_prominence_is_zero);
 	return run_test_suite(suite, create_text_reporter());
 }
 
