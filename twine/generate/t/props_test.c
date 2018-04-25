@@ -202,6 +202,24 @@ Ensure(spindle_generate_props, language_tag_test_returns_true_on_success) {
 	assert_that(match.prominence, is_equal_to(criterion.prominence));
 }
 
+Ensure(spindle_generate_props, language_tag_test_converts_language_tag_to_canonical_form_for_comparison) {
+	// Spindle's idea of canonical is all lower-case with hyphens, not e.g. "ja-JP-Latn" as BCP-47 would have
+	const char *input_tag = "EN_GB";
+	struct literal_struct literal = { .lang = "en-gb", .priority = 2 };
+	struct propmatch_struct match = { .nliterals = 1, .literals = &literal };
+	struct spindle_predicatematch_struct criterion = { .priority = literal.priority - 1, .prominence = 5 };
+	librdf_node *clone = (librdf_node *) 0xA02;
+	SPINDLEGENERATE generate = { 0 };
+	SPINDLEENTRY entry = { .generate = &generate };
+	struct propdata_struct data = { .entry = &entry };
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_node_destroy);
+
+	int r = spindle_prop_candidate_lang_(&data, &match, &criterion, NULL, NULL, input_tag);
+	assert_that(r, is_equal_to(1));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -216,6 +234,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_false_if_matching_language_has_equal_priority_to_criterion);
 	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_error_if_twine_rdf_node_clone_fails);
 	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_true_on_success);
+	add_test_with_context(suite, spindle_generate_props, language_tag_test_converts_language_tag_to_canonical_form_for_comparison);
 	return run_test_suite(suite, create_text_reporter());
 }
 
