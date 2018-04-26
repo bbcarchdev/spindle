@@ -347,6 +347,32 @@ Ensure(spindle_generate_props, candidate_literal_matches_by_language_if_no_datat
 	assert_that(r, is_equal_to(-1));
 }
 
+Ensure(spindle_generate_props, candidate_literal_returns_false_if_matching_literal_has_lower_priority_than_criterion) {
+	struct propdata_struct data = { 0 };
+	struct spindle_predicatemap_struct predicate_map = { .datatype = "xsd:sometype" };
+	struct propmatch_struct match = { .map = &predicate_map, .priority = 1 };
+	struct spindle_predicatematch_struct criterion = { .priority = match.priority + 1 };
+	librdf_node *obj = (librdf_node *) 0xA03;
+
+	expect(librdf_node_get_literal_value_language, when(node, is_equal_to(obj)));
+
+	int r = spindle_prop_candidate_literal_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, candidate_literal_returns_false_if_matching_literal_has_equal_priority_to_criterion) {
+	struct propdata_struct data = { 0 };
+	struct spindle_predicatemap_struct predicate_map = { .datatype = "xsd:sometype" };
+	struct propmatch_struct match = { .map = &predicate_map, .priority = 1 };
+	struct spindle_predicatematch_struct criterion = { .priority = match.priority };
+	librdf_node *obj = (librdf_node *) 0xA03;
+
+	expect(librdf_node_get_literal_value_language, when(node, is_equal_to(obj)));
+
+	int r = spindle_prop_candidate_literal_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(0));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -368,6 +394,8 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, candidate_lang_sets_the_base_title_only_when_input_lang_is_NULL);
 	add_test_with_context(suite, spindle_generate_props, candidate_lang_does_not_set_a_title_title_when_input_lang_is_not_english);
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_matches_by_language_if_no_datatype_is_specified);
+	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_false_if_matching_literal_has_lower_priority_than_criterion);
+	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_false_if_matching_literal_has_equal_priority_to_criterion);
 	return run_test_suite(suite, create_text_reporter());
 }
 
