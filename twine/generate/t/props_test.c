@@ -135,24 +135,24 @@ Ensure(spindle_generate_props, literal_copy_copies_all_source_literals_and_retur
 #pragma mark -
 #pragma mark spindle_prop_candidate_lang_
 
-Ensure(spindle_generate_props, language_tag_test_returns_error_on_unsupported_value) {
+Ensure(spindle_generate_props, candidate_lang_returns_error_on_unsupported_value) {
 	// whilst they are valid BCP-47 tags, values like "de-DE-1901" and "es-419" are not supported
 	int r = spindle_prop_candidate_lang_(NULL, NULL, NULL, NULL, NULL, "de-1996");
 	assert_that(r, is_equal_to(-1));
 }
 
-Ensure(spindle_generate_props, language_tag_test_returns_error_on_too_short_string_length) {
+Ensure(spindle_generate_props, candidate_lang_returns_error_on_too_short_string_length) {
 	int r = spindle_prop_candidate_lang_(NULL, NULL, NULL, NULL, NULL, "a");
 	assert_that(r, is_equal_to(-1));
 }
 
-Ensure(spindle_generate_props, language_tag_test_returns_error_on_too_long_string_length) {
+Ensure(spindle_generate_props, candidate_lang_returns_error_on_too_long_string_length) {
 	// Spindle does not support language tags longer than 7 characters
 	int r = spindle_prop_candidate_lang_(NULL, NULL, NULL, NULL, NULL, "abcdefgh");
 	assert_that(r, is_equal_to(-1));
 }
 
-Ensure(spindle_generate_props, language_tag_test_returns_false_if_matching_language_has_lower_priority_than_criterion) {
+Ensure(spindle_generate_props, candidate_lang_returns_false_if_matching_language_has_lower_priority_than_criterion) {
 	struct literal_struct literal = { .lang = "en", .priority = 1 };
 	struct propmatch_struct match = { .nliterals = 1, .literals = &literal };
 	struct spindle_predicatematch_struct criterion = { .priority = literal.priority + 1 };
@@ -161,7 +161,7 @@ Ensure(spindle_generate_props, language_tag_test_returns_false_if_matching_langu
 	assert_that(r, is_equal_to(0));
 }
 
-Ensure(spindle_generate_props, language_tag_test_returns_false_if_matching_language_has_equal_priority_to_criterion) {
+Ensure(spindle_generate_props, candidate_lang_returns_false_if_matching_language_has_equal_priority_to_criterion) {
 	struct literal_struct literal = { .lang = "en", .priority = 1 };
 	struct propmatch_struct match = { .nliterals = 1, .literals = &literal };
 	struct spindle_predicatematch_struct criterion = { .priority = literal.priority };
@@ -170,7 +170,7 @@ Ensure(spindle_generate_props, language_tag_test_returns_false_if_matching_langu
 	assert_that(r, is_equal_to(0));
 }
 
-Ensure(spindle_generate_props, language_tag_test_returns_error_if_twine_rdf_node_clone_fails) {
+Ensure(spindle_generate_props, candidate_lang_returns_error_if_twine_rdf_node_clone_fails) {
 	struct literal_struct literal = { .lang = "en", .priority = 2 };
 	struct propmatch_struct match = { .nliterals = 1, .literals = &literal };
 	struct spindle_predicatematch_struct criterion = { .priority = literal.priority - 1 };
@@ -182,7 +182,7 @@ Ensure(spindle_generate_props, language_tag_test_returns_error_if_twine_rdf_node
 	assert_that(r, is_equal_to(-1));
 }
 
-Ensure(spindle_generate_props, language_tag_test_returns_true_on_success) {
+Ensure(spindle_generate_props, candidate_lang_returns_true_on_success) {
 	struct literal_struct literal = { .lang = "en", .priority = 2, .node = (librdf_node *) 0xA01 };
 	struct propmatch_struct match = { .nliterals = 1, .literals = &literal };
 	struct spindle_predicatematch_struct criterion = { .priority = literal.priority - 1, .prominence = 5 };
@@ -202,7 +202,7 @@ Ensure(spindle_generate_props, language_tag_test_returns_true_on_success) {
 	assert_that(match.prominence, is_equal_to(criterion.prominence));
 }
 
-Ensure(spindle_generate_props, language_tag_test_converts_language_tag_to_canonical_form_for_comparison) {
+Ensure(spindle_generate_props, candidate_lang_converts_language_tag_to_canonical_form_for_comparison) {
 	// Spindle's idea of canonical is all lower-case with hyphens, not e.g. "ja-JP-Latn" as BCP-47 would have
 	const char *input_tag = "EN_GB";
 	struct literal_struct literal = { .lang = "en-gb", .priority = 2 };
@@ -220,7 +220,7 @@ Ensure(spindle_generate_props, language_tag_test_converts_language_tag_to_canoni
 	assert_that(r, is_equal_to(1));
 }
 
-Ensure(spindle_generate_props, language_tag_test_uses_map_prominence_if_criterion_prominence_is_zero) {
+Ensure(spindle_generate_props, candidate_lang_uses_map_prominence_if_criterion_prominence_is_zero) {
 	struct literal_struct literal = { .lang = "en", .priority = 2 };
 	struct spindle_predicatemap_struct predicate_map = { .prominence = 5 };
 	struct propmatch_struct match = { .nliterals = 1, .literals = &literal, .map = &predicate_map };
@@ -238,7 +238,7 @@ Ensure(spindle_generate_props, language_tag_test_uses_map_prominence_if_criterio
 	assert_that(match.prominence, is_equal_to(predicate_map.prominence));
 }
 
-Ensure(spindle_generate_props, language_tag_test_appends_candidate_language_to_propmatch_literals_if_no_match_found) {
+Ensure(spindle_generate_props, candidate_lang_appends_candidate_language_to_propmatch_literals_if_no_match_found) {
 	struct propmatch_struct match = { .nliterals = 1 };
 	match.literals = calloc(match.nliterals, sizeof (struct literal_struct));
 	match.literals[0].lang[0] = 'e';
@@ -263,7 +263,7 @@ Ensure(spindle_generate_props, language_tag_test_appends_candidate_language_to_p
 	assert_that(match.literals[1].priority, is_equal_to(4));
 }
 
-Ensure(spindle_generate_props, language_tag_test_sets_the_english_title) {
+Ensure(spindle_generate_props, candidate_lang_sets_the_english_title) {
 	SPINDLEGENERATE generate = { .titlepred = "dc:title" };
 	SPINDLEENTRY entry = { .generate = &generate };
 	struct propdata_struct data = { .entry = &entry };
@@ -285,7 +285,7 @@ Ensure(spindle_generate_props, language_tag_test_sets_the_english_title) {
 	assert_that(entry.title, is_null);
 }
 
-Ensure(spindle_generate_props, language_tag_test_sets_the_base_title_only_when_input_lang_is_NULL) {
+Ensure(spindle_generate_props, candidate_lang_sets_the_base_title_only_when_input_lang_is_NULL) {
 	SPINDLEGENERATE generate = { .titlepred = "dc:title" };
 	SPINDLEENTRY entry = { .generate = &generate };
 	struct propdata_struct data = { .entry = &entry };
@@ -311,7 +311,7 @@ Ensure(spindle_generate_props, language_tag_test_sets_the_base_title_only_when_i
 	assert_that(entry.title_en, is_null);
 }
 
-Ensure(spindle_generate_props, language_tag_test_does_not_set_a_title_title_when_input_lang_is_not_english) {
+Ensure(spindle_generate_props, candidate_lang_does_not_set_a_title_title_when_input_lang_is_not_english) {
 	SPINDLEGENERATE generate = { .titlepred = "dc:title" };
 	SPINDLEENTRY entry = { .generate = &generate };
 	struct propdata_struct data = { .entry = &entry };
@@ -339,19 +339,19 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, literal_copy_with_NULL_source_does_not_copy_and_returns_no_error);
 	add_test_with_context(suite, spindle_generate_props, literal_copy_with_no_source_literals_does_not_copy_and_returns_no_error);
 	add_test_with_context(suite, spindle_generate_props, literal_copy_copies_all_source_literals_and_returns_no_error);
-	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_error_on_unsupported_value);
-	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_error_on_too_short_string_length);
-	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_error_on_too_long_string_length);
-	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_false_if_matching_language_has_lower_priority_than_criterion);
-	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_false_if_matching_language_has_equal_priority_to_criterion);
-	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_error_if_twine_rdf_node_clone_fails);
-	add_test_with_context(suite, spindle_generate_props, language_tag_test_returns_true_on_success);
-	add_test_with_context(suite, spindle_generate_props, language_tag_test_converts_language_tag_to_canonical_form_for_comparison);
-	add_test_with_context(suite, spindle_generate_props, language_tag_test_uses_map_prominence_if_criterion_prominence_is_zero);
-	add_test_with_context(suite, spindle_generate_props, language_tag_test_appends_candidate_language_to_propmatch_literals_if_no_match_found);
-	add_test_with_context(suite, spindle_generate_props, language_tag_test_sets_the_english_title);
-	add_test_with_context(suite, spindle_generate_props, language_tag_test_sets_the_base_title_only_when_input_lang_is_NULL);
-	add_test_with_context(suite, spindle_generate_props, language_tag_test_does_not_set_a_title_title_when_input_lang_is_not_english);
+	add_test_with_context(suite, spindle_generate_props, candidate_lang_returns_error_on_unsupported_value);
+	add_test_with_context(suite, spindle_generate_props, candidate_lang_returns_error_on_too_short_string_length);
+	add_test_with_context(suite, spindle_generate_props, candidate_lang_returns_error_on_too_long_string_length);
+	add_test_with_context(suite, spindle_generate_props, candidate_lang_returns_false_if_matching_language_has_lower_priority_than_criterion);
+	add_test_with_context(suite, spindle_generate_props, candidate_lang_returns_false_if_matching_language_has_equal_priority_to_criterion);
+	add_test_with_context(suite, spindle_generate_props, candidate_lang_returns_error_if_twine_rdf_node_clone_fails);
+	add_test_with_context(suite, spindle_generate_props, candidate_lang_returns_true_on_success);
+	add_test_with_context(suite, spindle_generate_props, candidate_lang_converts_language_tag_to_canonical_form_for_comparison);
+	add_test_with_context(suite, spindle_generate_props, candidate_lang_uses_map_prominence_if_criterion_prominence_is_zero);
+	add_test_with_context(suite, spindle_generate_props, candidate_lang_appends_candidate_language_to_propmatch_literals_if_no_match_found);
+	add_test_with_context(suite, spindle_generate_props, candidate_lang_sets_the_english_title);
+	add_test_with_context(suite, spindle_generate_props, candidate_lang_sets_the_base_title_only_when_input_lang_is_NULL);
+	add_test_with_context(suite, spindle_generate_props, candidate_lang_does_not_set_a_title_title_when_input_lang_is_not_english);
 	return run_test_suite(suite, create_text_reporter());
 }
 
