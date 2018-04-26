@@ -263,6 +263,75 @@ Ensure(spindle_generate_props, language_tag_test_appends_candidate_language_to_p
 	assert_that(match.literals[1].priority, is_equal_to(4));
 }
 
+Ensure(spindle_generate_props, language_tag_test_sets_the_english_title) {
+	SPINDLEGENERATE generate = { .titlepred = "dc:title" };
+	SPINDLEENTRY entry = { .generate = &generate };
+	struct propdata_struct data = { .entry = &entry };
+	struct literal_struct literal = { .lang = "en", .priority = 2 };
+	struct spindle_predicatematch_struct criterion = { .priority = literal.priority - 1, .prominence = 5 };
+	struct spindle_predicatemap_struct predicate_map = { .target = generate.titlepred, .prominence = criterion.prominence };
+	struct propmatch_struct match = { .nliterals = 1, .literals = &literal, .map = &predicate_map };
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *obj = (librdf_node *) 0xA03;
+	const char *title = "title";
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_node_destroy);
+	expect(librdf_node_get_literal_value, will_return(title), when(node, is_equal_to(obj)));
+
+	int r = spindle_prop_candidate_lang_(&data, &match, &criterion, NULL, obj, literal.lang);
+	assert_that(r, is_equal_to(1));
+	assert_that(entry.title_en, is_equal_to_string(title));
+	assert_that(entry.title, is_null);
+}
+
+Ensure(spindle_generate_props, language_tag_test_sets_the_base_title_only_when_input_lang_is_NULL) {
+	SPINDLEGENERATE generate = { .titlepred = "dc:title" };
+	SPINDLEENTRY entry = { .generate = &generate };
+	struct propdata_struct data = { .entry = &entry };
+	struct spindle_predicatematch_struct criterion = { .priority = 1, .prominence = 5 };
+	struct spindle_predicatemap_struct predicate_map = { .target = generate.titlepred, .prominence = criterion.prominence };
+	struct propmatch_struct match = { .nliterals = 1, .map = &predicate_map };
+	match.literals = calloc(match.nliterals, sizeof (struct literal_struct));
+	match.literals[0].lang[0] = 'e';
+	match.literals[0].lang[1] = 'n';
+	match.literals[0].lang[2] = '\0';
+	match.literals[0].priority = criterion.priority + 1;
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *obj = (librdf_node *) 0xA03;
+	const char *title = "title";
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_node_destroy);
+	expect(librdf_node_get_literal_value, will_return(title), when(node, is_equal_to(obj)));
+
+	int r = spindle_prop_candidate_lang_(&data, &match, &criterion, NULL, obj, NULL);
+	assert_that(r, is_equal_to(1));
+	assert_that(entry.title, is_equal_to_string(title));
+	assert_that(entry.title_en, is_null);
+}
+
+Ensure(spindle_generate_props, language_tag_test_does_not_set_a_title_title_when_input_lang_is_not_english) {
+	SPINDLEGENERATE generate = { .titlepred = "dc:title" };
+	SPINDLEENTRY entry = { .generate = &generate };
+	struct propdata_struct data = { .entry = &entry };
+	struct literal_struct literal = { .lang = "fr", .priority = 2 };
+	struct spindle_predicatematch_struct criterion = { .priority = literal.priority - 1, .prominence = 5 };
+	struct spindle_predicatemap_struct predicate_map = { .target = generate.titlepred, .prominence = criterion.prominence };
+	struct propmatch_struct match = { .nliterals = 1, .literals = &literal, .map = &predicate_map };
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *obj = (librdf_node *) 0xA03;
+	const char *title = "l'intitulé";
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_node_destroy);
+
+	int r = spindle_prop_candidate_lang_(&data, &match, &criterion, NULL, obj, literal.lang);
+	assert_that(r, is_equal_to(1));
+	assert_that(entry.title, is_null);
+	assert_that(entry.title_en, is_null);
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -280,6 +349,9 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, language_tag_test_converts_language_tag_to_canonical_form_for_comparison);
 	add_test_with_context(suite, spindle_generate_props, language_tag_test_uses_map_prominence_if_criterion_prominence_is_zero);
 	add_test_with_context(suite, spindle_generate_props, language_tag_test_appends_candidate_language_to_propmatch_literals_if_no_match_found);
+	add_test_with_context(suite, spindle_generate_props, language_tag_test_sets_the_english_title);
+	add_test_with_context(suite, spindle_generate_props, language_tag_test_sets_the_base_title_only_when_input_lang_is_NULL);
+	add_test_with_context(suite, spindle_generate_props, language_tag_test_does_not_set_a_title_title_when_input_lang_is_not_english);
 	return run_test_suite(suite, create_text_reporter());
 }
 
