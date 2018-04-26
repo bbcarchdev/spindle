@@ -333,6 +333,21 @@ Ensure(spindle_generate_props, candidate_lang_does_not_set_a_title_title_when_in
 }
 
 #pragma mark -
+#pragma mark spindle_prop_candidate_literal_
+
+Ensure(spindle_generate_props, candidate_literal_matches_by_language_if_no_datatype_is_specified) {
+	struct spindle_predicatemap_struct predicate_map = { 0 };
+	struct propmatch_struct match = { .map = &predicate_map, .priority = 1 };
+	librdf_node *obj = (librdf_node *) 0xA03;
+
+	expect(librdf_node_get_literal_value_language, will_return("en"), when(node, is_equal_to(obj)));
+	always_expect(twine_rdf_node_clone, will_return(NULL), when(node, is_equal_to(obj)));
+
+	int r = spindle_prop_candidate_literal_(NULL, &match, NULL, NULL, obj);
+	assert_that(r, is_equal_to(-1));
+}
+
+#pragma mark -
 
 int props_test(void) {
 	TestSuite *suite = create_test_suite();
@@ -352,6 +367,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, candidate_lang_sets_the_english_title);
 	add_test_with_context(suite, spindle_generate_props, candidate_lang_sets_the_base_title_only_when_input_lang_is_NULL);
 	add_test_with_context(suite, spindle_generate_props, candidate_lang_does_not_set_a_title_title_when_input_lang_is_not_english);
+	add_test_with_context(suite, spindle_generate_props, candidate_literal_matches_by_language_if_no_datatype_is_specified);
 	return run_test_suite(suite, create_text_reporter());
 }
 
