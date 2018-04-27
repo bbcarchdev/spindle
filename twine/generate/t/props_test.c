@@ -682,6 +682,25 @@ Ensure(spindle_generate_props, candidate_literal_when_successful_sets_match_prom
 }
 
 #pragma mark -
+#pragma mark spindle_prop_candidate_uri_
+
+Ensure(spindle_generate_props, candidate_uri_returns_false_if_earlier_match_has_lower_priority_than_criterion) {
+	struct propmatch_struct match = { .priority = 1 };
+	struct spindle_predicatematch_struct criterion = { .priority = match.priority + 1 };
+
+	int r = spindle_prop_candidate_uri_(NULL, &match, &criterion, NULL, NULL);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, candidate_uri_returns_false_if_earlier_match_has_equal_priority_to_criterion) {
+	struct propmatch_struct match = { .priority = 1 };
+	struct spindle_predicatematch_struct criterion = { .priority = match.priority };
+
+	int r = spindle_prop_candidate_uri_(NULL, &match, &criterion, NULL, NULL);
+	assert_that(r, is_equal_to(0));
+}
+
+#pragma mark -
 
 int props_test(void) {
 	TestSuite *suite = create_test_suite();
@@ -716,6 +735,8 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_when_successful_sets_match_priority);
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_when_successful_sets_match_prominence_to_criterion_prominence_if_criterion_prominence_is_non_zero);
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_when_successful_sets_match_prominence_to_predicate_map_prominence_if_criterion_prominence_is_zero);
+	add_test_with_context(suite, spindle_generate_props, candidate_uri_returns_false_if_earlier_match_has_lower_priority_than_criterion);
+	add_test_with_context(suite, spindle_generate_props, candidate_uri_returns_false_if_earlier_match_has_equal_priority_to_criterion);
 	return run_test_suite(suite, create_text_reporter());
 }
 
