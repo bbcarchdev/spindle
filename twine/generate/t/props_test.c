@@ -133,6 +133,71 @@ Ensure(spindle_generate_props, literal_copy_copies_all_source_literals_and_retur
 }
 
 #pragma mark -
+#pragma mark spindle_dt_is_int
+
+/**
+ * The function spindle_dt_is_int() actually returns whether a
+ * datatype is a derived type of xsd:decimal or not, according to
+ * https://www.w3.org/TR/xmlschema11-2/#built-in-datatypes
+ */
+
+Ensure(spindle_generate_props, datatype_is_int_returns_true_iff_type_is_derived_from_xsd_decimal) {
+	// true
+	assert_that(spindle_dt_is_int(NS_XSD "integer"), is_equal_to(1));
+	assert_that(spindle_dt_is_int(NS_XSD "long"), is_equal_to(1));
+	assert_that(spindle_dt_is_int(NS_XSD "short"), is_equal_to(1));
+	assert_that(spindle_dt_is_int(NS_XSD "byte"), is_equal_to(1));
+	assert_that(spindle_dt_is_int(NS_XSD "int"), is_equal_to(1));
+	assert_that(spindle_dt_is_int(NS_XSD "nonPositiveInteger"), is_equal_to(1));
+	assert_that(spindle_dt_is_int(NS_XSD "nonNegativeInteger"), is_equal_to(1));
+	assert_that(spindle_dt_is_int(NS_XSD "negativeInteger"), is_equal_to(1));
+	assert_that(spindle_dt_is_int(NS_XSD "positiveInteger"), is_equal_to(1));
+	assert_that(spindle_dt_is_int(NS_XSD "unsignedLong"), is_equal_to(1));
+	assert_that(spindle_dt_is_int(NS_XSD "unsignedInt"), is_equal_to(1));
+	assert_that(spindle_dt_is_int(NS_XSD "unsignedShort"), is_equal_to(1));
+	assert_that(spindle_dt_is_int(NS_XSD "unsignedByte"), is_equal_to(1));
+
+	// false - this list is infinite, but we'll just test the built-in types
+	assert_that(spindle_dt_is_int(NS_XSD "decimal"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "anyType"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "anySimpleType"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "anyAtomicType"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "anyURI"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "base64Binary"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "boolean"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "date"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "dateTime"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "dateTimeStamp"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "double"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "duration"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "dayTimeDuration"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "yearMonthDuration"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "float"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "gDay"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "gMonth"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "gMonthDay"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "gYear"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "gYearMonth"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "hexBinary"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "NOTATION"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "QName"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "string"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "normalizedString"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "token"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "language"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "Name"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "NCName"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "ENTITY"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "ID"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "IDREF"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "NMTOKEN"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "time"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "ENTITIES"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "IDREFS"), is_equal_to(0));
+	assert_that(spindle_dt_is_int(NS_XSD "NMTOKENS"), is_equal_to(0));
+}
+
+#pragma mark -
 #pragma mark spindle_prop_candidate_lang_
 
 Ensure(spindle_generate_props, candidate_lang_returns_error_on_unsupported_value) {
@@ -623,6 +688,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, literal_copy_with_NULL_source_does_not_copy_and_returns_no_error);
 	add_test_with_context(suite, spindle_generate_props, literal_copy_with_no_source_literals_does_not_copy_and_returns_no_error);
 	add_test_with_context(suite, spindle_generate_props, literal_copy_copies_all_source_literals_and_returns_no_error);
+	add_test_with_context(suite, spindle_generate_props, datatype_is_int_returns_true_iff_type_is_derived_from_xsd_decimal);
 	add_test_with_context(suite, spindle_generate_props, candidate_lang_returns_error_on_unsupported_value);
 	add_test_with_context(suite, spindle_generate_props, candidate_lang_returns_error_on_too_short_string_length);
 	add_test_with_context(suite, spindle_generate_props, candidate_lang_returns_error_on_too_long_string_length);
