@@ -761,6 +761,20 @@ Ensure(spindle_generate_props, candidate_uri_returns_error_if_cannot_create_node
 	assert_that(r, is_equal_to(-1));
 }
 
+Ensure(spindle_generate_props, candidate_uri_returns_error_if_cloning_object_node_fails) {
+	SPINDLE spindle = { 0 };
+	struct propdata_struct data = { .spindle = &spindle };
+	struct spindle_predicatemap_struct predicate_map = { 0 };
+	struct spindle_predicatematch_struct criterion = { .priority = 1 };
+	struct propmatch_struct match = { .map = &predicate_map, .priority = criterion.priority + 1 };
+	librdf_node *obj = (librdf_node *) 0xA03;
+
+	expect(twine_rdf_node_clone, will_return(NULL), when(node, is_equal_to(obj)));
+
+	int r = spindle_prop_candidate_uri_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(-1));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -801,6 +815,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, candidate_uri_returns_false_if_the_required_proxy_does_not_exist);
 	add_test_with_context(suite, spindle_generate_props, candidate_uri_returns_false_if_the_required_proxy_matches_localname);
 	add_test_with_context(suite, spindle_generate_props, candidate_uri_returns_error_if_cannot_create_node_for_proxy_uri);
+	add_test_with_context(suite, spindle_generate_props, candidate_uri_returns_error_if_cloning_object_node_fails);
 	return run_test_suite(suite, create_text_reporter());
 }
 
