@@ -419,6 +419,28 @@ Ensure(spindle_generate_props, candidate_literal_returns_false_if_predicate_map_
 	assert_that(r, is_equal_to(0));
 }
 
+Ensure(spindle_generate_props, candidate_literal_returns_error_if_creating_a_new_node_from_a_typed_literal_fails) {
+	librdf_world *world = (librdf_world *) 0xA01;
+	SPINDLE spindle = { .world = world };
+	struct propdata_struct data = { .spindle = &spindle };
+	struct spindle_predicatemap_struct predicate_map = { .datatype = "xsd:sometype" };
+	struct propmatch_struct match = { .map = &predicate_map };
+	struct spindle_predicatematch_struct criterion = { 0 };
+	librdf_node *obj = (librdf_node *) 0xA03;
+	librdf_uri *uri = (librdf_uri *) 0xA04;
+	const char *value = "x";
+
+	expect(librdf_node_get_literal_value_language, will_return(NULL), when(node, is_equal_to(obj)));
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(NULL), when(node, is_equal_to(obj)));
+	expect(librdf_new_uri, will_return(uri), when(world, is_equal_to(world)), when(uri_string, is_equal_to(predicate_map.datatype)));
+	expect(librdf_node_get_literal_value, will_return(value), when(node, is_equal_to(obj)));
+	expect(librdf_new_node_from_typed_literal, will_return(NULL), when(world, is_equal_to(world)), when(value, is_equal_to(value)), when(xml_language, is_equal_to(NULL)), when(datatype_uri, is_equal_to(uri)));
+	expect(librdf_free_uri, when(uri, is_equal_to(uri)));
+
+	int r = spindle_prop_candidate_literal_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(-1));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -445,6 +467,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_false_if_object_datatype_has_no_uri_and_language_is_not_NULL);
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_false_if_object_datatype_has_different_uri_to_predicate_map_datatype_and_predicate_map_datatype_is_not_xsd_decimal);
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_false_if_predicate_map_datatype_is_xsd_decimal_and_object_datatype_cannot_be_coerced_to_xsd_decimal);
+	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_error_if_creating_a_new_node_from_a_typed_literal_fails);
 	return run_test_suite(suite, create_text_reporter());
 }
 
