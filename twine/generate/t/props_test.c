@@ -403,6 +403,22 @@ Ensure(spindle_generate_props, candidate_literal_returns_false_if_object_datatyp
 	assert_that(r, is_equal_to(0));
 }
 
+Ensure(spindle_generate_props, candidate_literal_returns_false_if_predicate_map_datatype_is_xsd_decimal_and_object_datatype_cannot_be_coerced_to_xsd_decimal) {
+	struct propdata_struct data = { 0 };
+	struct spindle_predicatemap_struct predicate_map = { .datatype = NS_XSD "decimal" };
+	struct propmatch_struct match = { .map = &predicate_map };
+	struct spindle_predicatematch_struct criterion = { 0 };
+	librdf_node *obj = (librdf_node *) 0xA03;
+	librdf_uri *dturi = (librdf_uri *) 0xA04;
+
+	expect(librdf_node_get_literal_value_language, will_return(NULL), when(node, is_equal_to(obj)));
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(dturi), when(node, is_equal_to(obj)));
+	expect(librdf_uri_as_string, will_return("xsd:cannotcoerce"), when(uri, is_equal_to(dturi)));
+
+	int r = spindle_prop_candidate_literal_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(0));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -428,6 +444,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_false_if_matching_literal_has_equal_priority_to_criterion);
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_false_if_object_datatype_has_no_uri_and_language_is_not_NULL);
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_false_if_object_datatype_has_different_uri_to_predicate_map_datatype_and_predicate_map_datatype_is_not_xsd_decimal);
+	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_false_if_predicate_map_datatype_is_xsd_decimal_and_object_datatype_cannot_be_coerced_to_xsd_decimal);
 	return run_test_suite(suite, create_text_reporter());
 }
 
