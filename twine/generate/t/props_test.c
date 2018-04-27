@@ -700,6 +700,24 @@ Ensure(spindle_generate_props, candidate_uri_returns_false_if_earlier_match_has_
 	assert_that(r, is_equal_to(0));
 }
 
+Ensure(spindle_generate_props, candidate_uri_returns_false_if_the_required_proxy_does_not_exist) {
+	SPINDLE spindle = { 0 };
+	struct propdata_struct data = { .spindle = &spindle };
+	struct spindle_predicatemap_struct predicate_map = { .proxyonly = 1 };
+	struct propmatch_struct match = { .map = &predicate_map };
+	struct spindle_predicatematch_struct criterion = { 0 };
+	librdf_node *obj = (librdf_node *) 0xA03;
+	librdf_uri *uri = (librdf_uri *) 0xA04;
+	const char *uristr = "uri";
+
+	expect(librdf_node_get_uri, will_return(uri), when(node, is_equal_to(obj)));
+	expect(librdf_uri_as_string, will_return(uristr), when(uri, is_equal_to(uri)));
+	expect(spindle_proxy_locate, will_return(NULL), when(spindle, is_equal_to(&spindle)), when(uri, is_equal_to(uristr)));
+
+	int r = spindle_prop_candidate_uri_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(0));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -737,6 +755,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_when_successful_sets_match_prominence_to_predicate_map_prominence_if_criterion_prominence_is_zero);
 	add_test_with_context(suite, spindle_generate_props, candidate_uri_returns_false_if_earlier_match_has_lower_priority_than_criterion);
 	add_test_with_context(suite, spindle_generate_props, candidate_uri_returns_false_if_earlier_match_has_equal_priority_to_criterion);
+	add_test_with_context(suite, spindle_generate_props, candidate_uri_returns_false_if_the_required_proxy_does_not_exist);
 	return run_test_suite(suite, create_text_reporter());
 }
 
