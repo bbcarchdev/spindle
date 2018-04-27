@@ -447,7 +447,7 @@ Ensure(spindle_generate_props, candidate_literal_returns_true_if_object_datatype
 	struct propdata_struct data = { .spindle = &spindle };
 	struct spindle_predicatemap_struct predicate_map = { .datatype = "xsd:sometype" };
 	struct propmatch_struct match = { .map = &predicate_map, .resource = (librdf_node *) 0xB01 };
-	struct spindle_predicatematch_struct criterion = { .priority = 5, .prominence = 5 };
+	struct spindle_predicatematch_struct criterion = { 0 };
 	librdf_node *node = (librdf_node *) 0xA02;
 	librdf_node *obj = (librdf_node *) 0xA03;
 	librdf_uri *uri = (librdf_uri *) 0xA04;
@@ -463,9 +463,157 @@ Ensure(spindle_generate_props, candidate_literal_returns_true_if_object_datatype
 
 	int r = spindle_prop_candidate_literal_(&data, &match, &criterion, NULL, obj);
 	assert_that(r, is_equal_to(1));
+}
+
+Ensure(spindle_generate_props, candidate_literal_returns_true_if_object_datatype_matches_predicate_map_datatype) {
+	librdf_world *world = (librdf_world *) 0xA01;
+	SPINDLE spindle = { .world = world };
+	struct propdata_struct data = { .spindle = &spindle };
+	struct spindle_predicatemap_struct predicate_map = { .datatype = "xsd:sometype" };
+	struct propmatch_struct match = { .map = &predicate_map, .resource = (librdf_node *) 0xB01 };
+	struct spindle_predicatematch_struct criterion = { 0 };
+	librdf_node *node = (librdf_node *) 0xA02;
+	librdf_node *obj = (librdf_node *) 0xA03;
+	librdf_uri *uri = (librdf_uri *) 0xA04;
+	librdf_uri *datatype_uri = (librdf_uri *) 0xA05;
+	const char *value = "x";
+
+	always_expect(librdf_node_get_literal_value_language);
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(datatype_uri), when(node, is_equal_to(obj)));
+	expect(librdf_uri_as_string, will_return(predicate_map.datatype), when(uri, is_equal_to(datatype_uri)));
+	expect(librdf_new_uri, will_return(uri), when(world, is_equal_to(world)), when(uri_string, is_equal_to(predicate_map.datatype)));
+	expect(librdf_node_get_literal_value, will_return(value), when(node, is_equal_to(obj)));
+	expect(librdf_new_node_from_typed_literal, will_return(node), when(world, is_equal_to(world)), when(value, is_equal_to(value)), when(xml_language, is_equal_to(NULL)), when(datatype_uri, is_equal_to(uri)));
+	expect(librdf_free_uri, when(uri, is_equal_to(uri)));
+	expect(twine_rdf_node_destroy, when(node, is_equal_to(match.resource)));
+
+	int r = spindle_prop_candidate_literal_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(1));
+}
+
+Ensure(spindle_generate_props, candidate_literal_returns_true_if_predicate_map_datatype_is_xsd_decimal_and_object_datatype_can_be_coerced_to_xsd_decimal) {
+	librdf_world *world = (librdf_world *) 0xA01;
+	SPINDLE spindle = { .world = world };
+	struct propdata_struct data = { .spindle = &spindle };
+	struct spindle_predicatemap_struct predicate_map = { .datatype = NS_XSD "decimal" };
+	struct propmatch_struct match = { .map = &predicate_map, .resource = (librdf_node *) 0xB01 };
+	struct spindle_predicatematch_struct criterion = { 0 };
+	librdf_node *node = (librdf_node *) 0xA02;
+	librdf_node *obj = (librdf_node *) 0xA03;
+	librdf_uri *uri = (librdf_uri *) 0xA04;
+	librdf_uri *datatype_uri = (librdf_uri *) 0xA05;
+	const char *value = "x";
+
+	always_expect(librdf_node_get_literal_value_language);
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(datatype_uri), when(node, is_equal_to(obj)));
+	expect(librdf_uri_as_string, will_return(NS_XSD "int"), when(uri, is_equal_to(datatype_uri)));
+	expect(librdf_new_uri, will_return(uri), when(world, is_equal_to(world)), when(uri_string, is_equal_to(predicate_map.datatype)));
+	expect(librdf_node_get_literal_value, will_return(value), when(node, is_equal_to(obj)));
+	expect(librdf_new_node_from_typed_literal, will_return(node), when(world, is_equal_to(world)), when(value, is_equal_to(value)), when(xml_language, is_equal_to(NULL)), when(datatype_uri, is_equal_to(uri)));
+	expect(librdf_free_uri, when(uri, is_equal_to(uri)));
+	expect(twine_rdf_node_destroy, when(node, is_equal_to(match.resource)));
+
+	int r = spindle_prop_candidate_literal_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(1));
+}
+
+Ensure(spindle_generate_props, candidate_literal_when_successful_sets_match_resource) {
+	SPINDLE spindle = { .world = (librdf_world *) 0xA01 };
+	struct propdata_struct data = { .spindle = &spindle };
+	struct spindle_predicatemap_struct predicate_map = { .datatype = "xsd:sometype" };
+	struct propmatch_struct match = { .map = &predicate_map, .resource = (librdf_node *) 0xB01 };
+	struct spindle_predicatematch_struct criterion = { 0 };
+	librdf_node *node = (librdf_node *) 0xA02;
+	librdf_node *obj = (librdf_node *) 0xA03;
+
+	always_expect(librdf_node_get_literal_value_language);
+	always_expect(librdf_node_get_literal_value_datatype_uri);
+	always_expect(librdf_new_uri);
+	always_expect(librdf_node_get_literal_value);
+	always_expect(librdf_new_node_from_typed_literal, will_return(node));
+	always_expect(librdf_free_uri);
+	always_expect(twine_rdf_node_destroy);
+
+	int r = spindle_prop_candidate_literal_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(1));
 	assert_that(match.resource, is_equal_to(node));
-	assert_that(match.priority, is_equal_to(criterion.priority));
-	assert_that(match.prominence, is_equal_to(criterion.prominence));
+}
+
+Ensure(spindle_generate_props, candidate_literal_when_successful_sets_match_priority) {
+	SPINDLE spindle = { .world = (librdf_world *) 0xA01 };
+	struct propdata_struct data = { .spindle = &spindle };
+	struct spindle_predicatemap_struct predicate_map = { .datatype = "xsd:sometype" };
+	struct propmatch_struct match = { .map = &predicate_map };
+	struct spindle_predicatematch_struct criterion = { 0 };
+	librdf_node *node = (librdf_node *) 0xA02;
+	librdf_node *obj = (librdf_node *) 0xA03;
+
+	always_expect(librdf_node_get_literal_value_language);
+	always_expect(librdf_node_get_literal_value_datatype_uri);
+	always_expect(librdf_new_uri);
+	always_expect(librdf_node_get_literal_value);
+	always_expect(librdf_new_node_from_typed_literal, will_return(node));
+	always_expect(librdf_free_uri);
+	always_expect(twine_rdf_node_destroy);
+
+	int expected_priority = 5;
+	criterion.priority = expected_priority;
+
+	int r = spindle_prop_candidate_literal_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(1));
+	assert_that(match.priority, is_equal_to(expected_priority));
+}
+
+Ensure(spindle_generate_props, candidate_literal_when_successful_sets_match_prominence_to_criterion_prominence_if_criterion_prominence_is_non_zero) {
+	SPINDLE spindle = { .world = (librdf_world *) 0xA01 };
+	struct propdata_struct data = { .spindle = &spindle };
+	struct spindle_predicatemap_struct predicate_map = { .datatype = "xsd:sometype" };
+	struct propmatch_struct match = { .map = &predicate_map };
+	struct spindle_predicatematch_struct criterion = { 0 };
+	librdf_node *node = (librdf_node *) 0xA02;
+	librdf_node *obj = (librdf_node *) 0xA03;
+
+	always_expect(librdf_node_get_literal_value_language);
+	always_expect(librdf_node_get_literal_value_datatype_uri);
+	always_expect(librdf_new_uri);
+	always_expect(librdf_node_get_literal_value);
+	always_expect(librdf_new_node_from_typed_literal, will_return(node));
+	always_expect(librdf_free_uri);
+	always_expect(twine_rdf_node_destroy);
+
+	int expected_prominence = 5;
+	criterion.prominence = expected_prominence;
+	predicate_map.prominence = 1; // should be ignored
+
+	int r = spindle_prop_candidate_literal_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(1));
+	assert_that(match.prominence, is_equal_to(expected_prominence));
+}
+
+Ensure(spindle_generate_props, candidate_literal_when_successful_sets_match_prominence_to_predicate_map_prominence_if_criterion_prominence_is_zero) {
+	SPINDLE spindle = { .world = (librdf_world *) 0xA01 };
+	struct propdata_struct data = { .spindle = &spindle };
+	struct spindle_predicatemap_struct predicate_map = { .datatype = "xsd:sometype" };
+	struct propmatch_struct match = { .map = &predicate_map };
+	struct spindle_predicatematch_struct criterion = { 0 };
+	librdf_node *node = (librdf_node *) 0xA02;
+	librdf_node *obj = (librdf_node *) 0xA03;
+
+	always_expect(librdf_node_get_literal_value_language);
+	always_expect(librdf_node_get_literal_value_datatype_uri);
+	always_expect(librdf_new_uri);
+	always_expect(librdf_node_get_literal_value);
+	always_expect(librdf_new_node_from_typed_literal, will_return(node));
+	always_expect(librdf_free_uri);
+	always_expect(twine_rdf_node_destroy);
+
+	int expected_prominence = 5;
+	criterion.prominence = 0;
+	predicate_map.prominence = expected_prominence;
+
+	int r = spindle_prop_candidate_literal_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(1));
+	assert_that(match.prominence, is_equal_to(expected_prominence));
 }
 
 #pragma mark -
@@ -496,6 +644,12 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_false_if_predicate_map_datatype_is_xsd_decimal_and_object_datatype_cannot_be_coerced_to_xsd_decimal);
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_error_if_creating_a_new_node_from_a_typed_literal_fails);
 	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_true_if_object_datatype_has_no_uri_and_language_is_NULL);
+	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_true_if_object_datatype_matches_predicate_map_datatype);
+	add_test_with_context(suite, spindle_generate_props, candidate_literal_returns_true_if_predicate_map_datatype_is_xsd_decimal_and_object_datatype_can_be_coerced_to_xsd_decimal);
+	add_test_with_context(suite, spindle_generate_props, candidate_literal_when_successful_sets_match_resource);
+	add_test_with_context(suite, spindle_generate_props, candidate_literal_when_successful_sets_match_priority);
+	add_test_with_context(suite, spindle_generate_props, candidate_literal_when_successful_sets_match_prominence_to_criterion_prominence_if_criterion_prominence_is_non_zero);
+	add_test_with_context(suite, spindle_generate_props, candidate_literal_when_successful_sets_match_prominence_to_predicate_map_prominence_if_criterion_prominence_is_zero);
 	return run_test_suite(suite, create_text_reporter());
 }
 
