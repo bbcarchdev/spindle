@@ -1194,6 +1194,21 @@ Ensure(spindle_generate_props, prop_test_can_match_the_same_predicate_from_match
 }
 
 #pragma mark -
+#pragma mark spindle_prop_apply_
+
+Ensure(spindle_generate_props, prop_apply_returns_error_if_self_node_cannot_be_cloned) {
+	librdf_node *self = (librdf_node *) 0xA01;
+	librdf_node *clone = NULL;
+	SPINDLEENTRY entry = { .self = self };
+	struct propdata_struct data = { .entry = &entry };
+
+	expect(twine_rdf_node_clone, will_return(clone), when(node, is_equal_to(self)));
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(-1));
+}
+
+#pragma mark -
 
 int props_test(void) {
 	TestSuite *suite = create_test_suite();
@@ -1256,6 +1271,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_test_processes_statement_object_if_predicate_parameter_is_equal_to_predicate_map_match_predicate_and_inverse_parameter_is_false);
 	add_test_with_context(suite, spindle_generate_props, prop_test_processes_statement_subject_if_predicate_parameter_is_equal_to_predicate_map_match_predicate_and_inverse_parameter_is_true);
 	add_test_with_context(suite, spindle_generate_props, prop_test_can_match_the_same_predicate_from_match_lists_corresponding_to_different_targets);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_self_node_cannot_be_cloned);
 	return run_test_suite(suite, create_text_reporter());
 }
 
