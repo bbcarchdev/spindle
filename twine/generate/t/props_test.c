@@ -1094,6 +1094,60 @@ Ensure(spindle_generate_props, prop_test_skips_predicate_map_match_if_predicate_
 	assert_that(r, is_equal_to(0));
 }
 
+Ensure(spindle_generate_props, prop_test_processes_statement_object_if_predicate_parameter_is_equal_to_predicate_map_match_predicate_and_inverse_parameter_is_false) {
+	struct spindle_predicatematch_struct matches[] = {
+		{ .predicate = "pred" },
+		{ 0 }
+	};
+	struct spindle_predicatemap_struct maps[] = {
+		{ .target = "target", .matches = matches },
+		{ 0 }
+	};
+	struct spindle_predicatemap_struct predicate_map = {
+		.expected = RAPTOR_TERM_TYPE_LITERAL
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &predicate_map },
+		{ 0 }
+	};
+	struct propdata_struct data = { .maps = maps, .matches = prop_matches };
+	librdf_statement *statement = (librdf_statement *) 0xA01;
+	librdf_node *node = (librdf_node *) 0xA02;
+
+	expect(librdf_statement_get_object, will_return(node), when(statement, is_equal_to(statement)));
+	expect(librdf_node_is_literal, when(node, is_equal_to(node)));
+
+	int r = spindle_prop_test_(&data, statement, "pred", 0);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, prop_test_processes_statement_subject_if_predicate_parameter_is_equal_to_predicate_map_match_predicate_and_inverse_parameter_is_true) {
+	struct spindle_predicatematch_struct matches[] = {
+		{ .predicate = "pred", .inverse = 1 },
+		{ 0 }
+	};
+	struct spindle_predicatemap_struct maps[] = {
+		{ .target = "target", .matches = matches },
+		{ 0 }
+	};
+	struct spindle_predicatemap_struct predicate_map = {
+		.expected = RAPTOR_TERM_TYPE_LITERAL
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &predicate_map },
+		{ 0 }
+	};
+	struct propdata_struct data = { .maps = maps, .matches = prop_matches };
+	librdf_statement *statement = (librdf_statement *) 0xA01;
+	librdf_node *node = (librdf_node *) 0xA02;
+
+	expect(librdf_statement_get_subject, will_return(node), when(statement, is_equal_to(statement)));
+	expect(librdf_node_is_literal, when(node, is_equal_to(node)));
+
+	int r = spindle_prop_test_(&data, statement, "pred", 1);
+	assert_that(r, is_equal_to(0));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -1154,6 +1208,8 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_test_skips_predicate_map_match_if_match_onlyfor_property_is_not_NULL_and_propdata_classname_is_NULL);
 	add_test_with_context(suite, spindle_generate_props, prop_test_skips_predicate_map_match_if_match_onlyfor_property_is_not_equal_to_propdata_classname);
 	add_test_with_context(suite, spindle_generate_props, prop_test_skips_predicate_map_match_if_predicate_parameter_differs_from_match_predicate);
+	add_test_with_context(suite, spindle_generate_props, prop_test_processes_statement_object_if_predicate_parameter_is_equal_to_predicate_map_match_predicate_and_inverse_parameter_is_false);
+	add_test_with_context(suite, spindle_generate_props, prop_test_processes_statement_subject_if_predicate_parameter_is_equal_to_predicate_map_match_predicate_and_inverse_parameter_is_true);
 	return run_test_suite(suite, create_text_reporter());
 }
 
