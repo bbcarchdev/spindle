@@ -909,6 +909,74 @@ Ensure(spindle_generate_props, candidate_returns_false_for_raptor_term_type_blan
 	assert_that(r, is_equal_to(0));
 }
 
+Ensure(spindle_generate_props, candidate_returns_false_for_raptor_term_type_uri_if_object_is_not_a_resource) {
+	struct spindle_predicatemap_struct predicate_map = { .expected = RAPTOR_TERM_TYPE_URI };
+	struct propmatch_struct match = { .map = &predicate_map };
+	librdf_node *obj = (librdf_node *) 0xA03;
+
+	expect(librdf_node_is_resource, will_return(0), when(node, is_equal_to(obj)));
+
+	int r = spindle_prop_candidate_(NULL, &match, NULL, NULL, obj);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, candidate_returns_false_for_raptor_term_type_literal_if_object_is_not_a_literal) {
+	struct spindle_predicatemap_struct predicate_map = { .expected = RAPTOR_TERM_TYPE_LITERAL };
+	struct propmatch_struct match = { .map = &predicate_map };
+	librdf_node *obj = (librdf_node *) 0xA03;
+
+	expect(librdf_node_is_literal, will_return(0), when(node, is_equal_to(obj)));
+
+	int r = spindle_prop_candidate_(NULL, &match, NULL, NULL, obj);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, candidate_returns_result_from_candidate_uri_for_raptor_term_type_uri_if_object_is_a_resource) {
+	// config from "candidate_uri_returns_true_on_success" but calls
+	// spindle_prop_candidate_(RAPTOR_TERM_TYPE_URI) and also expects a
+	// call to librdf_node_is_resource()
+
+	SPINDLE spindle = { 0 };
+	struct propdata_struct data = { .spindle = &spindle };
+	struct spindle_predicatemap_struct predicate_map = { .expected = RAPTOR_TERM_TYPE_URI };
+	struct spindle_predicatematch_struct criterion = { .priority = 1 };
+	struct propmatch_struct match = {
+		.map = &predicate_map,
+		.priority = criterion.priority + 1,
+		.resource = (librdf_node *) 0xB01
+	};
+	librdf_node *obj = (librdf_node *) 0xA03;
+	librdf_node *clone = (librdf_node *) 0xA04;
+
+	expect(librdf_node_is_resource, will_return(1), when(node, is_equal_to(obj)));
+	expect(twine_rdf_node_clone, will_return(clone), when(node, is_equal_to(obj)));
+	expect(twine_rdf_node_destroy, when(node, is_equal_to(match.resource)));
+
+	int r = spindle_prop_candidate_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(1));
+}
+
+Ensure(spindle_generate_props, candidate_returns_result_from_candidate_literal_for_raptor_term_type_literal_if_object_is_a_literal) {
+	// config from "candidate_literal_returns_false_if_matching_literal_has_lower_priority_than_criterion"
+	// but calls spindle_prop_candidate_(RAPTOR_TERM_TYPE_LITERAL) and also
+	// expects a call to librdf_node_is_literal()
+
+	struct propdata_struct data = { 0 };
+	struct spindle_predicatemap_struct predicate_map = {
+		.expected = RAPTOR_TERM_TYPE_LITERAL,
+		.datatype = "xsd:sometype"
+	};
+	struct propmatch_struct match = { .map = &predicate_map, .priority = 1 };
+	struct spindle_predicatematch_struct criterion = { .priority = match.priority + 1 };
+	librdf_node *obj = (librdf_node *) 0xA03;
+
+	expect(librdf_node_is_literal, will_return(1), when(node, is_equal_to(obj)));
+	expect(librdf_node_get_literal_value_language, when(node, is_equal_to(obj)));
+
+	int r = spindle_prop_candidate_(&data, &match, &criterion, NULL, obj);
+	assert_that(r, is_equal_to(0));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -957,6 +1025,10 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, candidate_uri_when_successful_sets_match_prominence_to_predicate_map_prominence_if_criterion_prominence_is_zero);
 	add_test_with_context(suite, spindle_generate_props, candidate_returns_false_for_raptor_term_type_unknown);
 	add_test_with_context(suite, spindle_generate_props, candidate_returns_false_for_raptor_term_type_blank);
+	add_test_with_context(suite, spindle_generate_props, candidate_returns_false_for_raptor_term_type_uri_if_object_is_not_a_resource);
+	add_test_with_context(suite, spindle_generate_props, candidate_returns_false_for_raptor_term_type_literal_if_object_is_not_a_literal);
+	add_test_with_context(suite, spindle_generate_props, candidate_returns_result_from_candidate_uri_for_raptor_term_type_uri_if_object_is_a_resource);
+	add_test_with_context(suite, spindle_generate_props, candidate_returns_result_from_candidate_literal_for_raptor_term_type_literal_if_object_is_a_literal);
 	return run_test_suite(suite, create_text_reporter());
 }
 
