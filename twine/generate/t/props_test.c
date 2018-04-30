@@ -891,6 +891,25 @@ Ensure(spindle_generate_props, candidate_uri_when_successful_sets_match_prominen
 }
 
 #pragma mark -
+#pragma mark spindle_prop_candidate_
+
+Ensure(spindle_generate_props, candidate_returns_false_for_raptor_term_type_unknown) {
+	struct spindle_predicatemap_struct predicate_map = { .expected = RAPTOR_TERM_TYPE_UNKNOWN };
+	struct propmatch_struct match = { .map = &predicate_map };
+
+	int r = spindle_prop_candidate_(NULL, &match, NULL, NULL, NULL);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, candidate_returns_false_for_raptor_term_type_blank) {
+	struct spindle_predicatemap_struct predicate_map = { .expected = RAPTOR_TERM_TYPE_BLANK };
+	struct propmatch_struct match = { .map = &predicate_map };
+
+	int r = spindle_prop_candidate_(NULL, &match, NULL, NULL, NULL);
+	assert_that(r, is_equal_to(0));
+}
+
+#pragma mark -
 
 int props_test(void) {
 	TestSuite *suite = create_test_suite();
@@ -936,6 +955,8 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, candidate_uri_when_successful_sets_match_priority);
 	add_test_with_context(suite, spindle_generate_props, candidate_uri_when_successful_sets_match_prominence_to_criterion_prominence_if_criterion_prominence_is_non_zero);
 	add_test_with_context(suite, spindle_generate_props, candidate_uri_when_successful_sets_match_prominence_to_predicate_map_prominence_if_criterion_prominence_is_zero);
+	add_test_with_context(suite, spindle_generate_props, candidate_returns_false_for_raptor_term_type_unknown);
+	add_test_with_context(suite, spindle_generate_props, candidate_returns_false_for_raptor_term_type_blank);
 	return run_test_suite(suite, create_text_reporter());
 }
 
