@@ -978,6 +978,108 @@ Ensure(spindle_generate_props, candidate_returns_result_from_candidate_literal_f
 }
 
 #pragma mark -
+#pragma mark spindle_prop_test_
+
+/*
+	These tests really only prove the function exits before strcmp(NULL, NULL) is reached.
+	After the code under test is refactored, we can test each conditional/filter in isolation.
+*/
+
+Ensure(spindle_generate_props, prop_test_returns_no_error_for_empty_predicate_map_list) {
+	struct spindle_predicatemap_struct maps = { 0 };
+	struct propdata_struct data = { .maps = &maps };
+
+	int r = spindle_prop_test_(&data, NULL, NULL, 0);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, prop_test_skips_predicate_map_if_predicate_map_has_no_matches_list) {
+	struct spindle_predicatemap_struct maps[] = {
+		{ .target = "target" },
+		{ 0 }
+	};
+	struct propdata_struct data = { .maps = maps };
+
+	int r = spindle_prop_test_(&data, NULL, NULL, 0);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, prop_test_stops_iterating_predicate_map_matches_list_when_at_end) {
+	struct spindle_predicatematch_struct matches = { 0 };
+	struct spindle_predicatemap_struct maps[] = {
+		{ .target = "target", .matches = &matches },
+		{ 0 }
+	};
+	struct propdata_struct data = { .maps = maps };
+
+	int r = spindle_prop_test_(&data, NULL, NULL, 0);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, prop_test_skips_predicate_map_match_if_match_inversion_property_is_true_and_inverse_parameter_is_false) {
+	struct spindle_predicatematch_struct matches[] = {
+		{ .predicate = "pred", .inverse = 1 },
+		{ 0 }
+	};
+	struct spindle_predicatemap_struct maps[] = {
+		{ .target = "target", .matches = matches },
+		{ 0 }
+	};
+	struct propdata_struct data = { .maps = maps };
+
+	int r = spindle_prop_test_(&data, NULL, NULL, 0);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, prop_test_skips_predicate_map_match_if_match_inversion_property_is_false_and_inverse_parameter_is_true) {
+	struct spindle_predicatematch_struct matches[] = {
+		{ .predicate = "pred" },
+		{ 0 }
+	};
+	struct spindle_predicatemap_struct maps[] = {
+		{ .target = "target", .matches = matches },
+		{ 0 }
+	};
+	struct propdata_struct data = { .maps = maps };
+
+	int r = spindle_prop_test_(&data, NULL, NULL, 1);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, prop_test_skips_predicate_map_match_if_match_onlyfor_property_is_not_NULL_and_propdata_classname_is_NULL) {
+	struct spindle_predicatematch_struct matches[] = {
+		{ .predicate = "pred", .onlyfor = "only for this class" },
+		{ 0 }
+	};
+	struct spindle_predicatemap_struct maps[] = {
+		{ .target = "target", .matches = matches },
+		{ 0 }
+	};
+	struct propdata_struct data = { .maps = maps };
+
+	int r = spindle_prop_test_(&data, NULL, NULL, 0);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, prop_test_skips_predicate_map_match_if_match_onlyfor_property_is_not_equal_to_propdata_classname) {
+	struct spindle_predicatematch_struct matches[] = {
+		{ .predicate = "pred", .onlyfor = "only for this class" },
+		{ 0 }
+	};
+	struct spindle_predicatemap_struct maps[] = {
+		{ .target = "target", .matches = matches },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.maps = maps,
+		.classname = "different class"
+	};
+
+	int r = spindle_prop_test_(&data, NULL, NULL, 0);
+	assert_that(r, is_equal_to(0));
+}
+
+#pragma mark -
 
 int props_test(void) {
 	TestSuite *suite = create_test_suite();
@@ -1029,6 +1131,13 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, candidate_returns_false_for_raptor_term_type_literal_if_object_is_not_a_literal);
 	add_test_with_context(suite, spindle_generate_props, candidate_returns_result_from_candidate_uri_for_raptor_term_type_uri_if_object_is_a_resource);
 	add_test_with_context(suite, spindle_generate_props, candidate_returns_result_from_candidate_literal_for_raptor_term_type_literal_if_object_is_a_literal);
+	add_test_with_context(suite, spindle_generate_props, prop_test_returns_no_error_for_empty_predicate_map_list);
+	add_test_with_context(suite, spindle_generate_props, prop_test_skips_predicate_map_if_predicate_map_has_no_matches_list);
+	add_test_with_context(suite, spindle_generate_props, prop_test_stops_iterating_predicate_map_matches_list_when_at_end);
+	add_test_with_context(suite, spindle_generate_props, prop_test_skips_predicate_map_match_if_match_inversion_property_is_true_and_inverse_parameter_is_false);
+	add_test_with_context(suite, spindle_generate_props, prop_test_skips_predicate_map_match_if_match_inversion_property_is_false_and_inverse_parameter_is_true);
+	add_test_with_context(suite, spindle_generate_props, prop_test_skips_predicate_map_match_if_match_onlyfor_property_is_not_NULL_and_propdata_classname_is_NULL);
+	add_test_with_context(suite, spindle_generate_props, prop_test_skips_predicate_map_match_if_match_onlyfor_property_is_not_equal_to_propdata_classname);
 	return run_test_suite(suite, create_text_reporter());
 }
 
