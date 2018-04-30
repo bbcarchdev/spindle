@@ -1148,6 +1148,51 @@ Ensure(spindle_generate_props, prop_test_processes_statement_subject_if_predicat
 	assert_that(r, is_equal_to(0));
 }
 
+Ensure(spindle_generate_props, prop_test_can_match_the_same_predicate_from_match_lists_corresponding_to_different_targets) {
+	struct spindle_predicatematch_struct matches_1[] = {
+		{ .predicate = "pred 1" },
+		{ .predicate = "pred 2" },
+		{ .predicate = "pred 3" },
+		{ 0 }
+	};
+	struct spindle_predicatematch_struct matches_2[] = {
+		{ .predicate = "pred 2" },
+		{ .predicate = "pred 3" },
+		{ .predicate = "pred 4" },
+		{ 0 }
+	};
+	struct spindle_predicatemap_struct maps[] = {
+		{ .target = "target 1", .matches = matches_1 },
+		{ .target = "target 2", .matches = matches_2 },
+		{ 0 }
+	};
+	struct spindle_predicatemap_struct predicate_map_1 = {
+		.expected = RAPTOR_TERM_TYPE_LITERAL
+	};
+	struct spindle_predicatemap_struct predicate_map_2 = {
+		.expected = RAPTOR_TERM_TYPE_URI
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &predicate_map_1 },
+		{ .map = &predicate_map_2 },
+		{ 0 }
+	};
+	struct propdata_struct data = { .maps = maps, .matches = prop_matches };
+	librdf_statement *statement = (librdf_statement *) 0xA01;
+	librdf_node *node_1 = (librdf_node *) 0xA02;
+	librdf_node *node_2 = (librdf_node *) 0xA03;
+
+	expect(librdf_statement_get_object, will_return(node_1), when(statement, is_equal_to(statement)));
+	expect(librdf_statement_get_object, will_return(node_2), when(statement, is_equal_to(statement)));
+	expect(librdf_node_is_literal, when(node, is_equal_to(node_1)));
+	expect(librdf_node_is_resource, when(node, is_equal_to(node_2)));
+	never_expect(librdf_statement_get_object);
+	never_expect(librdf_statement_get_subject);
+
+	int r = spindle_prop_test_(&data, statement, "pred 3", 0);
+	assert_that(r, is_equal_to(0));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -1210,6 +1255,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_test_skips_predicate_map_match_if_predicate_parameter_differs_from_match_predicate);
 	add_test_with_context(suite, spindle_generate_props, prop_test_processes_statement_object_if_predicate_parameter_is_equal_to_predicate_map_match_predicate_and_inverse_parameter_is_false);
 	add_test_with_context(suite, spindle_generate_props, prop_test_processes_statement_subject_if_predicate_parameter_is_equal_to_predicate_map_match_predicate_and_inverse_parameter_is_true);
+	add_test_with_context(suite, spindle_generate_props, prop_test_can_match_the_same_predicate_from_match_lists_corresponding_to_different_targets);
 	return run_test_suite(suite, create_text_reporter());
 }
 
