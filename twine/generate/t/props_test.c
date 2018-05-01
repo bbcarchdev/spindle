@@ -1291,6 +1291,35 @@ Ensure(spindle_generate_props, prop_apply_returns_error_if_creating_a_node_for_t
 	assert_that(r, is_equal_to(-1));
 }
 
+Ensure(spindle_generate_props, prop_apply_returns_no_error_if_the_match_has_no_resource_or_literals) {
+	librdf_node *self = (librdf_node *) 0xA01;
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *target = (librdf_node *) 0xA03;
+	librdf_statement *subject_statement = (librdf_statement *) 0xA04;
+	librdf_statement *predicate_statement = (librdf_statement *) 0xA05;
+	SPINDLEENTRY entry = { .self = self };
+	struct spindle_predicatemap_struct map = {
+		.target = "target"
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map },
+		{ 0 }
+	};
+	struct propdata_struct data = { .entry = &entry, .matches = prop_matches };
+
+	expect(twine_rdf_node_clone, will_return(clone), when(node, is_equal_to(self)));
+	expect(twine_rdf_st_create, will_return(subject_statement));
+	expect(librdf_statement_set_subject, when(statement, is_equal_to(subject_statement)), when(node, is_equal_to(clone)));
+	expect(twine_rdf_st_clone, will_return(predicate_statement), when(src, is_equal_to(subject_statement)));
+	expect(twine_rdf_node_createuri, will_return(target), when(uri, is_equal_to_string(map.target)));
+	expect(librdf_statement_set_predicate, when(statement, is_equal_to(predicate_statement)), when(node, is_equal_to(target)));
+	expect(librdf_free_statement, when(statement, is_equal_to(predicate_statement)));
+	expect(librdf_free_statement, when(statement, is_equal_to(subject_statement)));
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -1359,6 +1388,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_no_error_if_predicate_match_list_map_is_empty);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_cloning_the_statement_contining_only_a_subject_fails);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_creating_a_node_for_the_matchs_map_target_fails);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_no_error_if_the_match_has_no_resource_or_literals);
 	return run_test_suite(suite, create_text_reporter());
 }
 
