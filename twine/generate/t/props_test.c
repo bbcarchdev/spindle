@@ -1240,6 +1240,30 @@ Ensure(spindle_generate_props, prop_apply_returns_no_error_if_predicate_match_li
 	assert_that(r, is_equal_to(0));
 }
 
+Ensure(spindle_generate_props, prop_apply_returns_error_if_cloning_the_statement_contining_only_a_subject_fails) {
+	librdf_node *self = (librdf_node *) 0xA01;
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_statement *statement = (librdf_statement *) 0xA03;
+	SPINDLEENTRY entry = { .self = self };
+	struct spindle_predicatemap_struct map = {
+		.target = "target"
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map },
+		{ 0 }
+	};
+	struct propdata_struct data = { .entry = &entry, .matches = prop_matches };
+
+	expect(twine_rdf_node_clone, will_return(clone), when(node, is_equal_to(self)));
+	expect(twine_rdf_st_create, will_return(statement));
+	expect(librdf_statement_set_subject, when(statement, is_equal_to(statement)), when(node, is_equal_to(clone)));
+	expect(twine_rdf_st_clone, will_return(NULL), when(src, is_equal_to(statement)));
+	expect(librdf_free_statement, when(statement, is_equal_to(statement)));
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(-1));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -1306,6 +1330,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_self_node_cannot_be_cloned);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_cannot_create_empty_statement);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_no_error_if_predicate_match_list_map_is_empty);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_cloning_the_statement_contining_only_a_subject_fails);
 	return run_test_suite(suite, create_text_reporter());
 }
 
