@@ -1473,6 +1473,46 @@ Ensure(spindle_generate_props, prop_apply_when_the_match_has_a_resource_and_is_s
 	assert_that(r, is_equal_to(0));
 }
 
+Ensure(spindle_generate_props, prop_apply_returns_error_if_the_match_has_a_resource_and_adding_the_target_statement_to_the_root_model_fails) {
+	librdf_node *self = (librdf_node *) 0xA01;
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *target = (librdf_node *) 0xA03;
+	librdf_node *resource = (librdf_node *) 0xA04;
+	librdf_statement *subject_statement = (librdf_statement *) 0xA05;
+	librdf_statement *predicate_statement = (librdf_statement *) 0xA06;
+	SPINDLE spindle = { .rootgraph = (librdf_node *) 0xC01, .multigraph = 1 };
+	SPINDLEENTRY entry = { .self = self };
+	struct spindle_predicatemap_struct map = {
+		.target = "target",
+		.indexed = 1
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .resource = resource },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.spindle = &spindle,
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_st_create, will_return(subject_statement));
+	always_expect(librdf_statement_set_subject);
+	always_expect(twine_rdf_st_clone, will_return(predicate_statement));
+	always_expect(twine_rdf_node_createuri, will_return(target));
+	always_expect(librdf_statement_set_predicate);
+	always_expect(librdf_statement_set_object);
+	expect(twine_rdf_model_add_st);
+	expect(twine_rdf_model_add_st, will_return(-1), when(model, is_equal_to(data.rootmodel)), when(statement, is_equal_to(predicate_statement)), when(ctx, is_equal_to(spindle.rootgraph)));
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(-1));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -1546,6 +1586,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_the_match_has_a_resource_and_adding_statement_to_proxy_model_fails);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_clears_the_resource_of_a_successful_match);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_when_the_match_has_a_resource_and_is_successful_adds_the_target_statement_to_the_root_model_if_the_matched_map_is_indexed_and_not_inverted_and_if_multigraph_is_true);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_the_match_has_a_resource_and_adding_the_target_statement_to_the_root_model_fails);
 	return run_test_suite(suite, create_text_reporter());
 }
 
