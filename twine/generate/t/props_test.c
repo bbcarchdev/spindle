@@ -1513,6 +1513,342 @@ Ensure(spindle_generate_props, prop_apply_returns_error_if_the_match_has_a_resou
 	assert_that(r, is_equal_to(-1));
 }
 
+Ensure(spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_literal_has_no_datatype_uri) {
+	librdf_node *self = (librdf_node *) 0xA01;
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *target = (librdf_node *) 0xA03;
+	librdf_node *resource = (librdf_node *) 0xA04;
+	librdf_statement *subject_statement = (librdf_statement *) 0xA05;
+	librdf_statement *predicate_statement = (librdf_statement *) 0xA06;
+	librdf_uri *xsd_decimal = (librdf_uri *) 0xA07;
+	SPINDLEENTRY entry = { .self = self };
+	struct spindle_predicatemap_struct map = {
+		.target = NS_GEO "long"
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .resource = resource },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_st_create, will_return(subject_statement));
+	always_expect(librdf_statement_set_subject);
+	always_expect(twine_rdf_st_clone, will_return(predicate_statement));
+	always_expect(twine_rdf_node_createuri, will_return(target));
+	always_expect(librdf_statement_set_predicate);
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(NULL));
+	never_expect(librdf_uri_as_string);
+	never_expect(librdf_node_get_literal_value);
+	always_expect(librdf_statement_set_object);
+	always_expect(twine_rdf_model_add_st);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+	assert_that(data.has_geo, is_equal_to(0));
+	assert_that((float) data.lon, is_equal_to(0.0f));
+}
+
+Ensure(spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_literal_has_no_datatype_uri) {
+	librdf_node *self = (librdf_node *) 0xA01;
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *target = (librdf_node *) 0xA03;
+	librdf_node *resource = (librdf_node *) 0xA04;
+	librdf_statement *subject_statement = (librdf_statement *) 0xA05;
+	librdf_statement *predicate_statement = (librdf_statement *) 0xA06;
+	librdf_uri *xsd_decimal = (librdf_uri *) 0xA07;
+	SPINDLEENTRY entry = { .self = self };
+	struct spindle_predicatemap_struct map = {
+		.target = NS_GEO "lat"
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .resource = resource },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_st_create, will_return(subject_statement));
+	always_expect(librdf_statement_set_subject);
+	always_expect(twine_rdf_st_clone, will_return(predicate_statement));
+	always_expect(twine_rdf_node_createuri, will_return(target));
+	always_expect(librdf_statement_set_predicate);
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(NULL));
+	never_expect(librdf_uri_as_string);
+	never_expect(librdf_node_get_literal_value);
+	always_expect(librdf_statement_set_object);
+	always_expect(twine_rdf_model_add_st);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+	assert_that(data.has_geo, is_equal_to(0));
+	assert_that((float) data.lat, is_equal_to(0.0f));
+}
+
+Ensure(spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_datatype_uri_string_is_NULL) {
+	librdf_node *self = (librdf_node *) 0xA01;
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *target = (librdf_node *) 0xA03;
+	librdf_node *resource = (librdf_node *) 0xA04;
+	librdf_statement *subject_statement = (librdf_statement *) 0xA05;
+	librdf_statement *predicate_statement = (librdf_statement *) 0xA06;
+	librdf_uri *xsd_decimal = (librdf_uri *) 0xA07;
+	SPINDLEENTRY entry = { .self = self };
+	struct spindle_predicatemap_struct map = {
+		.target = NS_GEO "long"
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .resource = resource },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_st_create, will_return(subject_statement));
+	always_expect(librdf_statement_set_subject);
+	always_expect(twine_rdf_st_clone, will_return(predicate_statement));
+	always_expect(twine_rdf_node_createuri, will_return(target));
+	always_expect(librdf_statement_set_predicate);
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(xsd_decimal));
+	expect(librdf_uri_as_string, will_return(NULL), when(uri, is_equal_to(xsd_decimal)));
+	never_expect(librdf_node_get_literal_value);
+	always_expect(librdf_statement_set_object);
+	always_expect(twine_rdf_model_add_st);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+	assert_that(data.has_geo, is_equal_to(0));
+	assert_that((float) data.lon, is_equal_to(0.0f));
+}
+
+Ensure(spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_datatype_uri_string_is_NULL) {
+	librdf_node *self = (librdf_node *) 0xA01;
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *target = (librdf_node *) 0xA03;
+	librdf_node *resource = (librdf_node *) 0xA04;
+	librdf_statement *subject_statement = (librdf_statement *) 0xA05;
+	librdf_statement *predicate_statement = (librdf_statement *) 0xA06;
+	librdf_uri *xsd_decimal = (librdf_uri *) 0xA07;
+	SPINDLEENTRY entry = { .self = self };
+	struct spindle_predicatemap_struct map = {
+		.target = NS_GEO "lat"
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .resource = resource },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_st_create, will_return(subject_statement));
+	always_expect(librdf_statement_set_subject);
+	always_expect(twine_rdf_st_clone, will_return(predicate_statement));
+	always_expect(twine_rdf_node_createuri, will_return(target));
+	always_expect(librdf_statement_set_predicate);
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(xsd_decimal));
+	expect(librdf_uri_as_string, will_return(NULL), when(uri, is_equal_to(xsd_decimal)));
+	never_expect(librdf_node_get_literal_value);
+	always_expect(librdf_statement_set_object);
+	always_expect(twine_rdf_model_add_st);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+	assert_that(data.has_geo, is_equal_to(0));
+	assert_that((float) data.lat, is_equal_to(0.0f));
+}
+
+Ensure(spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_datatype_uri_is_not_xsd_decimal) {
+	librdf_node *self = (librdf_node *) 0xA01;
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *target = (librdf_node *) 0xA03;
+	librdf_node *resource = (librdf_node *) 0xA04;
+	librdf_statement *subject_statement = (librdf_statement *) 0xA05;
+	librdf_statement *predicate_statement = (librdf_statement *) 0xA06;
+	librdf_uri *xsd_decimal = (librdf_uri *) 0xA07;
+	SPINDLEENTRY entry = { .self = self };
+	struct spindle_predicatemap_struct map = {
+		.target = NS_GEO "long"
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .resource = resource },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_st_create, will_return(subject_statement));
+	always_expect(librdf_statement_set_subject);
+	always_expect(twine_rdf_st_clone, will_return(predicate_statement));
+	always_expect(twine_rdf_node_createuri, will_return(target));
+	always_expect(librdf_statement_set_predicate);
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(xsd_decimal));
+	expect(librdf_uri_as_string, will_return("not xsd:decimal"), when(uri, is_equal_to(xsd_decimal)));
+	never_expect(librdf_node_get_literal_value);
+	always_expect(librdf_statement_set_object);
+	always_expect(twine_rdf_model_add_st);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+	assert_that(data.has_geo, is_equal_to(0));
+	assert_that((float) data.lon, is_equal_to(0.0f));
+}
+
+Ensure(spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_datatype_uri_is_not_xsd_decimal) {
+	librdf_node *self = (librdf_node *) 0xA01;
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *target = (librdf_node *) 0xA03;
+	librdf_node *resource = (librdf_node *) 0xA04;
+	librdf_statement *subject_statement = (librdf_statement *) 0xA05;
+	librdf_statement *predicate_statement = (librdf_statement *) 0xA06;
+	librdf_uri *xsd_decimal = (librdf_uri *) 0xA07;
+	SPINDLEENTRY entry = { .self = self };
+	struct spindle_predicatemap_struct map = {
+		.target = NS_GEO "lat"
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .resource = resource },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_st_create, will_return(subject_statement));
+	always_expect(librdf_statement_set_subject);
+	always_expect(twine_rdf_st_clone, will_return(predicate_statement));
+	always_expect(twine_rdf_node_createuri, will_return(target));
+	always_expect(librdf_statement_set_predicate);
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(xsd_decimal));
+	expect(librdf_uri_as_string, will_return("not xsd:decimal"), when(uri, is_equal_to(xsd_decimal)));
+	never_expect(librdf_node_get_literal_value);
+	always_expect(librdf_statement_set_object);
+	always_expect(twine_rdf_model_add_st);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+	assert_that(data.has_geo, is_equal_to(0));
+	assert_that((float) data.lat, is_equal_to(0.0f));
+}
+
+Ensure(spindle_generate_props, prop_apply_sets_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_datatype_uri_is_xsd_decimal) {
+	librdf_node *self = (librdf_node *) 0xA01;
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *target = (librdf_node *) 0xA03;
+	librdf_node *resource = (librdf_node *) 0xA04;
+	librdf_statement *subject_statement = (librdf_statement *) 0xA05;
+	librdf_statement *predicate_statement = (librdf_statement *) 0xA06;
+	librdf_uri *xsd_decimal = (librdf_uri *) 0xA07;
+	SPINDLEENTRY entry = { .self = self };
+	struct spindle_predicatemap_struct map = {
+		.target = NS_GEO "long"
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .resource = resource },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_st_create, will_return(subject_statement));
+	always_expect(librdf_statement_set_subject);
+	always_expect(twine_rdf_st_clone, will_return(predicate_statement));
+	always_expect(twine_rdf_node_createuri, will_return(target));
+	always_expect(librdf_statement_set_predicate);
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(xsd_decimal), when(node, is_equal_to(resource)));
+	expect(librdf_uri_as_string, will_return(NS_XSD "decimal"), when(uri, is_equal_to(xsd_decimal)));
+	expect(librdf_node_get_literal_value, will_return("-123.45"), when(node, is_equal_to(resource)));
+	always_expect(librdf_statement_set_object);
+	always_expect(twine_rdf_model_add_st);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+	assert_that(data.has_geo, is_equal_to(1));
+	assert_that((float) data.lon, is_equal_to(-123.45f));
+}
+
+Ensure(spindle_generate_props, prop_apply_sets_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_datatype_uri_is_xsd_decimal) {
+	librdf_node *self = (librdf_node *) 0xA01;
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *target = (librdf_node *) 0xA03;
+	librdf_node *resource = (librdf_node *) 0xA04;
+	librdf_statement *subject_statement = (librdf_statement *) 0xA05;
+	librdf_statement *predicate_statement = (librdf_statement *) 0xA06;
+	librdf_uri *xsd_decimal = (librdf_uri *) 0xA07;
+	SPINDLEENTRY entry = { .self = self };
+	struct spindle_predicatemap_struct map = {
+		.target = NS_GEO "lat"
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .resource = resource },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(twine_rdf_node_clone, will_return(clone));
+	always_expect(twine_rdf_st_create, will_return(subject_statement));
+	always_expect(librdf_statement_set_subject);
+	always_expect(twine_rdf_st_clone, will_return(predicate_statement));
+	always_expect(twine_rdf_node_createuri, will_return(target));
+	always_expect(librdf_statement_set_predicate);
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(xsd_decimal), when(node, is_equal_to(resource)));
+	expect(librdf_uri_as_string, will_return(NS_XSD "decimal"), when(uri, is_equal_to(xsd_decimal)));
+	expect(librdf_node_get_literal_value, will_return("-67.89"), when(node, is_equal_to(resource)));
+	always_expect(librdf_statement_set_object);
+	always_expect(twine_rdf_model_add_st);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+	assert_that(data.has_geo, is_equal_to(2));
+	assert_that((float) data.lat, is_equal_to(-67.89f));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -1587,6 +1923,14 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_apply_clears_the_resource_of_a_successful_match);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_when_the_match_has_a_resource_and_is_successful_adds_the_target_statement_to_the_root_model_if_the_matched_map_is_indexed_and_not_inverted_and_if_multigraph_is_true);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_the_match_has_a_resource_and_adding_the_target_statement_to_the_root_model_fails);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_literal_has_no_datatype_uri);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_literal_has_no_datatype_uri);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_datatype_uri_string_is_NULL);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_datatype_uri_string_is_NULL);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_datatype_uri_is_not_xsd_decimal);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_datatype_uri_is_not_xsd_decimal);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_sets_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_datatype_uri_is_xsd_decimal);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_sets_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_datatype_uri_is_xsd_decimal);
 	return run_test_suite(suite, create_text_reporter());
 }
 
