@@ -2153,6 +2153,44 @@ Ensure(spindle_generate_props, prop_loop_returns_no_error_if_the_predicate_uri_a
 	assert_that(r, is_equal_to(0));
 }
 
+Ensure(spindle_generate_props, prop_loop_returns_no_error_if_no_entry_reference_is_found_matching_the_subject_or_object) {
+	librdf_model *model = (librdf_model *) 0xA01;
+	librdf_uri *uri = (librdf_uri *) 0xA02;
+	char *predicate_str = "predicate";
+	char *references[] = {
+		"ref",
+		NULL
+	};
+	SPINDLE spindle = { 0 };
+	SPINDLEENTRY entry = { .refs = references };
+	struct propdata_struct data = {
+		.spindle = &spindle,
+		.entry = &entry,
+		.source = model
+	};
+
+	expect(librdf_stream_end, will_return(0));
+	expect(librdf_uri_as_string, will_return(predicate_str));
+	expect(librdf_uri_as_string);
+	expect(librdf_uri_as_string);
+
+	always_expect(librdf_new_statement);
+	always_expect(librdf_model_find_statements);
+	always_expect(librdf_stream_get_object);
+	always_expect(librdf_statement_get_subject);
+	always_expect(librdf_statement_get_predicate);
+	always_expect(librdf_statement_get_object);
+	always_expect(librdf_node_is_resource, will_return(1));
+	always_expect(librdf_node_get_uri, will_return(uri));
+	always_expect(librdf_stream_next);
+	always_expect(librdf_stream_end, will_return(1));
+	always_expect(librdf_free_stream);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_loop_(&data);
+	assert_that(r, is_equal_to(0));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -2244,6 +2282,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_no_error_if_the_predicate_is_not_a_resource);
 	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_no_error_if_the_predicate_uri_is_NULL);
 	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_no_error_if_the_predicate_uri_as_string_is_NULL);
+	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_no_error_if_no_entry_reference_is_found_matching_the_subject_or_object);
 	return run_test_suite(suite, create_text_reporter());
 }
 
