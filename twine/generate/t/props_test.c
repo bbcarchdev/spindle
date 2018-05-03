@@ -2044,6 +2044,116 @@ Ensure(spindle_generate_props, prop_apply_returns_error_if_the_match_has_no_reso
 }
 
 #pragma mark -
+#pragma mark spindle_prop_loop_
+
+Ensure(spindle_generate_props, prop_loop_returns_no_error_if_there_are_no_statements_in_source_model) {
+	librdf_model *model = (librdf_model *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	librdf_stream *stream = (librdf_stream *) 0xA03;
+	librdf_world *world = (librdf_world *) 0xA04;
+	SPINDLE spindle = { .world = world };
+	struct propdata_struct data = {
+		.spindle = &spindle,
+		.source = model
+	};
+
+	expect(librdf_new_statement, will_return(statement), when(world, is_equal_to(world)));
+	expect(librdf_model_find_statements, will_return(stream), when(model, is_equal_to(model)), when(statement, is_equal_to(statement)));
+	expect(librdf_stream_end, will_return(1));
+	expect(librdf_free_stream, when(stream, is_equal_to(stream)));
+	expect(librdf_free_statement, when(statement, is_equal_to(statement)));
+
+	int r = spindle_prop_loop_(&data);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, prop_loop_returns_no_error_if_the_predicate_is_not_a_resource) {
+	librdf_model *model = (librdf_model *) 0xA01;
+	librdf_node *predicate = (librdf_node *) 0xA02;
+	librdf_statement *statement = (librdf_statement *) 0xA03;
+	librdf_stream *stream = (librdf_stream *) 0xA04;
+	SPINDLE spindle = { 0 };
+	struct propdata_struct data = {
+		.spindle = &spindle,
+		.source = model
+	};
+
+	expect(librdf_stream_end, will_return(0));
+	expect(librdf_stream_get_object, will_return(statement), when(stream, is_equal_to(stream)));
+	expect(librdf_statement_get_predicate, will_return(predicate), when(statement, is_equal_to(statement)));
+	expect(librdf_node_is_resource, will_return(0), when(node, is_equal_to(predicate)));
+	expect(librdf_stream_next, when(stream, is_equal_to(stream)));
+
+	always_expect(librdf_new_statement);
+	always_expect(librdf_model_find_statements, will_return(stream));
+	always_expect(librdf_statement_get_subject);
+	always_expect(librdf_statement_get_object);
+	always_expect(librdf_stream_end, will_return(1));
+	always_expect(librdf_free_stream);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_loop_(&data);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, prop_loop_returns_no_error_if_the_predicate_uri_is_NULL) {
+	librdf_model *model = (librdf_model *) 0xA01;
+	librdf_node *predicate = (librdf_node *) 0xA02;
+	SPINDLE spindle = { 0 };
+	struct propdata_struct data = {
+		.spindle = &spindle,
+		.source = model
+	};
+
+	expect(librdf_stream_end, will_return(0));
+	expect(librdf_node_get_uri, will_return(NULL), when(node, is_equal_to(predicate)));
+
+	always_expect(librdf_new_statement);
+	always_expect(librdf_model_find_statements);
+	always_expect(librdf_stream_get_object);
+	always_expect(librdf_statement_get_subject);
+	always_expect(librdf_statement_get_predicate, will_return(predicate));
+	always_expect(librdf_statement_get_object);
+	always_expect(librdf_node_is_resource, will_return(1));
+	always_expect(librdf_stream_next);
+	always_expect(librdf_stream_end, will_return(1));
+	always_expect(librdf_free_stream);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_loop_(&data);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, prop_loop_returns_no_error_if_the_predicate_uri_as_string_is_NULL) {
+	librdf_model *model = (librdf_model *) 0xA01;
+	librdf_uri *uri = (librdf_uri *) 0xA02;
+	SPINDLE spindle = { 0 };
+	struct propdata_struct data = {
+		.spindle = &spindle,
+		.source = model
+	};
+
+	expect(librdf_stream_end, will_return(0));
+	expect(librdf_uri_as_string, will_return(NULL), when(uri, is_equal_to(uri)));
+
+	always_expect(librdf_new_statement);
+	always_expect(librdf_model_find_statements);
+	always_expect(librdf_stream_get_object);
+	always_expect(librdf_statement_get_subject);
+	always_expect(librdf_statement_get_predicate);
+	always_expect(librdf_statement_get_object);
+	always_expect(librdf_node_is_resource, will_return(1));
+	always_expect(librdf_node_get_uri, will_return(uri));
+	always_expect(librdf_stream_next);
+	always_expect(librdf_stream_end, will_return(1));
+	always_expect(librdf_free_stream);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_loop_(&data);
+	assert_that(r, is_equal_to(0));
+}
+
+#pragma mark -
 
 int props_test(void) {
 	TestSuite *suite = create_test_suite();
@@ -2130,6 +2240,10 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_the_match_has_a_literal_and_no_resource_and_adding_the_statement_to_the_proxy_model_fails);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_when_the_match_has_no_resource_and_is_successful_adds_the_statement_to_the_root_model_and_returns_no_error_if_the_matched_map_is_indexed_and_not_inverted_and_if_multigraph_is_true);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_the_match_has_no_resource_and_adding_the_target_statement_to_the_root_model_fails);
+	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_no_error_if_there_are_no_statements_in_source_model);
+	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_no_error_if_the_predicate_is_not_a_resource);
+	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_no_error_if_the_predicate_uri_is_NULL);
+	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_no_error_if_the_predicate_uri_as_string_is_NULL);
 	return run_test_suite(suite, create_text_reporter());
 }
 
