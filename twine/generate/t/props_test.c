@@ -1849,6 +1849,200 @@ Ensure(spindle_generate_props, prop_apply_sets_latitude_and_geo_flag_if_the_matc
 	assert_that((float) data.lat, is_equal_to(-67.89f));
 }
 
+Ensure(spindle_generate_props, prop_apply_adds_the_statement_to_the_proxy_model_and_returns_no_error_if_the_match_has_a_literal_and_no_resource) {
+	librdf_node *self = (librdf_node *) 0xA01;
+	librdf_node *clone = (librdf_node *) 0xA02;
+	librdf_node *target = (librdf_node *) 0xA03;
+	librdf_node *match_literal = (librdf_node *) 0xA04;
+	librdf_node *match_literal_clone = (librdf_node *) 0xA05;
+	librdf_statement *subject_statement = (librdf_statement *) 0xA06;
+	librdf_statement *predicate_statement = (librdf_statement *) 0xA07;
+	librdf_statement *local_predicate_statement = (librdf_statement *) 0xA08;
+	SPINDLEENTRY entry = { .self = self };
+	struct spindle_predicatemap_struct map = {
+		.target = "target"
+	};
+	struct literal_struct literals[] = {
+		{ .node = match_literal }
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .nliterals = 1, .literals = literals },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	expect(twine_rdf_node_clone, will_return(clone), when(node, is_equal_to(self)));
+	expect(twine_rdf_st_create, will_return(subject_statement));
+	expect(librdf_statement_set_subject, when(statement, is_equal_to(subject_statement)), when(node, is_equal_to(clone)));
+	expect(twine_rdf_st_clone, will_return(predicate_statement), when(src, is_equal_to(subject_statement)));
+	expect(twine_rdf_node_createuri, will_return(target), when(uri, is_equal_to_string(map.target)));
+	expect(librdf_statement_set_predicate, when(statement, is_equal_to(predicate_statement)), when(node, is_equal_to(target)));
+	expect(twine_rdf_st_clone, will_return(local_predicate_statement), when(src, is_equal_to(predicate_statement)));
+	expect(twine_rdf_node_clone, will_return(match_literal_clone), when(node, is_equal_to(match_literal)));
+	expect(librdf_statement_set_object, when(statement, is_equal_to(local_predicate_statement)), when(node, is_equal_to(match_literal_clone)));
+	expect(twine_rdf_model_add_st, will_return(0), when(model, is_equal_to(data.proxymodel)), when(statement, is_equal_to(local_predicate_statement)), when(ctx, is_equal_to(data.context)));
+	expect(librdf_free_statement, when(statement, is_equal_to(local_predicate_statement)));
+	expect(librdf_free_statement, when(statement, is_equal_to(predicate_statement)));
+	expect(librdf_free_statement, when(statement, is_equal_to(subject_statement)));
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, prop_apply_returns_error_if_the_match_has_a_literal_and_no_resource_and_cloning_the_predicate_statement_fails) {
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *subject_statement = (librdf_statement *) 0xA06;
+	librdf_statement *predicate_statement = (librdf_statement *) 0xA07;
+	SPINDLEENTRY entry = { 0 };
+	struct spindle_predicatemap_struct map = {
+		.target = "target"
+	};
+	struct literal_struct literals[] = {
+		{ .node = node }
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .nliterals = 1, .literals = literals },
+		{ 0 }
+	};
+	struct propdata_struct data = { .entry = &entry, .matches = prop_matches };
+
+	always_expect(librdf_statement_set_subject);
+	always_expect(librdf_statement_set_predicate);
+	always_expect(librdf_free_statement);
+	always_expect(twine_rdf_node_clone, will_return(node));
+	always_expect(twine_rdf_node_createuri, will_return(node));
+
+	expect(twine_rdf_st_create, will_return(subject_statement));
+	expect(twine_rdf_st_clone, will_return(predicate_statement), when(src, is_equal_to(subject_statement)));
+	expect(twine_rdf_st_clone, will_return(NULL), when(src, is_equal_to(predicate_statement)));
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(-1));
+}
+
+Ensure(spindle_generate_props, prop_apply_returns_error_if_the_match_has_a_literal_and_no_resource_and_adding_the_statement_to_the_proxy_model_fails) {
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	SPINDLEENTRY entry = { 0 };
+	struct spindle_predicatemap_struct map = {
+		.target = "target"
+	};
+	struct literal_struct literals[] = {
+		{ .node = node }
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .nliterals = 1, .literals = literals },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(librdf_statement_set_subject);
+	always_expect(librdf_statement_set_predicate);
+	always_expect(librdf_statement_set_object);
+	always_expect(librdf_free_statement);
+	always_expect(twine_rdf_node_clone, will_return(node));
+	always_expect(twine_rdf_node_createuri, will_return(node));
+	always_expect(twine_rdf_st_create, will_return(statement));
+	always_expect(twine_rdf_st_clone, will_return(statement));
+
+	expect(twine_rdf_model_add_st, will_return(-1), when(model, is_equal_to(data.proxymodel)));
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(-1));
+}
+
+Ensure(spindle_generate_props, prop_apply_when_the_match_has_no_resource_and_is_successful_adds_the_statement_to_the_root_model_and_returns_no_error_if_the_matched_map_is_indexed_and_not_inverted_and_if_multigraph_is_true) {
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *subject_statement = (librdf_statement *) 0xA06;
+	librdf_statement *predicate_statement = (librdf_statement *) 0xA07;
+	librdf_statement *local_predicate_statement = (librdf_statement *) 0xA08;
+	SPINDLE spindle = { .rootgraph = (librdf_node *) 0xC01, .multigraph = 1 };
+	SPINDLEENTRY entry = { 0 };
+	struct spindle_predicatemap_struct map = {
+		.target = "target",
+		.indexed = 1
+	};
+	struct literal_struct literals[] = {
+		{ .node = node }
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .nliterals = 1, .literals = literals },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.spindle = &spindle,
+		.entry = &entry,
+		.proxymodel = (librdf_model *) 0xB01,
+		.matches = prop_matches
+	};
+
+	always_expect(librdf_statement_set_subject);
+	always_expect(librdf_statement_set_predicate);
+	always_expect(librdf_statement_set_object);
+	always_expect(librdf_free_statement);
+	always_expect(twine_rdf_node_clone, will_return(node));
+	always_expect(twine_rdf_node_createuri, will_return(node));
+
+	expect(twine_rdf_st_create, will_return(subject_statement));
+	expect(twine_rdf_st_clone, will_return(predicate_statement), when(src, is_equal_to(subject_statement)));
+	expect(twine_rdf_st_clone, will_return(local_predicate_statement), when(src, is_equal_to(predicate_statement)));
+	expect(twine_rdf_model_add_st, will_return(0), when(model, is_equal_to(data.proxymodel)));
+	expect(twine_rdf_model_add_st, will_return(0), when(model, is_equal_to(data.rootmodel)), when(statement, is_equal_to(local_predicate_statement)), when(ctx, is_equal_to(spindle.rootgraph)));
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, prop_apply_returns_error_if_the_match_has_no_resource_and_adding_the_target_statement_to_the_root_model_fails) {
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	SPINDLE spindle = { .rootgraph = (librdf_node *) 0xC01, .multigraph = 1 };
+	SPINDLEENTRY entry = { 0 };
+	struct spindle_predicatemap_struct map = {
+		.target = "target",
+		.indexed = 1
+	};
+	struct literal_struct literals[] = {
+		{ .node = node }
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .nliterals = 1, .literals = literals },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.spindle = &spindle,
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(librdf_statement_set_subject);
+	always_expect(librdf_statement_set_predicate);
+	always_expect(librdf_statement_set_object);
+	always_expect(librdf_free_statement);
+	always_expect(twine_rdf_node_clone, will_return(node));
+	always_expect(twine_rdf_node_createuri, will_return(node));
+	always_expect(twine_rdf_st_create, will_return(statement));
+	always_expect(twine_rdf_st_clone, will_return(statement));
+
+	expect(twine_rdf_model_add_st, will_return(0), when(model, is_equal_to(data.proxymodel)));
+	expect(twine_rdf_model_add_st, will_return(-1), when(model, is_equal_to(data.rootmodel)));
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(-1));
+}
+
 #pragma mark -
 
 int props_test(void) {
@@ -1931,6 +2125,11 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_datatype_uri_is_not_xsd_decimal);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_sets_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_datatype_uri_is_xsd_decimal);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_sets_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_datatype_uri_is_xsd_decimal);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_adds_the_statement_to_the_proxy_model_and_returns_no_error_if_the_match_has_a_literal_and_no_resource);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_the_match_has_a_literal_and_no_resource_and_cloning_the_predicate_statement_fails);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_the_match_has_a_literal_and_no_resource_and_adding_the_statement_to_the_proxy_model_fails);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_when_the_match_has_no_resource_and_is_successful_adds_the_statement_to_the_root_model_and_returns_no_error_if_the_matched_map_is_indexed_and_not_inverted_and_if_multigraph_is_true);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_the_match_has_no_resource_and_adding_the_target_statement_to_the_root_model_fails);
 	return run_test_suite(suite, create_text_reporter());
 }
 
