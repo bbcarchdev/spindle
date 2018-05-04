@@ -2316,6 +2316,57 @@ Ensure(spindle_generate_props, prop_loop_returns_result_from_prop_test_if_object
 }
 
 #pragma mark -
+#pragma mark spindle_prop_cleanup_
+
+Ensure(spindle_generate_props, prop_cleanup_frees_match_resource_and_match_literals_if_match_map_has_a_target) {
+	librdf_node *node_1 = (librdf_node *) 0xA01;
+	librdf_node *node_2 = (librdf_node *) 0xA02;
+	librdf_node *node_3 = (librdf_node *) 0xA03;
+	librdf_node *node_4 = (librdf_node *) 0xA04;
+	librdf_node *node_5 = (librdf_node *) 0xA05;
+	librdf_node *resource_1 = (librdf_node *) 0xA06;
+	librdf_node *resource_2 = (librdf_node *) 0xA07;
+	struct spindle_predicatemap_struct map_1 = { .target = "target 1" };
+	struct spindle_predicatemap_struct map_2 = { .target = "target 2" };
+	struct spindle_predicatemap_struct map_3 = { .target = "target 3" };
+	struct literal_struct literals_1_data[] = {
+		{ .node = node_1 },
+		{ .node = node_2 }
+	};
+	struct literal_struct literals_2_data[] = {
+		{ .node = node_3 },
+		{ .node = node_4 },
+		{ .node = node_5 }
+	};
+	struct propmatch_struct prop_match_data[] = {
+		{ .map = &map_1, .nliterals = 2, .resource = resource_1 },
+		{ .map = &map_2, .resource = resource_2 },
+		{ .map = &map_3, .nliterals = 3 },
+		{ 0 }
+	};
+	struct propdata_struct data = { 0 };
+
+	prop_match_data[0].literals = (struct literal_struct *) malloc(sizeof literals_1_data);
+	prop_match_data[2].literals = (struct literal_struct *) malloc(sizeof literals_2_data);
+	memcpy(prop_match_data[0].literals, literals_1_data, sizeof literals_1_data);
+	memcpy(prop_match_data[2].literals, literals_2_data, sizeof literals_2_data);
+
+	data.matches = (struct propmatch_struct *) malloc(sizeof prop_match_data);
+	memcpy(data.matches, prop_match_data, sizeof prop_match_data);
+
+	expect(librdf_free_node, when(node, is_equal_to(resource_1)));
+	expect(librdf_free_node, when(node, is_equal_to(node_1)));
+	expect(librdf_free_node, when(node, is_equal_to(node_2)));
+	expect(librdf_free_node, when(node, is_equal_to(resource_2)));
+	expect(librdf_free_node, when(node, is_equal_to(node_3)));
+	expect(librdf_free_node, when(node, is_equal_to(node_4)));
+	expect(librdf_free_node, when(node, is_equal_to(node_5)));
+
+	int r = spindle_prop_cleanup_(&data);
+	assert_that(r, is_equal_to(0));
+}
+
+#pragma mark -
 
 int props_test(void) {
 	TestSuite *suite = create_test_suite();
@@ -2409,6 +2460,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_no_error_if_no_entry_reference_is_found_matching_the_subject_or_object);
 	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_result_from_prop_test_if_subject_from_a_source_model_triple_matches_an_entry_reference);
 	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_result_from_prop_test_if_object_from_a_source_model_triple_matches_an_entry_reference);
+	add_test_with_context(suite, spindle_generate_props, prop_cleanup_frees_match_resource_and_match_literals_if_match_map_has_a_target);
 	return run_test_suite(suite, create_text_reporter());
 }
 
