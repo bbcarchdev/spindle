@@ -2367,6 +2367,60 @@ Ensure(spindle_generate_props, prop_cleanup_frees_match_resource_and_match_liter
 }
 
 #pragma mark -
+#pragma mark spindle_prop_init_
+
+Ensure(spindle_generate_props, prop_init_initialises_the_property_data_structure) {
+	struct spindle_predicatemap_struct predicates[] = {
+		{ 0 },
+		{ 0 },
+		{ 0 }
+	};
+	SPINDLERULES rules = {
+		.predicates = predicates,
+		.predcount = 3
+	};
+	SPINDLEENTRY entry = {
+		.spindle = (SPINDLE *) 0xA00,
+		.rules = &rules,
+		.localname = "local name",
+		.classname = "class name",
+		.rootdata = (librdf_model *) 0xA01,
+		.proxydata = (librdf_model *) 0xA02,
+		.sourcedata = (librdf_model *) 0xA03,
+		.extradata = (librdf_model *) 0xA04,
+		.graph = (librdf_node *) 0xA05,
+		.doc = (librdf_node *) 0xA06,
+		.self = (librdf_node *) 0xA07,
+		.sameas = (librdf_node *) 0xA08
+	};
+	struct propmatch_struct expected_matches[4] = {
+		{ .map = &predicates[0] },
+		{ .map = &predicates[1] },
+		{ .map = &predicates[2] },
+		{ 0 }
+	};
+	struct propdata_struct data, expected_data = {
+		.entry = &entry,
+		.spindle = entry.spindle,
+		.source = entry.sourcedata,
+		.localname = entry.localname,
+		.classname = entry.classname,
+		.proxymodel = entry.proxydata,
+		.rootmodel = entry.rootdata,
+		.context = entry.graph,
+		.maps = rules.predicates
+	};
+
+	memset(&data, 0x55, sizeof (struct propdata_struct));
+
+	int r = spindle_prop_init_(&data, &entry);
+	assert_that(r, is_equal_to(0));
+	assert_that(data.matches, is_equal_to_contents_of(expected_matches, sizeof expected_matches));
+	expected_data.matches = data.matches; // fill in expected field with value of allocated pointer
+	assert_that(&data, is_equal_to_contents_of(&expected_data, sizeof expected_data));
+}
+
+#pragma mark -
 
 int props_test(void) {
 	TestSuite *suite = create_test_suite();
@@ -2461,6 +2515,7 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_result_from_prop_test_if_subject_from_a_source_model_triple_matches_an_entry_reference);
 	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_result_from_prop_test_if_object_from_a_source_model_triple_matches_an_entry_reference);
 	add_test_with_context(suite, spindle_generate_props, prop_cleanup_frees_match_resource_and_match_literals_if_match_map_has_a_target);
+	add_test_with_context(suite, spindle_generate_props, prop_init_initialises_the_property_data_structure);
 	return run_test_suite(suite, create_text_reporter());
 }
 
