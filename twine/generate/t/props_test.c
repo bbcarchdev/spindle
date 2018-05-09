@@ -893,6 +893,10 @@ Ensure(spindle_generate_props, candidate_uri_when_successful_sets_match_prominen
 #pragma mark -
 #pragma mark spindle_prop_candidate_
 
+/*
+	spindle_prop_candidate_ always returns zero.
+*/
+
 Ensure(spindle_generate_props, candidate_returns_false_for_raptor_term_type_unknown) {
 	struct spindle_predicatemap_struct predicate_map = { .expected = RAPTOR_TERM_TYPE_UNKNOWN };
 	struct propmatch_struct match = { .map = &predicate_map };
@@ -983,6 +987,8 @@ Ensure(spindle_generate_props, candidate_returns_result_from_candidate_literal_f
 /*
 	These tests really only prove the function exits before strcmp(NULL, NULL) is reached.
 	After the code under test is refactored, we can test each conditional/filter in isolation.
+
+	spindle_prop_test_ always returns zero.
 */
 
 Ensure(spindle_generate_props, prop_test_returns_no_error_for_empty_predicate_map_list) {
@@ -2046,6 +2052,11 @@ Ensure(spindle_generate_props, prop_apply_returns_error_if_the_match_has_no_reso
 #pragma mark -
 #pragma mark spindle_prop_loop_
 
+/*
+	spindle_prop_loop_ always returns zero, as its return value is solely
+	determined by a call to spindle_prop_test_, which itself always returns zero.
+*/
+
 Ensure(spindle_generate_props, prop_loop_returns_no_error_if_there_are_no_statements_in_source_model) {
 	librdf_model *model = (librdf_model *) 0xA01;
 	librdf_statement *statement = (librdf_statement *) 0xA02;
@@ -2318,6 +2329,10 @@ Ensure(spindle_generate_props, prop_loop_returns_result_from_prop_test_if_object
 #pragma mark -
 #pragma mark spindle_prop_cleanup_
 
+/*
+	spindle_prop_cleanup_ always returns zero.
+*/
+
 Ensure(spindle_generate_props, prop_cleanup_frees_match_resource_and_match_literals_if_match_map_has_a_target) {
 	librdf_node *node_1 = (librdf_node *) 0xA01;
 	librdf_node *node_2 = (librdf_node *) 0xA02;
@@ -2421,6 +2436,62 @@ Ensure(spindle_generate_props, prop_init_initialises_the_property_data_structure
 }
 
 #pragma mark -
+#pragma mark spindle_prop_update_entry
+
+Ensure(spindle_generate_props, prop_update_entry_updates_a_proxy_cache_entry_using_data_from_the_source_model_properties) {
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	SPINDLE spindle = { .root = "root" };
+	SPINDLERULES rules = { 0 };
+	SPINDLEENTRY entry = {
+		.spindle = &spindle,
+		.rules = &rules,
+		.localname = "local"
+	};
+	SPINDLEENTRY expected_entry = {
+		.has_geo = 1,
+		.lon = 123.45,
+		.lat = 67.89
+	};
+
+	expect(librdf_new_statement);
+	expect(librdf_model_find_statements);
+	expect(librdf_stream_end, will_return(1));
+	expect(librdf_free_stream);
+	expect(librdf_free_statement);
+	expect(twine_rdf_node_clone, will_return(node));
+	expect(twine_rdf_st_create, will_return(statement));
+	expect(librdf_statement_set_subject);
+	expect(librdf_free_statement);
+
+	int r = spindle_prop_update_entry(&entry);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_generate_props, prop_update_entry_returns_error_when_prop_apply_fails) {
+	librdf_node *node = (librdf_node *) 0xA01;
+	SPINDLE spindle = { .root = "root" };
+	SPINDLERULES rules = { 0 };
+	SPINDLEENTRY cache = {
+		.spindle = &spindle,
+		.rules = &rules,
+		.localname = "local"
+	};
+
+	expect(librdf_new_statement);
+	expect(librdf_model_find_statements);
+	expect(librdf_stream_end, will_return(1));
+	expect(librdf_free_stream);
+	expect(librdf_free_statement);
+	expect(twine_rdf_node_clone, will_return(node));
+	expect(twine_rdf_st_create, will_return(NULL));
+	expect(librdf_free_node, when(node, is_equal_to(node)));
+
+	int r = spindle_prop_update_entry(&cache);
+	assert_that(r, is_equal_to(-1));
+}
+
+#pragma mark -
 
 int props_test(void) {
 	TestSuite *suite = create_test_suite();
@@ -2516,6 +2587,8 @@ int props_test(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_loop_returns_result_from_prop_test_if_object_from_a_source_model_triple_matches_an_entry_reference);
 	add_test_with_context(suite, spindle_generate_props, prop_cleanup_frees_match_resource_and_match_literals_if_match_map_has_a_target);
 	add_test_with_context(suite, spindle_generate_props, prop_init_initialises_the_property_data_structure);
+	add_test_with_context(suite, spindle_generate_props, prop_update_entry_updates_a_proxy_cache_entry_using_data_from_the_source_model_properties);
+	add_test_with_context(suite, spindle_generate_props, prop_update_entry_returns_error_when_prop_apply_fails);
 	return run_test_suite(suite, create_text_reporter());
 }
 
