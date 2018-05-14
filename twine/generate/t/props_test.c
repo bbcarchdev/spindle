@@ -1558,7 +1558,7 @@ Ensure(spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if
 	int r = spindle_prop_apply_(&data);
 	assert_that(r, is_equal_to(0));
 	assert_that(data.has_geo, is_equal_to(0));
-	assert_that((float) data.lon, is_equal_to(0.0f));
+	assert_that_double(data.lon, is_equal_to_double(0.0));
 }
 
 Ensure(spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_literal_has_no_datatype_uri) {
@@ -1600,7 +1600,7 @@ Ensure(spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_
 	int r = spindle_prop_apply_(&data);
 	assert_that(r, is_equal_to(0));
 	assert_that(data.has_geo, is_equal_to(0));
-	assert_that((float) data.lat, is_equal_to(0.0f));
+	assert_that_double(data.lat, is_equal_to_double(0.0));
 }
 
 Ensure(spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_datatype_uri_string_is_NULL) {
@@ -1642,7 +1642,7 @@ Ensure(spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if
 	int r = spindle_prop_apply_(&data);
 	assert_that(r, is_equal_to(0));
 	assert_that(data.has_geo, is_equal_to(0));
-	assert_that((float) data.lon, is_equal_to(0.0f));
+	assert_that_double(data.lon, is_equal_to_double(0.0));
 }
 
 Ensure(spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_datatype_uri_string_is_NULL) {
@@ -1684,7 +1684,7 @@ Ensure(spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_
 	int r = spindle_prop_apply_(&data);
 	assert_that(r, is_equal_to(0));
 	assert_that(data.has_geo, is_equal_to(0));
-	assert_that((float) data.lat, is_equal_to(0.0f));
+	assert_that_double(data.lat, is_equal_to_double(0.0));
 }
 
 Ensure(spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_datatype_uri_is_not_xsd_decimal) {
@@ -1726,7 +1726,7 @@ Ensure(spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if
 	int r = spindle_prop_apply_(&data);
 	assert_that(r, is_equal_to(0));
 	assert_that(data.has_geo, is_equal_to(0));
-	assert_that((float) data.lon, is_equal_to(0.0f));
+	assert_that_double(data.lon, is_equal_to_double(0.0));
 }
 
 Ensure(spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_datatype_uri_is_not_xsd_decimal) {
@@ -1768,7 +1768,7 @@ Ensure(spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_
 	int r = spindle_prop_apply_(&data);
 	assert_that(r, is_equal_to(0));
 	assert_that(data.has_geo, is_equal_to(0));
-	assert_that((float) data.lat, is_equal_to(0.0f));
+	assert_that_double(data.lat, is_equal_to_double(0.0));
 }
 
 Ensure(spindle_generate_props, prop_apply_sets_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_datatype_uri_is_xsd_decimal) {
@@ -1810,7 +1810,7 @@ Ensure(spindle_generate_props, prop_apply_sets_longitude_and_geo_flag_if_the_mat
 	int r = spindle_prop_apply_(&data);
 	assert_that(r, is_equal_to(0));
 	assert_that(data.has_geo, is_equal_to(1));
-	assert_that((float) data.lon, is_equal_to(-123.45f));
+	assert_that_double(data.lon, is_equal_to_double(-123.45));
 }
 
 Ensure(spindle_generate_props, prop_apply_sets_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_datatype_uri_is_xsd_decimal) {
@@ -1852,7 +1852,7 @@ Ensure(spindle_generate_props, prop_apply_sets_latitude_and_geo_flag_if_the_matc
 	int r = spindle_prop_apply_(&data);
 	assert_that(r, is_equal_to(0));
 	assert_that(data.has_geo, is_equal_to(2));
-	assert_that((float) data.lat, is_equal_to(-67.89f));
+	assert_that_double(data.lat, is_equal_to_double(-67.89));
 }
 
 Ensure(spindle_generate_props, prop_apply_adds_the_statement_to_the_proxy_model_and_returns_no_error_if_the_match_has_a_literal_and_no_resource) {
