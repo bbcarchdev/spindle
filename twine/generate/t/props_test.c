@@ -1519,6 +1519,122 @@ Ensure(spindle_generate_props, prop_apply_returns_error_if_the_match_has_a_resou
 	assert_that(r, is_equal_to(-1));
 }
 
+Ensure(spindle_generate_props, prop_apply_sets_the_title_match_to_the_match_struct_mapping_to_rdfs_label) {
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	SPINDLEENTRY entry = { .self = node };
+	struct spindle_predicatemap_struct map1 = {
+		.target = "target"
+	};
+	struct spindle_predicatemap_struct map2 = {
+		.target = NS_RDFS "label"
+	};
+	struct spindle_predicatemap_struct map3 = {
+		.target = NS_DCTERMS "description"
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map1, .resource = node },
+		{ .map = &map2, .resource = node },
+		{ .map = &map3, .resource = node },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(twine_rdf_node_clone, will_return(node));
+	always_expect(twine_rdf_st_create, will_return(statement));
+	always_expect(librdf_statement_set_subject);
+	always_expect(twine_rdf_st_clone, will_return(statement));
+	always_expect(twine_rdf_node_createuri, will_return(node));
+	always_expect(librdf_statement_set_predicate);
+	always_expect(librdf_statement_set_object);
+	always_expect(twine_rdf_model_add_st);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+	assert_that(data.titlematch, is_equal_to(&prop_matches[1]));
+}
+
+Ensure(spindle_generate_props, prop_apply_sets_the_description_match_to_the_match_struct_mapping_to_dct_description) {
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	SPINDLEENTRY entry = { .self = node };
+	struct spindle_predicatemap_struct map1 = {
+		.target = "target"
+	};
+	struct spindle_predicatemap_struct map2 = {
+		.target = NS_RDFS "label"
+	};
+	struct spindle_predicatemap_struct map3 = {
+		.target = NS_DCTERMS "description"
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map1, .resource = node },
+		{ .map = &map2, .resource = node },
+		{ .map = &map3, .resource = node },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(twine_rdf_node_clone, will_return(node));
+	always_expect(twine_rdf_st_create, will_return(statement));
+	always_expect(librdf_statement_set_subject);
+	always_expect(twine_rdf_st_clone, will_return(statement));
+	always_expect(twine_rdf_node_createuri, will_return(node));
+	always_expect(librdf_statement_set_predicate);
+	always_expect(librdf_statement_set_object);
+	always_expect(twine_rdf_model_add_st);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+	assert_that(data.descmatch, is_equal_to(&prop_matches[2]));
+}
+
+Ensure(spindle_generate_props, prop_apply_decrements_the_proxy_entry_score_by_the_prominance_of_each_match) {
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	SPINDLEENTRY entry = { .self = node, .score = 99 };
+	struct spindle_predicatemap_struct map = {
+		.target = "target"
+	};
+	struct propmatch_struct prop_matches[] = {
+		{ .map = &map, .resource = node, .prominence = 33 },
+		{ .map = &map, .resource = node, .prominence = 22 },
+		{ 0 }
+	};
+	struct propdata_struct data = {
+		.entry = &entry,
+		.context = (librdf_node *) 0xB01,
+		.proxymodel = (librdf_model *) 0xB02,
+		.matches = prop_matches
+	};
+
+	always_expect(twine_rdf_node_clone, will_return(node));
+	always_expect(twine_rdf_st_create, will_return(statement));
+	always_expect(librdf_statement_set_subject);
+	always_expect(twine_rdf_st_clone, will_return(statement));
+	always_expect(twine_rdf_node_createuri, will_return(node));
+	always_expect(librdf_statement_set_predicate);
+	always_expect(librdf_statement_set_object);
+	always_expect(twine_rdf_model_add_st);
+	always_expect(librdf_free_statement);
+
+	int r = spindle_prop_apply_(&data);
+	assert_that(r, is_equal_to(0));
+	assert_that(entry.score, is_equal_to(44));
+}
+
 Ensure(spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_literal_has_no_datatype_uri) {
 	librdf_node *self = (librdf_node *) 0xA01;
 	librdf_node *clone = (librdf_node *) 0xA02;
@@ -2565,6 +2681,9 @@ TestSuite *create_props_test_suite(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_apply_clears_the_resource_of_a_successful_match);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_when_the_match_has_a_resource_and_is_successful_adds_the_target_statement_to_the_root_model_if_the_matched_map_is_indexed_and_not_inverted_and_if_multigraph_is_true);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_returns_error_if_the_match_has_a_resource_and_adding_the_target_statement_to_the_root_model_fails);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_sets_the_title_match_to_the_match_struct_mapping_to_rdfs_label);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_sets_the_description_match_to_the_match_struct_mapping_to_dct_description);
+	add_test_with_context(suite, spindle_generate_props, prop_apply_decrements_the_proxy_entry_score_by_the_prominance_of_each_match);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_literal_has_no_datatype_uri);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_does_not_set_latitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_lat_and_the_literal_has_no_datatype_uri);
 	add_test_with_context(suite, spindle_generate_props, prop_apply_does_not_set_longitude_and_geo_flag_if_the_match_has_a_resource_and_map_target_is_geo_long_and_the_datatype_uri_string_is_NULL);
