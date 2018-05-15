@@ -34,10 +34,10 @@ typedef enum {
 #include "../../t/mock_spindle_core.h"
 #include "../../t/mock_spindle_proxy_methods.h"
 
-#define NS_DCTERMS
-#define NS_GEO
-#define NS_RDFS
-#define NS_XSD
+#define NS_DCTERMS "NS_DCTERMS "
+#define NS_GEO "NS_GEO "
+#define NS_RDFS "NS_RDFS "
+#define NS_XSD "NS_XSD "
 
 /* compile SUT inline due to static functions */
 #define P_SPINDLE_GENERATE_H_
@@ -2554,34 +2554,202 @@ Ensure(spindle_generate_props, prop_init_initialises_the_property_data_structure
 #pragma mark -
 #pragma mark spindle_prop_update_entry
 
+/*
+	This test is basically an integration test, but only asserts that the work
+	done directly in this function is correct for the supplied sample data,
+	i.e. from after the call to spindle_prop_apply_() up to before the call
+	to spindle_prop_cleanup_().
+*/
+
 Ensure(spindle_generate_props, prop_update_entry_updates_a_proxy_cache_entry_using_data_from_the_source_model_properties) {
+	char *label_mapped_predicate_1 = "skos:prefLabel";
+	char *label_mapped_predicate_2 = "foaf:name";
+	char *description_mapped_predicate_1 = "po:synopsis";
+	char *description_mapped_predicate_2 = "rdfs:comment";
+	char *lat_mapped_predicate_1 = "geo:lat";
+	char *long_mapped_predicate_1 = "geo:long";
+	char *object_str = "object";
+	char *subject_str = "subject";
+	char *references[] = {
+		subject_str,
+		NULL
+	};
 	librdf_node *node = (librdf_node *) 0xA01;
 	librdf_statement *statement = (librdf_statement *) 0xA02;
+	struct spindle_predicatematch_struct label_matches[] = {
+		{ .predicate = label_mapped_predicate_1 },
+		{ .predicate = label_mapped_predicate_2 },
+		{ 0 }
+	};
+	struct spindle_predicatematch_struct desc_matches[] = {
+		{ .predicate = description_mapped_predicate_1 },
+		{ .predicate = description_mapped_predicate_2 },
+		{ 0 }
+	};
+	struct spindle_predicatematch_struct lat_matches[] = {
+		{ .predicate = lat_mapped_predicate_1 },
+		{ 0 }
+	};
+	struct spindle_predicatematch_struct long_matches[] = {
+		{ .predicate = long_mapped_predicate_1 },
+		{ 0 }
+	};
+	struct spindle_predicatemap_struct predicates[] = {
+		{ .target = "target", .expected = RAPTOR_TERM_TYPE_URI },
+		{ .target = NS_RDFS "label", .expected = RAPTOR_TERM_TYPE_LITERAL, .matches = label_matches },
+		{ .target = NS_DCTERMS "description", .expected = RAPTOR_TERM_TYPE_LITERAL, .matches = desc_matches },
+		{ .target = NS_GEO "lat", .expected = RAPTOR_TERM_TYPE_LITERAL, .matches = lat_matches, .datatype = NS_XSD "decimal" },
+		{ .target = NS_GEO "long", .expected = RAPTOR_TERM_TYPE_LITERAL, .matches = long_matches, .datatype = NS_XSD "decimal" },
+		{ 0 }
+	};
 	SPINDLE spindle = { .root = "root" };
-	SPINDLERULES rules = { 0 };
+	SPINDLERULES rules = {
+		.predicates = predicates,
+		.predcount = 5
+	};
+	SPINDLEGENERATE generate = { .titlepred = NS_RDFS "label" };
 	SPINDLEENTRY entry = {
 		.spindle = &spindle,
 		.rules = &rules,
-		.localname = "local"
+		.generate = &generate ,
+		.refs = references,
+		.self = node,
+		.localname = "proxy local name"
 	};
-	SPINDLEENTRY expected_entry = {
+
+	struct spindle_literalstring_struct expected_titleset_literals = {
+		.lang = "",
+		.str = "title@"
+	};
+	struct spindle_literalstring_struct expected_descset_literals = {
+		.lang = "fr",
+		.str = "description@fr"
+	};
+	char *expected_longitude_literal_str = "123.45";
+	char *expected_latitude_literal_str = "67.89";
+	SPINDLEENTRY expected = {
+		.title = expected_titleset_literals.str,
+		.titleset.nliterals = 1,
+		.titleset.literals = &expected_titleset_literals,
+		.descset.nliterals = 1,
+		.descset.literals = &expected_descset_literals,
 		.has_geo = 1,
 		.lon = 123.45,
 		.lat = 67.89
 	};
 
-	expect(librdf_new_statement);
-	expect(librdf_model_find_statements);
-	expect(librdf_stream_end, will_return(1));
-	expect(librdf_free_stream);
-	expect(librdf_free_statement);
-	expect(twine_rdf_node_clone, will_return(node));
-	expect(twine_rdf_st_create, will_return(statement));
-	expect(librdf_statement_set_subject);
-	expect(librdf_free_statement);
+	// EXPECTATIONS FROM CALLING spindle_prop_loop_()
+
+	// identify winning title
+	expect(librdf_stream_end, will_return(0));
+	expect(librdf_uri_as_string, will_return(label_mapped_predicate_1));
+	expect(librdf_uri_as_string, will_return(subject_str));
+	expect(librdf_uri_as_string, will_return(object_str));
+	expect(librdf_node_get_literal_value_language, will_return(NULL));
+	expect(librdf_node_get_literal_value, will_return(expected_titleset_literals.str));
+	expect(librdf_node_get_literal_value, will_return(expected_titleset_literals.str));
+
+	// identify winning description
+	expect(librdf_stream_end, will_return(0));
+	expect(librdf_uri_as_string, will_return(description_mapped_predicate_2));
+	expect(librdf_uri_as_string, will_return(subject_str));
+	expect(librdf_uri_as_string, will_return(object_str));
+	expect(librdf_node_get_literal_value_language, will_return(expected_descset_literals.lang));
+	expect(librdf_node_get_literal_value, will_return(expected_descset_literals.str));
+
+	// identify latitude
+	char *latitude_type_str = NS_XSD "decimal";
+	librdf_node *latitude_candidate_node = (librdf_node *) 0xC01;
+	librdf_node *latitude_typed_literal_node = (librdf_node *) 0xC02;
+	librdf_uri *latitude_type_uri = (librdf_uri *) 0xC03;
+	expect(librdf_stream_end, will_return(0));
+	expect(librdf_uri_as_string, will_return(lat_mapped_predicate_1));
+	expect(librdf_uri_as_string, will_return(subject_str));
+	expect(librdf_uri_as_string, will_return(object_str));
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(latitude_type_uri));
+	expect(librdf_uri_as_string, will_return(latitude_type_str), when(uri, is_equal_to(latitude_type_uri)));
+	expect(librdf_new_node_from_typed_literal, will_return(latitude_typed_literal_node));
+
+	// identify longitude
+	char *longitude_type_str = NS_XSD "decimal";
+	librdf_node *longitude_candidate_node = (librdf_node *) 0xD01;
+	librdf_node *longitude_typed_literal_node = (librdf_node *) 0xD02;
+	librdf_uri *longitude_type_uri = (librdf_uri *) 0xD03;
+	expect(librdf_stream_end, will_return(0));
+	expect(librdf_uri_as_string, will_return(long_mapped_predicate_1));
+	expect(librdf_uri_as_string, will_return(subject_str));
+	expect(librdf_uri_as_string, will_return(object_str));
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(longitude_type_uri));
+	expect(librdf_uri_as_string, will_return(longitude_type_str), when(uri, is_equal_to(longitude_type_uri)));
+	expect(librdf_new_node_from_typed_literal, will_return(longitude_typed_literal_node));
+
+	// EXPECTATIONS FROM CALLING spindle_prop_apply_()
+
+	// match is geo:lat
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(latitude_type_uri), when(node, is_equal_to(latitude_typed_literal_node)));
+	expect(librdf_uri_as_string, will_return(latitude_type_str), when(uri, is_equal_to(latitude_type_uri)));
+	expect(librdf_node_get_literal_value, will_return(expected_latitude_literal_str));
+
+	// match is geo:long
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(longitude_type_uri), when(node, is_equal_to(longitude_typed_literal_node)));
+	expect(librdf_uri_as_string, will_return(longitude_type_str), when(uri, is_equal_to(longitude_type_uri)));
+	expect(librdf_node_get_literal_value, will_return(expected_longitude_literal_str));
+
+	// EXPECTATIONS FOR ACTUAL STUFF IN spindle_prop_update_entry()
+
+	// copying winning title & desc from match to set
+	expect(librdf_node_get_literal_value, will_return(expected_titleset_literals.str));
+	expect(librdf_node_get_literal_value, will_return(expected_descset_literals.str));
+
+	// LIBRARY CALLS WHOSE RETURN VALUES ARE NOT INTERESTING FROM THIS POINT ON
+
+	always_expect(librdf_free_node);
+	always_expect(librdf_free_statement);
+	always_expect(librdf_free_stream);
+	always_expect(librdf_free_uri);
+	always_expect(librdf_model_find_statements);
+	always_expect(librdf_new_node_from_typed_literal, will_return(1));
+	always_expect(librdf_new_statement, will_return(1));
+	always_expect(librdf_new_uri, will_return(1));
+	always_expect(librdf_node_get_literal_value_language);
+	always_expect(librdf_node_get_uri, will_return(1));
+	always_expect(librdf_node_is_literal, will_return(1));
+	always_expect(librdf_node_is_resource, will_return(1));
+	always_expect(librdf_statement_get_object, will_return(1));
+	always_expect(librdf_statement_get_subject, will_return(1));
+	always_expect(librdf_statement_get_predicate, will_return(1));
+	always_expect(librdf_statement_set_object);
+	always_expect(librdf_statement_set_predicate);
+	always_expect(librdf_statement_set_subject);
+	always_expect(librdf_stream_end, will_return(1));
+	always_expect(librdf_stream_get_object, will_return(1));
+	always_expect(librdf_stream_next);
+	always_expect(twine_rdf_model_add_st);
+	always_expect(twine_rdf_node_clone, will_return(node));
+	always_expect(twine_rdf_node_createuri, will_return(node));
+	always_expect(twine_rdf_node_destroy);
+	always_expect(twine_rdf_st_clone, will_return(statement));
+	always_expect(twine_rdf_st_create, will_return(statement));
 
 	int r = spindle_prop_update_entry(&entry);
 	assert_that(r, is_equal_to(0));
+
+	// check spindle_prop_copystrings_ gets called as expected
+	assert_that(entry.titleset.nliterals, is_equal_to(expected.titleset.nliterals));
+	assert_that(entry.titleset.literals[0].lang, is_equal_to_string(expected.titleset.literals[0].lang));
+	assert_that(entry.titleset.literals[0].str, is_equal_to_string(expected.titleset.literals[0].str));
+	assert_that(entry.descset.nliterals, is_equal_to(expected.descset.nliterals));
+	assert_that(entry.descset.literals[0].lang, is_equal_to_string(expected.descset.literals[0].lang));
+	assert_that(entry.descset.literals[0].str, is_equal_to_string(expected.descset.literals[0].str));
+
+	// check that the proxy entry geo fields are set as expected
+	assert_that(entry.has_geo, is_equal_to(expected.has_geo));
+	assert_that_double(entry.lat, is_equal_to_double(expected.lat));
+	assert_that_double(entry.lon, is_equal_to_double(expected.lon));
+
+	// check that the winning title is cached under the correct language field
+	assert_that(entry.title, is_equal_to_string(expected.title));
+	assert_that(entry.title_en, is_null);
 }
 
 Ensure(spindle_generate_props, prop_update_entry_returns_error_when_prop_apply_fails) {
