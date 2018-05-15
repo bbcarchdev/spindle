@@ -2752,6 +2752,126 @@ Ensure(spindle_generate_props, prop_update_entry_updates_a_proxy_cache_entry_usi
 	assert_that(entry.title_en, is_null);
 }
 
+Ensure(spindle_generate_props, prop_update_entry_updates_the_english_title_of_a_proxy_cache_entry_using_data_from_the_source_model_properties) {
+	char *label_mapped_predicate_1 = "skos:prefLabel";
+	char *label_mapped_predicate_2 = "foaf:name";
+	char *description_mapped_predicate_1 = "po:synopsis";
+	char *description_mapped_predicate_2 = "rdfs:comment";
+	char *object_str = "object";
+	char *subject_str = "subject";
+	char *references[] = {
+		subject_str,
+		NULL
+	};
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	struct spindle_predicatematch_struct label_matches[] = {
+		{ .predicate = label_mapped_predicate_1 },
+		{ .predicate = label_mapped_predicate_2 },
+		{ 0 }
+	};
+	struct spindle_predicatematch_struct desc_matches[] = {
+		{ .predicate = description_mapped_predicate_1 },
+		{ .predicate = description_mapped_predicate_2 },
+		{ 0 }
+	};
+	struct spindle_predicatemap_struct predicates[] = {
+		{ .target = NS_RDFS "label", .expected = RAPTOR_TERM_TYPE_LITERAL, .matches = label_matches },
+		{ .target = NS_DCTERMS "description", .expected = RAPTOR_TERM_TYPE_LITERAL, .matches = desc_matches },
+		{ 0 }
+	};
+	SPINDLE spindle = { .root = "root" };
+	SPINDLERULES rules = {
+		.predicates = predicates,
+		.predcount = 5
+	};
+	SPINDLEGENERATE generate = { .titlepred = NS_RDFS "label" };
+	SPINDLEENTRY entry = {
+		.spindle = &spindle,
+		.rules = &rules,
+		.generate = &generate ,
+		.refs = references,
+		.self = node,
+		.localname = "proxy local name"
+	};
+
+	struct spindle_literalstring_struct expected_titleset_literals = {
+		.lang = "en",
+		.str = "title@en"
+	};
+	struct spindle_literalstring_struct expected_descset_literals = {
+		.lang = "fr",
+		.str = "description@fr"
+	};
+	SPINDLEENTRY expected = {
+		.title_en = expected_titleset_literals.str,
+		.titleset.nliterals = 1,
+		.titleset.literals = &expected_titleset_literals,
+		.descset.nliterals = 1,
+		.descset.literals = &expected_descset_literals
+	};
+
+	// EXPECTATIONS FROM CALLING spindle_prop_loop_()
+
+	// identify winning title
+	expect(librdf_stream_end, will_return(0));
+	expect(librdf_uri_as_string, will_return(label_mapped_predicate_1));
+	expect(librdf_uri_as_string, will_return(subject_str));
+	expect(librdf_uri_as_string, will_return(object_str));
+	expect(librdf_node_get_literal_value_language, will_return(expected_titleset_literals.lang));
+	expect(librdf_node_get_literal_value, will_return(expected_titleset_literals.str));
+
+	// identify winning description
+	expect(librdf_stream_end, will_return(0));
+	expect(librdf_uri_as_string, will_return(description_mapped_predicate_2));
+	expect(librdf_uri_as_string, will_return(subject_str));
+	expect(librdf_uri_as_string, will_return(object_str));
+	expect(librdf_node_get_literal_value_language, will_return(expected_descset_literals.lang));
+
+	// EXPECTATIONS FOR ACTUAL STUFF IN spindle_prop_update_entry()
+
+	// copying winning title & desc from match to set
+	expect(librdf_node_get_literal_value, will_return(expected_titleset_literals.str));
+	expect(librdf_node_get_literal_value, will_return(expected_descset_literals.str));
+
+	// LIBRARY CALLS WHOSE RETURN VALUES ARE NOT INTERESTING FROM THIS POINT ON
+
+	always_expect(librdf_free_node);
+	always_expect(librdf_free_statement);
+	always_expect(librdf_free_stream);
+	always_expect(librdf_free_uri);
+	always_expect(librdf_model_find_statements);
+	always_expect(librdf_new_node_from_typed_literal, will_return(1));
+	always_expect(librdf_new_statement, will_return(1));
+	always_expect(librdf_new_uri, will_return(1));
+	always_expect(librdf_node_get_literal_value_language);
+	always_expect(librdf_node_get_uri, will_return(1));
+	always_expect(librdf_node_is_literal, will_return(1));
+	always_expect(librdf_node_is_resource, will_return(1));
+	always_expect(librdf_statement_get_object, will_return(1));
+	always_expect(librdf_statement_get_predicate, will_return(1));
+	always_expect(librdf_statement_get_subject, will_return(1));
+	always_expect(librdf_statement_set_object);
+	always_expect(librdf_statement_set_predicate);
+	always_expect(librdf_statement_set_subject);
+	always_expect(librdf_stream_end, will_return(1));
+	always_expect(librdf_stream_get_object, will_return(1));
+	always_expect(librdf_stream_next);
+	always_expect(twine_rdf_model_add_st);
+	always_expect(twine_rdf_node_clone, will_return(node));
+	always_expect(twine_rdf_node_createuri, will_return(node));
+	always_expect(twine_rdf_node_destroy);
+	always_expect(twine_rdf_st_clone, will_return(statement));
+	always_expect(twine_rdf_st_create, will_return(statement));
+
+	int r = spindle_prop_update_entry(&entry);
+	assert_that(r, is_equal_to(0));
+
+	// check that the winning title is cached under the correct language field
+	assert_that(entry.title, is_null);
+	assert_that(entry.title_en, is_equal_to_string(expected.title_en));
+}
+
 Ensure(spindle_generate_props, prop_update_entry_returns_error_when_prop_apply_fails) {
 	librdf_node *node = (librdf_node *) 0xA01;
 	SPINDLE spindle = { .root = "root" };
@@ -2875,6 +2995,7 @@ TestSuite *create_props_test_suite(void) {
 	add_test_with_context(suite, spindle_generate_props, prop_cleanup_frees_match_resource_and_match_literals_if_match_map_has_a_target);
 	add_test_with_context(suite, spindle_generate_props, prop_init_initialises_the_property_data_structure);
 	add_test_with_context(suite, spindle_generate_props, prop_update_entry_updates_a_proxy_cache_entry_using_data_from_the_source_model_properties);
+	add_test_with_context(suite, spindle_generate_props, prop_update_entry_updates_the_english_title_of_a_proxy_cache_entry_using_data_from_the_source_model_properties);
 	add_test_with_context(suite, spindle_generate_props, prop_update_entry_returns_error_when_prop_apply_fails);
 	return suite;
 }
