@@ -158,3 +158,22 @@ struct spindle_predicatematch_struct {
 	int prominence;
 	int inverse;
 };
+
+struct spindle_coref_struct
+{
+	char *left;
+	char *right;
+};
+
+struct spindle_corefset_struct
+{
+	struct spindle_coref_struct *refs;
+	size_t refcount;
+	size_t size;
+};
+
+struct coref_match_struct
+{
+	const char *predicate;
+	int (*callback)(struct spindle_corefset_struct *set, const char *subject, const char *object);
+};

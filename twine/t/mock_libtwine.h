@@ -21,6 +21,10 @@ typedef struct {
 	void *old;
 } twine_graph;
 
+char *twine_config_geta(const char *key, const char *defval) {
+	return (char *) mock(key, defval);
+}
+
 int twine_logf(int level, char *msg, ...) {
 	return (int) mock(level, msg);
 }
@@ -39,6 +43,10 @@ librdf_model *twine_rdf_model_create(void) {
 
 int twine_rdf_model_destroy(librdf_model *model) {
 	return (int) mock(model);
+}
+
+int twine_rdf_model_parse(librdf_model *model, const char *mime, const char *buf, size_t buflen) {
+	return (int) mock(model, mime, buf, buflen);
 }
 
 librdf_node *twine_rdf_node_createuri(const char *uri) {
