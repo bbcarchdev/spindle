@@ -135,6 +135,53 @@ Ensure(spindle_common_rulebase, create_loads_an_empty_ruleset_from_configured_fi
 	assert_that(rules, is_non_null);
 }
 
+Ensure(spindle_common_rulebase, create_loads_rules) {
+	char *path = __FILE__;
+	struct coref_match_struct match_types = { 0 };
+	librdf_model *model = (librdf_model *) 0xA01;
+
+	always_expect(spindle_rulebase_cachepred_add);
+	always_expect(twine_rdf_model_create, will_return(model));
+	always_expect(twine_rdf_model_parse);
+	always_expect(librdf_model_as_stream);
+	expect(librdf_stream_end, will_return(0));
+		expect(librdf_stream_get_object, when(stream, is_equal_to(0)));
+		expect(librdf_statement_get_subject);
+		expect(librdf_statement_get_predicate);
+		expect(librdf_statement_get_object);
+		expect(librdf_node_is_resource);
+		expect(librdf_stream_next);
+	expect(librdf_stream_end, will_return(0));
+		expect(librdf_stream_get_object);
+		expect(librdf_statement_get_subject);
+		expect(librdf_statement_get_predicate);
+		expect(librdf_statement_get_object);
+		expect(librdf_node_is_resource, will_return(1));
+		expect(librdf_node_is_resource);
+		expect(librdf_stream_next);
+	expect(librdf_stream_end, will_return(0));
+		expect(librdf_stream_get_object);
+		expect(librdf_statement_get_subject);
+		expect(librdf_statement_get_predicate);
+		expect(librdf_statement_get_object);
+		expect(librdf_node_is_resource, will_return(1));
+		expect(librdf_node_is_resource, will_return(1));
+		expect(librdf_node_get_uri);
+		expect(librdf_uri_as_string, will_return("subject"));
+		expect(librdf_node_get_uri);
+		expect(librdf_uri_as_string, will_return("predicate"));
+		expect(librdf_stream_next);
+	expect(librdf_stream_end, will_return(1));
+	always_expect(librdf_free_stream);
+	always_expect(twine_rdf_model_destroy);
+	always_expect(spindle_rulebase_class_finalise);
+	always_expect(spindle_rulebase_pred_finalise);
+	always_expect(spindle_rulebase_cachepred_finalise);
+
+	SPINDLERULES *rules = spindle_rulebase_create(path, &match_types);
+	assert_that(rules, is_non_null);
+}
+
 #pragma mark -
 
 TestSuite *create_rulebase_test_suite(void) {
@@ -143,6 +190,7 @@ TestSuite *create_rulebase_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, create_fails_if_rulebase_file_cannot_be_opened);
 	add_test_with_context(suite, spindle_common_rulebase, create_loads_an_empty_ruleset_from_passed_file);
 	add_test_with_context(suite, spindle_common_rulebase, create_loads_an_empty_ruleset_from_configured_file_if_none_passed);
+	add_test_with_context(suite, spindle_common_rulebase, create_loads_rules);
 	return suite;
 }
 
