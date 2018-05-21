@@ -382,6 +382,64 @@ Ensure(spindle_common_rulebase, add_statement_returns_error_if_predicate_is_rdfs
 	assert_that(r, is_equal_to(-1));
 }
 
+Ensure(spindle_common_rulebase, add_statement_returns_success_if_predicate_is_rdfs_type_and_object_is_spindle_property) {
+	librdf_node *subject = (librdf_node *) 0xA01;
+	librdf_node *predicate = (librdf_node *) 0xA02;
+	librdf_node *object = (librdf_node *) 0xA03;
+	librdf_uri *subject_uri = (librdf_uri *) 0xA04;
+	librdf_uri *predicate_uri = (librdf_uri *) 0xA05;
+	librdf_uri *object_uri = (librdf_uri *) 0xA06;
+	char *subject_str = "subject";
+	char *predicate_str = NS_RDF "type";
+	char *object_str = NS_SPINDLE "Property";
+
+	expect(librdf_statement_get_subject, will_return(subject));
+	expect(librdf_statement_get_predicate, will_return(predicate));
+	expect(librdf_statement_get_object, will_return(object));
+	expect(librdf_node_is_resource, will_return(1), when(node, is_equal_to(subject)));
+	expect(librdf_node_is_resource, will_return(1), when(node, is_equal_to(predicate)));
+	expect(librdf_node_get_uri, will_return(subject_uri), when(node, is_equal_to(subject)));
+	expect(librdf_uri_as_string, will_return(subject_str), when(uri, is_equal_to(subject_uri)));
+	expect(librdf_node_get_uri, will_return(predicate_uri), when(node, is_equal_to(predicate)));
+	expect(librdf_uri_as_string, will_return(predicate_str), when(uri, is_equal_to(predicate_uri)));
+	expect(librdf_node_is_resource, will_return(1), when(node, is_equal_to(object)));
+	expect(librdf_node_get_uri, will_return(object_uri), when(node, is_equal_to(object)));
+	expect(librdf_uri_as_string, will_return(object_str), when(uri, is_equal_to(object_uri)));
+	expect(spindle_rulebase_pred_add_node, when(uri, is_equal_to(subject_str)), when(node, is_equal_to(subject)));
+
+	int r = spindle_rulebase_add_statement_(NULL, NULL, NULL);
+	assert_that(r, is_equal_to(1));
+}
+
+Ensure(spindle_common_rulebase, add_statement_returns_error_if_predicate_is_rdfs_type_and_object_is_spindle_property_but_add_node_fails) {
+	librdf_node *subject = (librdf_node *) 0xA01;
+	librdf_node *predicate = (librdf_node *) 0xA02;
+	librdf_node *object = (librdf_node *) 0xA03;
+	librdf_uri *subject_uri = (librdf_uri *) 0xA04;
+	librdf_uri *predicate_uri = (librdf_uri *) 0xA05;
+	librdf_uri *object_uri = (librdf_uri *) 0xA06;
+	char *subject_str = "subject";
+	char *predicate_str = NS_RDF "type";
+	char *object_str = NS_SPINDLE "Property";
+
+	expect(librdf_statement_get_subject, will_return(subject));
+	expect(librdf_statement_get_predicate, will_return(predicate));
+	expect(librdf_statement_get_object, will_return(object));
+	expect(librdf_node_is_resource, will_return(1), when(node, is_equal_to(subject)));
+	expect(librdf_node_is_resource, will_return(1), when(node, is_equal_to(predicate)));
+	expect(librdf_node_get_uri, will_return(subject_uri), when(node, is_equal_to(subject)));
+	expect(librdf_uri_as_string, will_return(subject_str), when(uri, is_equal_to(subject_uri)));
+	expect(librdf_node_get_uri, will_return(predicate_uri), when(node, is_equal_to(predicate)));
+	expect(librdf_uri_as_string, will_return(predicate_str), when(uri, is_equal_to(predicate_uri)));
+	expect(librdf_node_is_resource, will_return(1), when(node, is_equal_to(object)));
+	expect(librdf_node_get_uri, will_return(object_uri), when(node, is_equal_to(object)));
+	expect(librdf_uri_as_string, will_return(object_str), when(uri, is_equal_to(object_uri)));
+	expect(spindle_rulebase_pred_add_node, will_return(-1), when(uri, is_equal_to(subject_str)), when(node, is_equal_to(subject)));
+
+	int r = spindle_rulebase_add_statement_(NULL, NULL, NULL);
+	assert_that(r, is_equal_to(-1));
+}
+
 #pragma mark -
 
 TestSuite *create_rulebase_test_suite(void) {
@@ -402,6 +460,8 @@ TestSuite *create_rulebase_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, add_statement_returns_no_error_if_predicate_is_rdfs_type_but_object_is_neither_spindle_class_nor_spindle_property);
 	add_test_with_context(suite, spindle_common_rulebase, add_statement_returns_success_if_predicate_is_rdfs_type_and_object_is_spindle_class);
 	add_test_with_context(suite, spindle_common_rulebase, add_statement_returns_error_if_predicate_is_rdfs_type_and_object_is_spindle_class_but_add_node_fails);
+	add_test_with_context(suite, spindle_common_rulebase, add_statement_returns_success_if_predicate_is_rdfs_type_and_object_is_spindle_property);
+	add_test_with_context(suite, spindle_common_rulebase, add_statement_returns_error_if_predicate_is_rdfs_type_and_object_is_spindle_property_but_add_node_fails);
 	return suite;
 }
 
