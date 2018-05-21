@@ -73,11 +73,76 @@ Ensure(spindle_common_rulebase, create_fails_if_twine_rdf_model_create_fails) {
 	assert_that(rules, is_null);
 }
 
+Ensure(spindle_common_rulebase, create_fails_if_rulebase_file_cannot_be_opened) {
+	char *path = "fichier n'existe pas";
+	struct coref_match_struct match_types = { 0 };
+	librdf_model *model = (librdf_model *) 0xA01;
+
+	expect(twine_rdf_model_create, will_return(model));
+	always_expect(spindle_rulebase_cachepred_add);
+	always_expect(twine_rdf_model_destroy);
+	always_expect(spindle_rulebase_class_cleanup);
+	always_expect(spindle_rulebase_pred_cleanup);
+	always_expect(spindle_rulebase_cachepred_cleanup);
+
+	SPINDLERULES *rules = spindle_rulebase_create(path, &match_types);
+	assert_that(rules, is_null);
+}
+
+Ensure(spindle_common_rulebase, create_loads_an_empty_ruleset_from_passed_file) {
+	char *path = __FILE__;
+	struct coref_match_struct match_types = { 0 };
+	librdf_model *model = (librdf_model *) 0xA01;
+
+	expect(spindle_rulebase_cachepred_add);
+	expect(spindle_rulebase_cachepred_add);
+	expect(twine_rdf_model_create, will_return(model));
+	expect(twine_rdf_model_parse, when(model, is_equal_to(model)), when(mime, is_equal_to_string(MIME_TURTLE)));
+	expect(librdf_model_as_stream, when(model, is_equal_to(model)));
+	expect(librdf_stream_end, will_return(1));
+	expect(librdf_free_stream);
+	expect(twine_rdf_model_destroy, when(model, is_equal_to(model)));
+	expect(spindle_rulebase_class_finalise);
+	expect(spindle_rulebase_pred_finalise);
+	expect(spindle_rulebase_cachepred_finalise);
+
+	SPINDLERULES *rules = spindle_rulebase_create(path, &match_types);
+	assert_that(rules, is_non_null);
+}
+
+Ensure(spindle_common_rulebase, create_loads_an_empty_ruleset_from_configured_file_if_none_passed) {
+	char *path = NULL, *default_path;
+	struct coref_match_struct match_types = { 0 };
+	librdf_model *model = (librdf_model *) 0xA01;
+
+	default_path = malloc(strlen(__FILE__) + 1);
+	strcpy(default_path, __FILE__);
+
+	expect(spindle_rulebase_cachepred_add);
+	expect(spindle_rulebase_cachepred_add);
+	expect(twine_rdf_model_create, will_return(model));
+	expect(twine_config_geta, will_return(default_path), when(key, is_equal_to_string("spindle:rulebase")), when(defval, is_equal_to_string(TWINEMODULEDIR "/rulebase.ttl")));
+	expect(twine_rdf_model_parse, when(model, is_equal_to(model)), when(mime, is_equal_to_string(MIME_TURTLE)));
+	expect(librdf_model_as_stream, when(model, is_equal_to(model)));
+	expect(librdf_stream_end, will_return(1));
+	expect(librdf_free_stream);
+	expect(twine_rdf_model_destroy, when(model, is_equal_to(model)));
+	expect(spindle_rulebase_class_finalise);
+	expect(spindle_rulebase_pred_finalise);
+	expect(spindle_rulebase_cachepred_finalise);
+
+	SPINDLERULES *rules = spindle_rulebase_create(path, &match_types);
+	assert_that(rules, is_non_null);
+}
+
 #pragma mark -
 
 TestSuite *create_rulebase_test_suite(void) {
 	TestSuite *suite = create_test_suite();
 	add_test_with_context(suite, spindle_common_rulebase, create_fails_if_twine_rdf_model_create_fails);
+	add_test_with_context(suite, spindle_common_rulebase, create_fails_if_rulebase_file_cannot_be_opened);
+	add_test_with_context(suite, spindle_common_rulebase, create_loads_an_empty_ruleset_from_passed_file);
+	add_test_with_context(suite, spindle_common_rulebase, create_loads_an_empty_ruleset_from_configured_file_if_none_passed);
 	return suite;
 }
 
