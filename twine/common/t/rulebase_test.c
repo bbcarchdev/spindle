@@ -197,6 +197,21 @@ Ensure(spindle_common_rulebase, destroy_cleans_up) {
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_dump
+
+Ensure(spindle_common_rulebase, dump_dumps_contents) {
+	SPINDLERULES rules = { 0 };
+
+	expect(spindle_rulebase_cachepred_dump, when(rules, is_equal_to(&rules)));
+	expect(spindle_rulebase_class_dump, when(rules, is_equal_to(&rules)));
+	expect(spindle_rulebase_pred_dump, when(rules, is_equal_to(&rules)));
+	expect(spindle_rulebase_coref_dump, when(rules, is_equal_to(&rules)));
+
+	int r = spindle_rulebase_dump(&rules);
+	assert_that(r, is_equal_to(0));
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -206,6 +221,7 @@ TestSuite *create_rulebase_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, create_loads_an_empty_ruleset_from_configured_file_if_none_passed);
 	add_test_with_context(suite, spindle_common_rulebase, create_loads_rules);
 	add_test_with_context(suite, spindle_common_rulebase, destroy_cleans_up);
+	add_test_with_context(suite, spindle_common_rulebase, dump_dumps_contents);
 	return suite;
 }
 
