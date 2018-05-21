@@ -212,6 +212,20 @@ Ensure(spindle_common_rulebase, dump_dumps_contents) {
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_loadfile_
+
+Ensure(spindle_common_rulebase, loadfile_fails_if_file_does_not_exist) {
+	char *buffer = spindle_rulebase_loadfile_("fichier n'existe pas");
+	assert_that(buffer, is_null);
+}
+
+Ensure(spindle_common_rulebase, loadfile_reads_the_text_file_at_the_given_path_into_a_new_string_buffer) {
+	char *buffer = spindle_rulebase_loadfile_(__FILE__);
+	assert_that(buffer, is_non_null);
+	assert_that(strlen(buffer), is_greater_than(0));
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -222,6 +236,8 @@ TestSuite *create_rulebase_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, create_loads_rules);
 	add_test_with_context(suite, spindle_common_rulebase, destroy_cleans_up);
 	add_test_with_context(suite, spindle_common_rulebase, dump_dumps_contents);
+	add_test_with_context(suite, spindle_common_rulebase, loadfile_fails_if_file_does_not_exist);
+	add_test_with_context(suite, spindle_common_rulebase, loadfile_reads_the_text_file_at_the_given_path_into_a_new_string_buffer);
 	return suite;
 }
 
