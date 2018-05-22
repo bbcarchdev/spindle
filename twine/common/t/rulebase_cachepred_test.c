@@ -118,6 +118,34 @@ Ensure(spindle_common_rulebase, cachepred_add_extends_the_cachepred_list_when_it
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_cachepred_finalise
+
+Ensure(spindle_common_rulebase, cachepred_finalise_sorts_the_cachepred_list) {
+	char *preds[] = {
+		"alpha", "beta", "gamma", "delta", "epsilon",
+		"zeta", "eta", "theta", "iota", "kappa"
+	};
+	char *sorted_preds[] = {
+		"alpha", "beta", "delta", "epsilon", "eta",
+		"gamma", "iota", "kappa", "theta", "zeta"
+	};
+	SPINDLERULES rules = { .cachepreds = preds, .cpcount = 10 };
+
+	int r = spindle_rulebase_cachepred_finalise(&rules);
+	assert_that(r, is_equal_to(0));
+	assert_that(rules.cachepreds[0], is_equal_to_string(sorted_preds[0]));
+	assert_that(rules.cachepreds[1], is_equal_to_string(sorted_preds[1]));
+	assert_that(rules.cachepreds[2], is_equal_to_string(sorted_preds[2]));
+	assert_that(rules.cachepreds[3], is_equal_to_string(sorted_preds[3]));
+	assert_that(rules.cachepreds[4], is_equal_to_string(sorted_preds[4]));
+	assert_that(rules.cachepreds[5], is_equal_to_string(sorted_preds[5]));
+	assert_that(rules.cachepreds[6], is_equal_to_string(sorted_preds[6]));
+	assert_that(rules.cachepreds[7], is_equal_to_string(sorted_preds[7]));
+	assert_that(rules.cachepreds[8], is_equal_to_string(sorted_preds[8]));
+	assert_that(rules.cachepreds[9], is_equal_to_string(sorted_preds[9]));
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_cachepred_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -125,6 +153,7 @@ TestSuite *create_rulebase_cachepred_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_adds_a_second_uri_to_the_rulebase_cachepred_list);
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_does_not_add_a_duplicate_uri_to_the_rulebase_cachepred_list);
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_extends_the_cachepred_list_when_it_is_full);
+	add_test_with_context(suite, spindle_common_rulebase, cachepred_finalise_sorts_the_cachepred_list);
 	return suite;
 }
 
