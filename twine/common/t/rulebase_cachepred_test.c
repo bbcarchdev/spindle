@@ -163,6 +163,15 @@ Ensure(spindle_common_rulebase, cachepred_cleanup_frees_all_cached_predicates_an
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_cachepred_dump
+
+Ensure(spindle_common_rulebase, cachepred_dump_only_has_side_effects) {
+	SPINDLERULES rules = { 0 };
+	int r = spindle_rulebase_cachepred_dump(&rules);
+	assert_that(r, is_equal_to(0));
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_cachepred_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -172,6 +181,7 @@ TestSuite *create_rulebase_cachepred_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_extends_the_cachepred_list_when_it_is_full);
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_finalise_sorts_the_cachepred_list);
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_cleanup_frees_all_cached_predicates_and_the_cachpred_list);
+	add_test_with_context(suite, spindle_common_rulebase, cachepred_dump_only_has_side_effects);
 	return suite;
 }
 
