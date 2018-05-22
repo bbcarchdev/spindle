@@ -97,6 +97,26 @@ Ensure(spindle_common_rulebase, cachepred_add_does_not_add_a_duplicate_uri_to_th
 	assert_that(rules.cachepreds[0], is_equal_to_string(uri));
 }
 
+Ensure(spindle_common_rulebase, cachepred_add_extends_the_cachepred_list_when_it_is_full) {
+	SPINDLERULES rules = { 0 };
+
+	spindle_rulebase_cachepred_add(&rules, "uri 1");
+	spindle_rulebase_cachepred_add(&rules, "uri 2");
+	spindle_rulebase_cachepred_add(&rules, "uri 3");
+	spindle_rulebase_cachepred_add(&rules, "uri 4");
+	spindle_rulebase_cachepred_add(&rules, "uri 5");
+	spindle_rulebase_cachepred_add(&rules, "uri 6");
+	spindle_rulebase_cachepred_add(&rules, "uri 7");
+	assert_that(rules.cpsize, is_equal_to(8));
+	assert_that(rules.cpcount, is_equal_to(7));
+
+	int r = spindle_rulebase_cachepred_add(&rules, "uri 8");
+	assert_that(r, is_equal_to(0));
+	assert_that(rules.cpsize, is_equal_to(16));
+	assert_that(rules.cpcount, is_equal_to(8));
+	assert_that(rules.cachepreds, is_non_null);
+}
+
 #pragma mark -
 
 TestSuite *create_rulebase_cachepred_test_suite(void) {
@@ -104,6 +124,7 @@ TestSuite *create_rulebase_cachepred_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_adds_the_uri_to_the_rulebase_cachepred_list);
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_adds_a_second_uri_to_the_rulebase_cachepred_list);
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_does_not_add_a_duplicate_uri_to_the_rulebase_cachepred_list);
+	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_extends_the_cachepred_list_when_it_is_full);
 	return suite;
 }
 
