@@ -146,6 +146,23 @@ Ensure(spindle_common_rulebase, cachepred_finalise_sorts_the_cachepred_list) {
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_cachepred_cleanup
+
+Ensure(spindle_common_rulebase, cachepred_cleanup_frees_all_cached_predicates_and_the_cachpred_list) {
+	SPINDLERULES rules = { 0 };
+	rules.cachepreds = calloc(8, sizeof (char *));
+	rules.cachepreds[0] = strdup("alpha");
+	rules.cachepreds[1] = strdup("beta");
+	rules.cachepreds[2] = strdup("gamma");
+	rules.cpcount = 3;
+
+	int r = spindle_rulebase_cachepred_cleanup(&rules);
+	assert_that(r, is_equal_to(0));
+	assert_that(rules.cachepreds, is_null);
+//	assert_that(rules.cpcount, is_equal_to(0)); // code doesn't do this -> rules is in an inconsistant state
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_cachepred_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -154,6 +171,7 @@ TestSuite *create_rulebase_cachepred_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_does_not_add_a_duplicate_uri_to_the_rulebase_cachepred_list);
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_extends_the_cachepred_list_when_it_is_full);
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_finalise_sorts_the_cachepred_list);
+	add_test_with_context(suite, spindle_common_rulebase, cachepred_cleanup_frees_all_cached_predicates_and_the_cachpred_list);
 	return suite;
 }
 
