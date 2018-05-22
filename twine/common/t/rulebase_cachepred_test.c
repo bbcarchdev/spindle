@@ -83,12 +83,27 @@ Ensure(spindle_common_rulebase, cachepred_add_adds_a_second_uri_to_the_rulebase_
 	assert_that(rules.cachepreds[1], is_equal_to_string(uri_2));
 }
 
+Ensure(spindle_common_rulebase, cachepred_add_does_not_add_a_duplicate_uri_to_the_rulebase_cachepred_list) {
+	SPINDLERULES rules = { 0 };
+	const char *uri = "uri";
+
+	spindle_rulebase_cachepred_add(&rules, uri);
+
+	int r = spindle_rulebase_cachepred_add(&rules, uri);
+	assert_that(r, is_equal_to(0));
+	assert_that(rules.cpsize, is_equal_to(8));
+	assert_that(rules.cpcount, is_equal_to(1));
+	assert_that(rules.cachepreds, is_non_null);
+	assert_that(rules.cachepreds[0], is_equal_to_string(uri));
+}
+
 #pragma mark -
 
 TestSuite *create_rulebase_cachepred_test_suite(void) {
 	TestSuite *suite = create_test_suite();
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_adds_the_uri_to_the_rulebase_cachepred_list);
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_adds_a_second_uri_to_the_rulebase_cachepred_list);
+	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_does_not_add_a_duplicate_uri_to_the_rulebase_cachepred_list);
 	return suite;
 }
 
