@@ -38,14 +38,12 @@ typedef enum {
 #include "../../t/mock_spindle_rulebase_coref.h"
 #include "../../t/mock_spindle_rulebase_pred.h"
 
-/* compile SUT inline due to static functions */
 #define P_SPINDLE_H_
 #define PLUGIN_NAME "spindle-rulebase"
-int spindle_rulebase_destroy(SPINDLERULES *rules);
 #include "../rulebase-cachepred.c"
 
 Describe(spindle_common_rulebase);
-BeforeEach(spindle_common_rulebase) { cgreen_mocks_are(learning_mocks); always_expect(twine_logf); die_in(1); }
+BeforeEach(spindle_common_rulebase) { always_expect(twine_logf); die_in(1); }
 AfterEach(spindle_common_rulebase) {}
 
 /*
