@@ -1,3 +1,4 @@
 #!/bin/bash
 
 cc rulebase_test.c -o rulebase_test -lcgreen && ./rulebase_test
+cc rulebase_cachepred_test.c -o rulebase_cachepred_test -lcgreen && ./rulebase_cachepred_test
