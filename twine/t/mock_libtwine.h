@@ -72,3 +72,11 @@ librdf_statement *twine_rdf_st_clone(librdf_statement *src) {
 int twine_rdf_st_destroy(librdf_statement *statement) {
 	return (int) mock(statement);
 }
+
+int twine_rdf_st_obj_intval(librdf_statement *statement, long *value) {
+	return (int) mock(statement, value);
+}
+
+librdf_world *twine_rdf_world(void) {
+	return (librdf_world *) mock();
+}

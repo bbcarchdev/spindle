@@ -69,6 +69,10 @@ librdf_statement *librdf_new_statement(librdf_world *world) {
 	return (librdf_statement *) mock(world);
 }
 
+librdf_statement *librdf_new_statement_from_nodes(librdf_world *world, librdf_node *subject, librdf_node *predicate, librdf_node *object) {
+	return (librdf_statement *) mock(world, subject, predicate, object);
+}
+
 librdf_statement *librdf_new_statement_from_statement(librdf_statement *statement) {
 	return (librdf_statement *) mock(statement);
 }
