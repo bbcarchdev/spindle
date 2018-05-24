@@ -78,10 +78,61 @@ Ensure(spindle_common_rulebase, class_dump_only_has_side_effects) {
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_class_set_score_
+
+Ensure(spindle_common_rulebase, class_set_score_returns_false_if_the_statement_object_is_not_a_decimal_literal) {
+	struct spindle_classmap_struct entry = { 0 };
+	librdf_statement *statement = (librdf_statement *) 0xA01;
+
+	expect(twine_rdf_st_obj_intval, will_return(0), when(statement, is_equal_to(statement)));
+
+	int r = spindle_rulebase_class_set_score_(&entry, statement);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_common_rulebase, class_set_score_returns_false_if_the_score_to_be_set_is_negative) {
+	long score = -1;
+	struct spindle_classmap_struct entry = { 0 };
+	librdf_statement *statement = (librdf_statement *) 0xA01;
+
+	expect(twine_rdf_st_obj_intval, will_return(1), will_set_contents_of_parameter(value, &score, sizeof (long)), when(statement, is_equal_to(statement)));
+
+	int r = spindle_rulebase_class_set_score_(&entry, statement);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_common_rulebase, class_set_score_returns_false_if_the_score_to_be_set_is_zero) {
+	long score = 0;
+	struct spindle_classmap_struct entry = { 0 };
+	librdf_statement *statement = (librdf_statement *) 0xA01;
+
+	expect(twine_rdf_st_obj_intval, will_return(1), will_set_contents_of_parameter(value, &score, sizeof (long)), when(statement, is_equal_to(statement)));
+
+	int r = spindle_rulebase_class_set_score_(&entry, statement);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_common_rulebase, class_set_score_returns_true_and_sets_the_classmap_score_if_the_score_to_be_set_is_positive) {
+	long score = 777;
+	struct spindle_classmap_struct entry = { 0 };
+	librdf_statement *statement = (librdf_statement *) 0xA01;
+
+	expect(twine_rdf_st_obj_intval, will_return(1), will_set_contents_of_parameter(value, &score, sizeof (long)), when(statement, is_equal_to(statement)));
+
+	int r = spindle_rulebase_class_set_score_(&entry, statement);
+	assert_that(r, is_equal_to(1));
+	assert_that(entry.score, is_equal_to(score));
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_class_test_suite(void) {
 	TestSuite *suite = create_test_suite();
 	add_test_with_context(suite, spindle_common_rulebase, class_dump_only_has_side_effects);
+	add_test_with_context(suite, spindle_common_rulebase, class_set_score_returns_false_if_the_statement_object_is_not_a_decimal_literal);
+	add_test_with_context(suite, spindle_common_rulebase, class_set_score_returns_false_if_the_score_to_be_set_is_negative);
+	add_test_with_context(suite, spindle_common_rulebase, class_set_score_returns_false_if_the_score_to_be_set_is_zero);
+	add_test_with_context(suite, spindle_common_rulebase, class_set_score_returns_true_and_sets_the_classmap_score_if_the_score_to_be_set_is_positive);
 	return suite;
 }
 
