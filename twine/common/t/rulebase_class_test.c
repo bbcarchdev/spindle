@@ -287,6 +287,67 @@ Ensure(spindle_common_rulebase, class_add_returns_an_existing_classmap_for_a_kno
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_class_compare_
+
+Ensure(spindle_common_rulebase, class_compare_returns_no_difference_if_both_scores_are_zero) {
+	struct spindle_classmap_struct a = { 0 };
+	struct spindle_classmap_struct b = { 0 };
+
+	int r = spindle_rulebase_class_compare_(&a, &b);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_common_rulebase, class_compare_returns_no_difference_if_scores_are_equal_and_non_zero) {
+	struct spindle_classmap_struct a = { .score = 5 };
+	struct spindle_classmap_struct b = { .score = 5 };
+
+	int r = spindle_rulebase_class_compare_(&a, &b);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_common_rulebase, class_compare_returns_b_sorts_later_if_b_has_a_higher_score) {
+	struct spindle_classmap_struct a = { .score = 2 };
+	struct spindle_classmap_struct b = { .score = 5 };
+
+	int r = spindle_rulebase_class_compare_(&a, &b);
+	assert_that(r, is_less_than(0));
+}
+
+Ensure(spindle_common_rulebase, class_compare_returns_b_sorts_earlier_if_b_has_a_lower_score) {
+	struct spindle_classmap_struct a = { .score = 5 };
+	struct spindle_classmap_struct b = { .score = 2 };
+
+	int r = spindle_rulebase_class_compare_(&a, &b);
+	assert_that(r, is_greater_than(0));
+}
+
+#pragma mark -
+#pragma mark spindle_rulebase_class_cleanup
+
+Ensure(spindle_common_rulebase, class_cleanup_frees_the_class_uri_and_class_alias_uris) {
+	SPINDLERULES rules = { 0 };
+	rules.classcount = 5;
+	size_t classes_size = rules.classcount * sizeof (struct spindle_classmap_struct);
+	rules.classes = malloc(classes_size);
+	memset(rules.classes, 0x55, classes_size);
+
+	for(size_t c = 0; c < rules.classcount; c++) {
+		rules.classes[c].uri = strdup("class uri");
+		rules.classes[c].matchcount = 2;
+		size_t aliases_size = rules.classes[c].matchcount * sizeof (struct spindle_classmatch_struct);
+		rules.classes[c].match = malloc(aliases_size);
+		memset(rules.classes[c].match, 0x66, aliases_size);
+		for(size_t d = 0; d < rules.classes[c].matchcount; d++) {
+			rules.classes[c].match[d].uri = strdup("class alias uri");
+		}
+	}
+
+	int r = spindle_rulebase_class_cleanup(&rules);
+	assert_that(r, is_equal_to(0));
+	assert_that(rules.classes, is_null);
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_class_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -303,6 +364,11 @@ TestSuite *create_rulebase_class_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, class_add_returns_a_new_classmap_for_an_unknown_uri_and_adds_it_to_the_rulebase);
 	add_test_with_context(suite, spindle_common_rulebase, class_add_appends_a_second_uri_to_the_classes_list);
 	add_test_with_context(suite, spindle_common_rulebase, class_add_returns_an_existing_classmap_for_a_known_uri);
+	add_test_with_context(suite, spindle_common_rulebase, class_compare_returns_no_difference_if_both_scores_are_zero);
+	add_test_with_context(suite, spindle_common_rulebase, class_compare_returns_no_difference_if_scores_are_equal_and_non_zero);
+	add_test_with_context(suite, spindle_common_rulebase, class_compare_returns_b_sorts_later_if_b_has_a_higher_score);
+	add_test_with_context(suite, spindle_common_rulebase, class_compare_returns_b_sorts_earlier_if_b_has_a_lower_score);
+	add_test_with_context(suite, spindle_common_rulebase, class_cleanup_frees_the_class_uri_and_class_alias_uris);
 	return suite;
 }
 
