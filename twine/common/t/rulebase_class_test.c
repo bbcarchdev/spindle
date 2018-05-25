@@ -125,6 +125,168 @@ Ensure(spindle_common_rulebase, class_set_score_returns_true_and_sets_the_classm
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_class_add_match_
+// these first four tests are essentially the same as for spindle_rulebase_coref_add_() in rulebase_coref_test.c
+
+Ensure(spindle_common_rulebase, class_add_match_returns_one_and_adds_the_uri_to_the_match_classmap) {
+	struct spindle_classmap_struct match = { 0 };
+	const char *uri = "match uri";
+	int prominence = 777;
+
+	int r = spindle_rulebase_class_add_match_(&match, uri, prominence);
+	assert_that(r, is_equal_to(1));
+	assert_that(match.matchsize, is_greater_than(0));
+	assert_that(match.matchcount, is_equal_to(1));
+	assert_that(match.match, is_non_null);
+	assert_that(match.match[0].uri, is_equal_to_string(uri));
+	assert_that(match.match[0].prominence, is_equal_to(prominence));
+}
+
+Ensure(spindle_common_rulebase, class_add_match_returns_zero_and_replaces_the_prominence_of_a_match_if_its_url_is_already_in_the_match_list) {
+	struct spindle_classmap_struct match = { 0 };
+	const char *uri = "match uri";
+	int old_prominence = 777;
+	int new_prominence = 888;
+
+	int r = spindle_rulebase_class_add_match_(&match, uri, old_prominence);
+	assert_that(r, is_equal_to(1));
+
+	r = spindle_rulebase_class_add_match_(&match, uri, new_prominence);
+	assert_that(r, is_equal_to(0));
+	assert_that(match.matchsize, is_greater_than(0));
+	assert_that(match.matchcount, is_equal_to(1));
+	assert_that(match.match, is_non_null);
+	assert_that(match.match[0].uri, is_equal_to_string(uri));
+	assert_that(match.match[0].prominence, is_equal_to(new_prominence));
+}
+
+Ensure(spindle_common_rulebase, class_add_match_can_add_multiple_matches) {
+	struct spindle_classmap_struct match = { 0 };
+	const char *uri_1 = "match uri 1";
+	const char *uri_2 = "match uri 2";
+	int prominence_1 = 777;
+	int prominence_2 = 888;
+
+	int r = spindle_rulebase_class_add_match_(&match, uri_1, prominence_1);
+	assert_that(r, is_equal_to(1));
+
+	r = spindle_rulebase_class_add_match_(&match, uri_2, prominence_2);
+	assert_that(r, is_equal_to(1));
+	assert_that(match.matchsize, is_greater_than(1));
+	assert_that(match.matchcount, is_equal_to(2));
+	assert_that(match.match, is_non_null);
+	assert_that(match.match[0].uri, is_equal_to_string(uri_1));
+	assert_that(match.match[0].prominence, is_equal_to(prominence_1));
+	assert_that(match.match[1].uri, is_equal_to_string(uri_2)); // second match is appended to end of list
+	assert_that(match.match[1].prominence, is_equal_to(prominence_2));
+}
+
+Ensure(spindle_common_rulebase, class_add_match_replaces_the_correct_prominence_when_multiple_matches_are_present_and_prominence_is_non_zero) {
+	struct spindle_classmap_struct match = { 0 };
+	const char *uri_1 = "match uri 1";
+	const char *uri_2 = "match uri 2";
+	int prominence_1 = 777;
+	int prominence_2 = 888;
+	int prominence_3 = 999;
+
+	int r = spindle_rulebase_class_add_match_(&match, uri_1, prominence_1);
+	assert_that(r, is_equal_to(1));
+
+	r = spindle_rulebase_class_add_match_(&match, uri_2, prominence_2);
+	assert_that(r, is_equal_to(1));
+
+	r = spindle_rulebase_class_add_match_(&match, uri_2, prominence_3);
+	assert_that(r, is_equal_to(0));
+	assert_that(match.matchsize, is_greater_than(1));
+	assert_that(match.matchcount, is_equal_to(2));
+	assert_that(match.match, is_non_null);
+	assert_that(match.match[0].uri, is_equal_to_string(uri_1));
+	assert_that(match.match[0].prominence, is_equal_to(prominence_1));
+	assert_that(match.match[1].uri, is_equal_to_string(uri_2));
+	assert_that(match.match[1].prominence, is_equal_to(prominence_3));
+}
+
+Ensure(spindle_common_rulebase, class_add_match_does_not_replaces_a_prominence_when_multiple_matches_are_present_and_prominence_is_zero) {
+	struct spindle_classmap_struct match = { 0 };
+	const char *uri_1 = "match uri 1";
+	const char *uri_2 = "match uri 2";
+	int prominence_1 = 777;
+	int prominence_2 = 888;
+	int prominence_3 = 0;
+
+	int r = spindle_rulebase_class_add_match_(&match, uri_1, prominence_1);
+	assert_that(r, is_equal_to(1));
+
+	r = spindle_rulebase_class_add_match_(&match, uri_2, prominence_2);
+	assert_that(r, is_equal_to(1));
+
+	r = spindle_rulebase_class_add_match_(&match, uri_2, prominence_3);
+	assert_that(r, is_equal_to(0));
+	assert_that(match.matchsize, is_greater_than(1));
+	assert_that(match.matchcount, is_equal_to(2));
+	assert_that(match.match, is_non_null);
+	assert_that(match.match[0].uri, is_equal_to_string(uri_1));
+	assert_that(match.match[0].prominence, is_equal_to(prominence_1));
+	assert_that(match.match[1].uri, is_equal_to_string(uri_2));
+	assert_that(match.match[1].prominence, is_equal_to(prominence_2));
+}
+
+#pragma mark -
+#pragma mark spindle_rulebase_class_add_
+
+Ensure(spindle_common_rulebase, class_add_returns_a_new_classmap_for_an_unknown_uri_and_adds_it_to_the_rulebase) {
+	const char *uri = "uri";
+	SPINDLERULES rules = { 0 };
+
+	struct spindle_classmap_struct *p = spindle_rulebase_class_add_(&rules, uri);
+	assert_that(p, is_non_null);
+	assert_that(rules.classes, is_equal_to(p));
+	assert_that(rules.classsize, is_greater_than(0));
+	assert_that(rules.classcount, is_equal_to(1));
+	assert_that(rules.classes[0].uri, is_equal_to_string(uri));
+	assert_that(rules.classes[0].score, is_equal_to(100));
+	assert_that(rules.classes[0].match, is_non_null);
+	assert_that(rules.classes[0].matchcount, is_equal_to(1));
+	assert_that(rules.classes[0].matchsize, is_greater_than(0));
+	assert_that(rules.classes[0].prominence, is_equal_to(0));
+}
+
+Ensure(spindle_common_rulebase, class_add_appends_a_second_uri_to_the_classes_list) {
+	const char *uri_1 = "uri 1";
+	const char *uri_2 = "uri 2";
+	SPINDLERULES rules = { 0 };
+
+	// add the first URI
+	struct spindle_classmap_struct *p = spindle_rulebase_class_add_(&rules, uri_1);
+	assert_that(p, is_non_null);
+	assert_that(rules.classes, is_equal_to(p));
+	assert_that(rules.classcount, is_equal_to(1));
+
+	// add the second URI
+	p = spindle_rulebase_class_add_(&rules, uri_2);
+	assert_that(p, is_non_null);
+	assert_that(rules.classes, is_not_equal_to(p));
+	assert_that(rules.classcount, is_equal_to(2));
+	assert_that(&(rules.classes[1]), is_equal_to(p));
+}
+
+Ensure(spindle_common_rulebase, class_add_returns_an_existing_classmap_for_a_known_uri) {
+	const char *uri_1 = "uri 1";
+	const char *uri_2 = "uri 2";
+	SPINDLERULES rules = { 0 };
+
+	// add the two URIs
+	spindle_rulebase_class_add_(&rules, uri_1);
+	spindle_rulebase_class_add_(&rules, uri_2);
+
+	// re-add the second URI
+	struct spindle_classmap_struct *p = spindle_rulebase_class_add_(&rules, uri_2);
+	assert_that(p, is_non_null);
+	assert_that(rules.classcount, is_equal_to(2));
+	assert_that(&(rules.classes[1]), is_equal_to(p));
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_class_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -133,6 +295,14 @@ TestSuite *create_rulebase_class_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, class_set_score_returns_false_if_the_score_to_be_set_is_negative);
 	add_test_with_context(suite, spindle_common_rulebase, class_set_score_returns_false_if_the_score_to_be_set_is_zero);
 	add_test_with_context(suite, spindle_common_rulebase, class_set_score_returns_true_and_sets_the_classmap_score_if_the_score_to_be_set_is_positive);
+	add_test_with_context(suite, spindle_common_rulebase, class_add_match_returns_one_and_adds_the_uri_to_the_match_classmap);
+	add_test_with_context(suite, spindle_common_rulebase, class_add_match_returns_zero_and_replaces_the_prominence_of_a_match_if_its_url_is_already_in_the_match_list);
+	add_test_with_context(suite, spindle_common_rulebase, class_add_match_can_add_multiple_matches);
+	add_test_with_context(suite, spindle_common_rulebase, class_add_match_replaces_the_correct_prominence_when_multiple_matches_are_present_and_prominence_is_non_zero);
+	add_test_with_context(suite, spindle_common_rulebase, class_add_match_does_not_replaces_a_prominence_when_multiple_matches_are_present_and_prominence_is_zero);
+	add_test_with_context(suite, spindle_common_rulebase, class_add_returns_a_new_classmap_for_an_unknown_uri_and_adds_it_to_the_rulebase);
+	add_test_with_context(suite, spindle_common_rulebase, class_add_appends_a_second_uri_to_the_classes_list);
+	add_test_with_context(suite, spindle_common_rulebase, class_add_returns_an_existing_classmap_for_a_known_uri);
 	return suite;
 }
 
