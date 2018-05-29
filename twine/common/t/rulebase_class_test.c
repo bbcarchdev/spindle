@@ -348,6 +348,54 @@ Ensure(spindle_common_rulebase, class_cleanup_frees_the_class_uri_and_class_alia
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_class_finalise
+// similar test to cachepred_finalise_sorts_the_cachepred_list in rulebase_cachepred_test.c
+
+Ensure(spindle_common_rulebase, class_finalise_sorts_the_class_list_by_score) {
+	struct spindle_classmap_struct classes[] = {
+		{ .score = 29 },
+		{ .score = 3 },
+		{ .score = 13 },
+		{ .score = 23 },
+		{ .score = 5 },
+		{ .score = 17 },
+		{ .score = 11 },
+		{ .score = 2 },
+		{ .score = 7 },
+		{ .score = 19 }
+	};
+	struct spindle_classmap_struct sorted_classes[] = {
+		{ .score = 2 },
+		{ .score = 3 },
+		{ .score = 5 },
+		{ .score = 7 },
+		{ .score = 11 },
+		{ .score = 13 },
+		{ .score = 17 },
+		{ .score = 19 },
+		{ .score = 23 },
+		{ .score = 29 }
+	};
+	SPINDLERULES rules = {
+		.classes = classes,
+		.classcount = sizeof classes / sizeof classes[0]
+	};
+
+	int r = spindle_rulebase_class_finalise(&rules);
+	assert_that(r, is_equal_to(0));
+	assert_that(rules.classes[0].score, is_equal_to(sorted_classes[0].score));
+	assert_that(rules.classes[1].score, is_equal_to(sorted_classes[1].score));
+	assert_that(rules.classes[2].score, is_equal_to(sorted_classes[2].score));
+	assert_that(rules.classes[3].score, is_equal_to(sorted_classes[3].score));
+	assert_that(rules.classes[4].score, is_equal_to(sorted_classes[4].score));
+	assert_that(rules.classes[5].score, is_equal_to(sorted_classes[5].score));
+	assert_that(rules.classes[6].score, is_equal_to(sorted_classes[6].score));
+	assert_that(rules.classes[7].score, is_equal_to(sorted_classes[7].score));
+	assert_that(rules.classes[8].score, is_equal_to(sorted_classes[8].score));
+	assert_that(rules.classes[9].score, is_equal_to(sorted_classes[9].score));
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_class_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -369,6 +417,7 @@ TestSuite *create_rulebase_class_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, class_compare_returns_b_sorts_later_if_b_has_a_higher_score);
 	add_test_with_context(suite, spindle_common_rulebase, class_compare_returns_b_sorts_earlier_if_b_has_a_lower_score);
 	add_test_with_context(suite, spindle_common_rulebase, class_cleanup_frees_the_class_uri_and_class_alias_uris);
+	add_test_with_context(suite, spindle_common_rulebase, class_finalise_sorts_the_class_list_by_score);
 	return suite;
 }
 
