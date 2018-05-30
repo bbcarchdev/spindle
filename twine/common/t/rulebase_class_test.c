@@ -46,7 +46,7 @@ typedef enum {
 #include "../rulebase-class.c"
 
 Describe(spindle_common_rulebase);
-BeforeEach(spindle_common_rulebase) { cgreen_mocks_are(learning_mocks); always_expect(twine_logf); die_in(1); }
+BeforeEach(spindle_common_rulebase) { always_expect(twine_logf); die_in(1); }
 AfterEach(spindle_common_rulebase) {}
 
 /*
