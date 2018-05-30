@@ -444,6 +444,51 @@ Ensure(spindle_common_rulebase, class_add_matchnode_associates_a_match_url_with_
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_class_add_matchnode
+
+Ensure(spindle_common_rulebase, class_add_node_adds_the_class_url_to_the_class_list_with_the_olo_index_score_whos_subject_is_the_given_node) {
+	long score = 999;
+	const char *class_uri = "class uri";
+	librdf_model *model = (librdf_model *) 0xA01;
+	librdf_node *node = (librdf_node *) 0xA02;
+	librdf_node *subject = (librdf_node *) 0xA03;
+	librdf_statement *predicate = (librdf_statement *) 0xA04;
+	librdf_statement *query = (librdf_statement *) 0xA05;
+	librdf_statement *result = (librdf_statement *) 0xA06;
+	librdf_stream *stream = (librdf_stream *) 0xA07;
+	librdf_uri *predicate_uri = (librdf_uri *) 0xA08;
+	librdf_world *world = (librdf_world *) 0xA09;
+	SPINDLERULES rules = { 0 };
+
+	expect(twine_rdf_world, will_return(world));
+	expect(librdf_new_node_from_node, will_return(subject), when(node, is_equal_to(node)));
+	expect(librdf_new_statement_from_nodes, will_return(query), when(world, is_equal_to(world)), when(subject, is_equal_to(subject)), when(predicate, is_equal_to(0)), when(object, is_equal_to(0)));
+	expect(librdf_model_find_statements, will_return(stream), when(model, is_equal_to(model)), when(statement, is_equal_to(query)));
+	expect(librdf_stream_end, will_return(0), when(stream, is_equal_to(stream)));
+	expect(librdf_stream_get_object, will_return(result), when(stream, is_equal_to(stream)));
+	expect(librdf_statement_get_predicate, will_return(predicate), when(statement, is_equal_to(result)));
+	expect(librdf_node_get_uri, will_return(predicate_uri), when(node, is_equal_to(predicate)));
+	expect(librdf_uri_as_string, will_return(NS_OLO "index"), when(uri, is_equal_to(predicate_uri)));
+	expect(twine_rdf_st_obj_intval, will_return(score), will_set_contents_of_parameter(value, &score, sizeof score), when(statement, is_equal_to(result)));
+	expect(librdf_free_stream, when(stream, is_equal_to(stream)));
+	expect(librdf_free_statement, when(statement, is_equal_to(query)));
+
+	int r = spindle_rulebase_class_add_node(&rules, model, class_uri, node);
+//	assert_that(r, is_equal_to(1));
+	assert_that(r, is_equal_to(-1)); // BUG [fixed on develop]
+
+	assert_that(rules.classcount, is_equal_to(1));
+	assert_that(rules.classes, is_non_null);
+	assert_that(rules.classes[0].uri, is_equal_to_string(class_uri));
+	assert_that(rules.classes[0].score, is_equal_to(score));
+	assert_that(rules.classes[0].matchsize, is_greater_than(0));
+	assert_that(rules.classes[0].matchcount, is_equal_to(1));
+	assert_that(rules.classes[0].match, is_non_null);
+	assert_that(rules.classes[0].match[0].uri, is_equal_to_string(class_uri));
+	assert_that(rules.classes[0].match[0].prominence, is_equal_to(0));
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_class_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -467,6 +512,7 @@ TestSuite *create_rulebase_class_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, class_cleanup_frees_the_class_uri_and_class_alias_uris);
 	add_test_with_context(suite, spindle_common_rulebase, class_finalise_sorts_the_class_list_by_score);
 	add_test_with_context(suite, spindle_common_rulebase, class_add_matchnode_associates_a_match_url_with_a_class_url_and_stores_both_in_the_class_list);
+	add_test_with_context(suite, spindle_common_rulebase, class_add_node_adds_the_class_url_to_the_class_list_with_the_olo_index_score_whos_subject_is_the_given_node);
 	return suite;
 }
 
