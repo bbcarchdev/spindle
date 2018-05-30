@@ -61,6 +61,10 @@ int twine_rdf_node_destroy(librdf_node *node) {
 	return (int) mock(node);
 }
 
+int twine_rdf_node_intval(librdf_node *node, long *value) {
+	return (int) mock(node, value);
+}
+
 librdf_statement *twine_rdf_st_create(void) {
 	return (librdf_statement *) mock();
 }
