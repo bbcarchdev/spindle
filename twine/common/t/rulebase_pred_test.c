@@ -153,6 +153,45 @@ Ensure(spindle_common_rulebase, pred_add_match_returns_success_and_overwrites_th
 	assert_that(map.matches[0].inverse, is_equal_to(inverse));
 }
 
+Ensure(spindle_common_rulebase, pred_add_match_returns_success_and_does_not_overwrite_an_existing_entry_when_the_predicate_is_already_in_the_match_list_but_the_inverse_differs) {
+	struct spindle_predicatemap_struct map = { 0 };
+	const char *match_uri = "match uri";
+	int score = 222;
+	int prominence = 333;
+	int inverse_true = 1, inverse_false = 0;
+
+	spindle_rulebase_pred_add_match_(&map, match_uri, NULL, score, prominence, inverse_true);
+	spindle_rulebase_pred_add_match_(&map, match_uri, NULL, score, prominence, inverse_false);
+	assert_that(map.matchcount, is_equal_to(2));
+}
+
+Ensure(spindle_common_rulebase, pred_add_match_returns_success_and_does_not_overwrite_an_existing_entry_when_the_predicate_is_already_in_the_match_list_but_the_classmatch_is_empty) {
+	struct spindle_predicatemap_struct map = { 0 };
+	const char *match_uri = "match uri";
+	const char *class_uri = "class uri";
+	int score = 222;
+	int prominence = 333;
+	int inverse = 444;
+
+	spindle_rulebase_pred_add_match_(&map, match_uri, NULL, score, prominence, inverse);
+	spindle_rulebase_pred_add_match_(&map, match_uri, class_uri, score, prominence, inverse);
+	assert_that(map.matchcount, is_equal_to(2));
+}
+
+Ensure(spindle_common_rulebase, pred_add_match_returns_success_and_does_not_overwrite_an_existing_entry_when_the_predicate_is_already_in_the_match_list_but_the_classmatch_differs) {
+	struct spindle_predicatemap_struct map = { 0 };
+	const char *match_uri = "match uri";
+	const char *class_uri_1 = "class uri 1";
+	const char *class_uri_2 = "class uri 2";
+	int score = 222;
+	int prominence = 333;
+	int inverse = 444;
+
+	spindle_rulebase_pred_add_match_(&map, match_uri, class_uri_1, score, prominence, inverse);
+	spindle_rulebase_pred_add_match_(&map, match_uri, class_uri_2, score, prominence, inverse);
+	assert_that(map.matchcount, is_equal_to(2));
+}
+
 #pragma mark -
 
 TestSuite *create_rulebase_pred_test_suite(void) {
@@ -161,6 +200,9 @@ TestSuite *create_rulebase_pred_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_returns_success_and_adds_the_predicate_to_the_match_list_when_class_restriction_is_not_null);
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_can_add_multiple_different_predicates_to_the_match_list);
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_returns_success_and_overwrites_the_priority_and_prominance_when_the_predicate_is_already_in_the_match_list);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_returns_success_and_does_not_overwrite_an_existing_entry_when_the_predicate_is_already_in_the_match_list_but_the_inverse_differs);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_returns_success_and_does_not_overwrite_an_existing_entry_when_the_predicate_is_already_in_the_match_list_but_the_classmatch_is_empty);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_returns_success_and_does_not_overwrite_an_existing_entry_when_the_predicate_is_already_in_the_match_list_but_the_classmatch_differs);
 	return suite;
 }
 
