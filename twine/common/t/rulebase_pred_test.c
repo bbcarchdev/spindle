@@ -193,6 +193,26 @@ Ensure(spindle_common_rulebase, pred_add_match_returns_success_and_does_not_over
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_pred_add_
+
+Ensure(spindle_common_rulebase, pred_add_adds_the_predicate_to_the_match_list_and_returns_a_pointer_to_the_list_entry) {
+	SPINDLERULES rules = { 0 };
+	const char *predicate_uri = "predicate uri";
+
+	expect(spindle_rulebase_cachepred_add, will_return(0), when(rules, is_equal_to(&rules)), when(uri, is_equal_to(predicate_uri)));
+
+	struct spindle_predicatemap_struct *p = spindle_rulebase_pred_add_(&rules, predicate_uri);
+	assert_that(rules.predsize, is_greater_than(0));
+	assert_that(rules.predcount, is_equal_to(1));
+	assert_that(rules.predicates, is_non_null);
+	assert_that(rules.predicates[0].target, is_equal_to_string(predicate_uri));
+	assert_that(rules.predicates[0].expected, is_equal_to(RAPTOR_TERM_TYPE_UNKNOWN));
+	assert_that(rules.predicates[0].proxyonly, is_equal_to(0));
+	assert_that(rules.predicates[0].score, is_equal_to(100));
+	assert_that(p, is_equal_to(&(rules.predicates[0])));
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_pred_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -203,6 +223,7 @@ TestSuite *create_rulebase_pred_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_returns_success_and_does_not_overwrite_an_existing_entry_when_the_predicate_is_already_in_the_match_list_but_the_inverse_differs);
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_returns_success_and_does_not_overwrite_an_existing_entry_when_the_predicate_is_already_in_the_match_list_but_the_classmatch_is_empty);
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_returns_success_and_does_not_overwrite_an_existing_entry_when_the_predicate_is_already_in_the_match_list_but_the_classmatch_differs);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_adds_the_predicate_to_the_match_list_and_returns_a_pointer_to_the_list_entry);
 	return suite;
 }
 
