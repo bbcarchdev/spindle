@@ -97,12 +97,48 @@ Ensure(spindle_common_rulebase, pred_add_match_returns_success_and_adds_the_pred
 	assert_that(map.matches[0].inverse, is_equal_to(inverse));
 }
 
+Ensure(spindle_common_rulebase, pred_add_match_can_add_multiple_different_predicates_to_the_match_list) {
+	struct spindle_predicatemap_struct map = { 0 };
+	const char *match_uri_1 = "match uri 1";
+	const char *match_uri_2 = "match uri 2";
+	const char *match_uri_3 = "match uri 3";
+	int score_1 = 201, score_2 = 202, score_3 = 203;
+	int prominence_1 = 301, prominence_2 = 302, prominence_3 = 303;
+	int inverse_1 = 401, inverse_2 = 402, inverse_3 = 403;
+
+	int r = spindle_rulebase_pred_add_match_(&map, match_uri_1, NULL, score_1, prominence_1, inverse_1);
+	assert_that(r, is_equal_to(1));
+	r = spindle_rulebase_pred_add_match_(&map, match_uri_2, NULL, score_2, prominence_2, inverse_2);
+	assert_that(r, is_equal_to(1));
+	r = spindle_rulebase_pred_add_match_(&map, match_uri_3, NULL, score_3, prominence_3, inverse_3);
+	assert_that(r, is_equal_to(1));
+	assert_that(map.matchsize, is_greater_than(2));
+	assert_that(map.matchcount, is_equal_to(3));
+	assert_that(map.matches, is_non_null);
+	assert_that(map.matches[0].predicate, is_equal_to_string(match_uri_1));
+	assert_that(map.matches[0].onlyfor, is_null);
+	assert_that(map.matches[0].priority, is_equal_to(score_1));
+	assert_that(map.matches[0].prominence, is_equal_to(prominence_1));
+	assert_that(map.matches[0].inverse, is_equal_to(inverse_1));
+	assert_that(map.matches[1].predicate, is_equal_to_string(match_uri_2));
+	assert_that(map.matches[1].onlyfor, is_null);
+	assert_that(map.matches[1].priority, is_equal_to(score_2));
+	assert_that(map.matches[1].prominence, is_equal_to(prominence_2));
+	assert_that(map.matches[1].inverse, is_equal_to(inverse_2));
+	assert_that(map.matches[2].predicate, is_equal_to_string(match_uri_3));
+	assert_that(map.matches[2].onlyfor, is_null);
+	assert_that(map.matches[2].priority, is_equal_to(score_3));
+	assert_that(map.matches[2].prominence, is_equal_to(prominence_3));
+	assert_that(map.matches[2].inverse, is_equal_to(inverse_3));
+}
+
 #pragma mark -
 
 TestSuite *create_rulebase_pred_test_suite(void) {
 	TestSuite *suite = create_test_suite();
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_returns_success_and_adds_the_predicate_to_the_match_list);
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_returns_success_and_adds_the_predicate_to_the_match_list_when_class_restriction_is_not_null);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_can_add_multiple_different_predicates_to_the_match_list);
 	return suite;
 }
 
