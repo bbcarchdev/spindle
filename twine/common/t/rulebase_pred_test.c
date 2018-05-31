@@ -395,6 +395,84 @@ Ensure(spindle_common_rulebase, pred_set_indexed_returns_true_and_sets_indexed_t
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_pred_set_proxyonly_
+
+Ensure(spindle_common_rulebase, pred_set_proxyonly_returns_false_if_the_statement_object_is_not_a_literal) {
+	struct spindle_predicatemap_struct map = { 0 };
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+
+	expect(librdf_statement_get_object, will_return(node), when(statement, is_equal_to(statement)));
+	expect(librdf_node_is_literal, will_return(0), when(node, is_equal_to(node)));
+
+	int r = spindle_rulebase_pred_set_proxyonly_(&map, statement);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_common_rulebase, pred_set_proxyonly_returns_false_if_the_statement_object_has_no_datatype_uri) {
+	struct spindle_predicatemap_struct map = { 0 };
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	librdf_uri *type = (librdf_uri *) 0xA03;
+
+	expect(librdf_statement_get_object, will_return(node), when(statement, is_equal_to(statement)));
+	expect(librdf_node_is_literal, will_return(1), when(node, is_equal_to(node)));
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(0), when(node, is_equal_to(node)));
+
+	int r = spindle_rulebase_pred_set_proxyonly_(&map, statement);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_common_rulebase, pred_set_proxyonly_returns_false_if_the_statement_object_datatype_uri_is_not_xsd_boolean) {
+	struct spindle_predicatemap_struct map = { 0 };
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	librdf_uri *type = (librdf_uri *) 0xA03;
+
+	expect(librdf_statement_get_object, will_return(node), when(statement, is_equal_to(statement)));
+	expect(librdf_node_is_literal, will_return(1), when(node, is_equal_to(node)));
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(type), when(node, is_equal_to(node)));
+	expect(librdf_uri_as_string, will_return(NS_XSD "integer"), when(uri, is_equal_to(type)));
+
+	int r = spindle_rulebase_pred_set_proxyonly_(&map, statement);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_common_rulebase, pred_set_proxyonly_returns_true_and_sets_proxyonly_to_true_if_the_statement_object_contains_true) {
+	struct spindle_predicatemap_struct map = { 0 };
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	librdf_uri *type = (librdf_uri *) 0xA03;
+
+	expect(librdf_statement_get_object, will_return(node), when(statement, is_equal_to(statement)));
+	expect(librdf_node_is_literal, will_return(1), when(node, is_equal_to(node)));
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(type), when(node, is_equal_to(node)));
+	expect(librdf_uri_as_string, will_return(NS_XSD "boolean"), when(uri, is_equal_to(type)));
+	expect(librdf_node_get_literal_value, will_return("true"), when(node, is_equal_to(node)));
+
+	int r = spindle_rulebase_pred_set_proxyonly_(&map, statement);
+	assert_that(r, is_equal_to(1));
+	assert_that(map.proxyonly, is_equal_to(1));
+}
+
+Ensure(spindle_common_rulebase, pred_set_proxyonly_returns_true_and_sets_proxyonly_to_false_if_the_statement_object_contains_false) {
+	struct spindle_predicatemap_struct map = { .proxyonly = 1 };
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	librdf_uri *type = (librdf_uri *) 0xA03;
+
+	expect(librdf_statement_get_object, will_return(node), when(statement, is_equal_to(statement)));
+	expect(librdf_node_is_literal, will_return(1), when(node, is_equal_to(node)));
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(type), when(node, is_equal_to(node)));
+	expect(librdf_uri_as_string, will_return(NS_XSD "boolean"), when(uri, is_equal_to(type)));
+	expect(librdf_node_get_literal_value, will_return("false"), when(node, is_equal_to(node)));
+
+	int r = spindle_rulebase_pred_set_proxyonly_(&map, statement);
+	assert_that(r, is_equal_to(1));
+	assert_that(map.proxyonly, is_equal_to(0));
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_pred_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -418,6 +496,11 @@ TestSuite *create_rulebase_pred_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, pred_set_indexed_returns_false_if_the_statement_object_datatype_uri_is_not_xsd_boolean);
 	add_test_with_context(suite, spindle_common_rulebase, pred_set_indexed_returns_true_and_sets_indexed_to_true_if_the_statement_object_contains_true);
 	add_test_with_context(suite, spindle_common_rulebase, pred_set_indexed_returns_true_and_sets_indexed_to_false_if_the_statement_object_contains_false);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_proxyonly_returns_false_if_the_statement_object_is_not_a_literal);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_proxyonly_returns_false_if_the_statement_object_has_no_datatype_uri);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_proxyonly_returns_false_if_the_statement_object_datatype_uri_is_not_xsd_boolean);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_proxyonly_returns_true_and_sets_proxyonly_to_true_if_the_statement_object_contains_true);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_proxyonly_returns_true_and_sets_proxyonly_to_false_if_the_statement_object_contains_false);
 	return suite;
 }
 
