@@ -227,6 +227,17 @@ Ensure(spindle_common_rulebase, pred_add_adds_returns_a_pointer_to_an_existing_l
 	assert_that(q, is_equal_to(p));
 }
 
+Ensure(spindle_common_rulebase, pred_add_adds_returns_null_and_does_not_add_a_new_entry_if_adding_the_predicate_to_the_list_of_cached_predicates_fails) {
+	SPINDLERULES rules = { 0 };
+	const char *predicate_uri = "predicate uri";
+
+	expect(spindle_rulebase_cachepred_add, will_return(-1));
+
+	struct spindle_predicatemap_struct *p = spindle_rulebase_pred_add_(&rules, predicate_uri);
+	assert_that(p, is_null);
+	assert_that(rules.predcount, is_equal_to(0));
+}
+
 #pragma mark -
 
 TestSuite *create_rulebase_pred_test_suite(void) {
@@ -240,6 +251,7 @@ TestSuite *create_rulebase_pred_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_returns_success_and_does_not_overwrite_an_existing_entry_when_the_predicate_is_already_in_the_match_list_but_the_classmatch_differs);
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_adds_the_predicate_to_the_match_list_and_returns_a_pointer_to_the_list_entry);
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_adds_returns_a_pointer_to_an_existing_list_entry_and_does_not_add_a_new_entry_if_adding_a_duplicate_predicate);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_adds_returns_null_and_does_not_add_a_new_entry_if_adding_the_predicate_to_the_list_of_cached_predicates_fails);
 	return suite;
 }
 
