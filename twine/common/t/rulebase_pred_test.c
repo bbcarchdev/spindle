@@ -506,6 +506,71 @@ Ensure(spindle_common_rulebase, pred_set_expecttype_returns_success_and_sets_the
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_pred_set_expect_
+
+Ensure(spindle_common_rulebase, pred_set_expect_returns_false_if_the_statement_object_is_not_a_resource) {
+	struct spindle_predicatemap_struct map = { 0 };
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+
+	expect(librdf_statement_get_object, will_return(node), when(statement, is_equal_to(statement)));
+	expect(librdf_node_is_resource, will_return(0), when(node, is_equal_to(node)));
+
+	int r = spindle_rulebase_pred_set_expect_(&map, statement);
+	assert_that(r, is_equal_to(0));
+	assert_that(map.expected, is_equal_to(RAPTOR_TERM_TYPE_UNKNOWN));
+}
+
+Ensure(spindle_common_rulebase, pred_set_expect_returns_false_if_the_statement_object_is_not_rdfs_literal_nor_rdfs_resource) {
+	struct spindle_predicatemap_struct map = { 0 };
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	librdf_uri *uri = (librdf_uri *) 0xA03;
+	const char *uri_str = "uri";
+
+	expect(librdf_statement_get_object, will_return(node), when(statement, is_equal_to(statement)));
+	expect(librdf_node_is_resource, will_return(1), when(node, is_equal_to(node)));
+	expect(librdf_node_get_uri, will_return(uri), when(node, is_equal_to(node)));
+	expect(librdf_uri_as_string, will_return(uri_str), when(uri, is_equal_to(uri)));
+
+	int r = spindle_rulebase_pred_set_expect_(&map, statement);
+	assert_that(r, is_equal_to(0));
+	assert_that(map.expected, is_equal_to(RAPTOR_TERM_TYPE_UNKNOWN));
+}
+
+Ensure(spindle_common_rulebase, pred_set_expect_returns_true_and_sets_the_expected_term_type_to_raptor_literal_if_the_statement_object_is_rdfs_literal) {
+	struct spindle_predicatemap_struct map = { 0 };
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	librdf_uri *uri = (librdf_uri *) 0xA03;
+
+	expect(librdf_statement_get_object, will_return(node), when(statement, is_equal_to(statement)));
+	expect(librdf_node_is_resource, will_return(1), when(node, is_equal_to(node)));
+	expect(librdf_node_get_uri, will_return(uri), when(node, is_equal_to(node)));
+	expect(librdf_uri_as_string, will_return(NS_RDFS "Literal"), when(uri, is_equal_to(uri)));
+
+	int r = spindle_rulebase_pred_set_expect_(&map, statement);
+	assert_that(r, is_equal_to(1));
+	assert_that(map.expected, is_equal_to(RAPTOR_TERM_TYPE_LITERAL));
+}
+
+Ensure(spindle_common_rulebase, pred_set_expect_returns_true_and_sets_the_expected_term_type_to_raptor_uri_if_the_statement_object_is_rdfs_resource) {
+	struct spindle_predicatemap_struct map = { 0 };
+	librdf_node *node = (librdf_node *) 0xA01;
+	librdf_statement *statement = (librdf_statement *) 0xA02;
+	librdf_uri *uri = (librdf_uri *) 0xA03;
+
+	expect(librdf_statement_get_object, will_return(node), when(statement, is_equal_to(statement)));
+	expect(librdf_node_is_resource, will_return(1), when(node, is_equal_to(node)));
+	expect(librdf_node_get_uri, will_return(uri), when(node, is_equal_to(node)));
+	expect(librdf_uri_as_string, will_return(NS_RDFS "Resource"), when(uri, is_equal_to(uri)));
+
+	int r = spindle_rulebase_pred_set_expect_(&map, statement);
+	assert_that(r, is_equal_to(1));
+	assert_that(map.expected, is_equal_to(RAPTOR_TERM_TYPE_URI));
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_pred_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -536,6 +601,10 @@ TestSuite *create_rulebase_pred_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, pred_set_proxyonly_returns_true_and_sets_proxyonly_to_false_if_the_statement_object_contains_false);
 	add_test_with_context(suite, spindle_common_rulebase, pred_set_expecttype_returns_success_if_the_statement_object_is_not_a_resource);
 	add_test_with_context(suite, spindle_common_rulebase, pred_set_expecttype_returns_success_and_sets_the_expected_data_type_if_the_statement_object_is_a_resource);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_expect_returns_false_if_the_statement_object_is_not_a_resource);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_expect_returns_false_if_the_statement_object_is_not_rdfs_literal_nor_rdfs_resource);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_expect_returns_true_and_sets_the_expected_term_type_to_raptor_literal_if_the_statement_object_is_rdfs_literal);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_expect_returns_true_and_sets_the_expected_term_type_to_raptor_uri_if_the_statement_object_is_rdfs_resource);
 	return suite;
 }
 
