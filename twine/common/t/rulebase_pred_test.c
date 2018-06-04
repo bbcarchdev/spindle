@@ -571,6 +571,161 @@ Ensure(spindle_common_rulebase, pred_set_expect_returns_true_and_sets_the_expect
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_pred_set_prominence_
+
+Ensure(spindle_common_rulebase, pred_set_prominence_returns_false_and_does_not_change_prominence_if_getting_intval_fails) {
+	long prominence = 555;
+	struct spindle_predicatemap_struct map = { .prominence = prominence };
+	librdf_statement *statement = (librdf_statement *) 0xA01;
+
+	expect(twine_rdf_st_obj_intval, will_return(0), when(statement, is_equal_to(statement)));
+
+	int r = spindle_rulebase_pred_set_prominence_(&map, statement);
+	assert_that(r, is_equal_to(0));
+	assert_that(map.prominence, is_equal_to(prominence));
+}
+
+Ensure(spindle_common_rulebase, pred_set_prominence_returns_false_and_does_not_change_prominence_if_object_intval_is_negative) {
+	long prominence = -333, old_prominence = 555;
+	struct spindle_predicatemap_struct map = { .prominence = old_prominence };
+	librdf_statement *statement = (librdf_statement *) 0xA01;
+
+	expect(twine_rdf_st_obj_intval, will_return(prominence), will_set_contents_of_parameter(value, &prominence, sizeof prominence), when(statement, is_equal_to(statement)));
+
+	int r = spindle_rulebase_pred_set_prominence_(&map, statement);
+	assert_that(r, is_equal_to(0));
+	assert_that(map.prominence, is_equal_to(old_prominence));
+}
+
+Ensure(spindle_common_rulebase, pred_set_prominence_returns_true_and_sets_prominence_if_object_intval_is_positive) {
+	long prominence = 555;
+	struct spindle_predicatemap_struct map = { 0 };
+	librdf_statement *statement = (librdf_statement *) 0xA01;
+
+	expect(twine_rdf_st_obj_intval, will_return(prominence), will_set_contents_of_parameter(value, &prominence, sizeof prominence), when(statement, is_equal_to(statement)));
+
+	int r = spindle_rulebase_pred_set_prominence_(&map, statement);
+	assert_that(r, is_equal_to(1));
+	assert_that(map.prominence, is_equal_to(prominence));
+}
+
+#pragma mark -
+#pragma mark spindle_rulebase_pred_set_score_
+
+Ensure(spindle_common_rulebase, pred_set_score_returns_false_and_does_not_change_score_if_getting_intval_fails) {
+	long score = 555;
+	struct spindle_predicatemap_struct map = { .score = score };
+	librdf_statement *statement = (librdf_statement *) 0xA01;
+
+	expect(twine_rdf_st_obj_intval, will_return(0), when(statement, is_equal_to(statement)));
+
+	int r = spindle_rulebase_pred_set_score_(&map, statement);
+	assert_that(r, is_equal_to(0));
+	assert_that(map.score, is_equal_to(score));
+}
+
+Ensure(spindle_common_rulebase, pred_set_score_returns_false_and_does_not_change_score_if_object_intval_is_negative) {
+	long score = -333, old_score = 555;
+	struct spindle_predicatemap_struct map = { .score = old_score };
+	librdf_statement *statement = (librdf_statement *) 0xA01;
+
+	expect(twine_rdf_st_obj_intval, will_return(score), will_set_contents_of_parameter(value, &score, sizeof score), when(statement, is_equal_to(statement)));
+
+	int r = spindle_rulebase_pred_set_score_(&map, statement);
+	assert_that(r, is_equal_to(0));
+	assert_that(map.score, is_equal_to(old_score));
+}
+
+Ensure(spindle_common_rulebase, pred_set_score_returns_true_and_sets_score_if_object_intval_is_positive) {
+	long score = 555;
+	struct spindle_predicatemap_struct map = { 0 };
+	librdf_statement *statement = (librdf_statement *) 0xA01;
+
+	expect(twine_rdf_st_obj_intval, will_return(score), will_set_contents_of_parameter(value, &score, sizeof score), when(statement, is_equal_to(statement)));
+
+	int r = spindle_rulebase_pred_set_score_(&map, statement);
+	assert_that(r, is_equal_to(1));
+	assert_that(map.score, is_equal_to(score));
+}
+
+#pragma mark -
+#pragma mark spindle_rulebase_pred_dump
+
+Ensure(spindle_common_rulebase, pred_dump_returns_no_error_and_only_has_side_effects_when_the_predicate_list_is_empty) {
+	SPINDLERULES rules = { 0 };
+
+	int r = spindle_rulebase_pred_dump(&rules);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_common_rulebase, pred_dump_returns_no_error_and_only_has_side_effects_when_the_predicate_list_has_items) {
+	struct spindle_predicatematch_struct matches[] = {
+		{
+			.predicate = "some:predicate",
+			.priority = 5
+		},
+		{
+			.onlyfor = "<some_class>",
+			.predicate = "some:predicate",
+			.priority = 5
+		}
+	};
+	struct spindle_predicatemap_struct predicates[] = {
+		{ 0 },
+		{
+			.expected = RAPTOR_TERM_TYPE_URI,
+			.proxyonly = 1,
+			.datatype = "datatype",
+			.matches = matches,
+			.matchcount = sizeof matches / sizeof matches[0]
+		}
+	};
+	SPINDLERULES rules = {
+		.predicates = predicates,
+		.predcount = sizeof predicates / sizeof predicates[0]
+	};
+
+	int r = spindle_rulebase_pred_dump(&rules);
+	assert_that(r, is_equal_to(0));
+}
+
+#pragma mark -
+#pragma mark spindle_rulebase_pred_compare_
+/* these tests are identical to the class_compare ones in rulebase_class_test.c */
+
+Ensure(spindle_common_rulebase, pred_compare_returns_no_difference_if_both_scores_are_zero) {
+	struct spindle_predicatemap_struct a = { 0 };
+	struct spindle_predicatemap_struct b = { 0 };
+
+	int r = spindle_rulebase_pred_compare_(&a, &b);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_common_rulebase, pred_compare_returns_no_difference_if_scores_are_equal_and_non_zero) {
+	struct spindle_predicatemap_struct a = { .score = 5 };
+	struct spindle_predicatemap_struct b = { .score = 5 };
+
+	int r = spindle_rulebase_pred_compare_(&a, &b);
+	assert_that(r, is_equal_to(0));
+}
+
+Ensure(spindle_common_rulebase, pred_compare_returns_b_sorts_later_if_b_has_a_higher_score) {
+	struct spindle_predicatemap_struct a = { .score = 2 };
+	struct spindle_predicatemap_struct b = { .score = 5 };
+
+	int r = spindle_rulebase_pred_compare_(&a, &b);
+	assert_that(r, is_less_than(0));
+}
+
+Ensure(spindle_common_rulebase, pred_compare_returns_b_sorts_earlier_if_b_has_a_lower_score) {
+	struct spindle_predicatemap_struct a = { .score = 5 };
+	struct spindle_predicatemap_struct b = { .score = 2 };
+
+	int r = spindle_rulebase_pred_compare_(&a, &b);
+	assert_that(r, is_greater_than(0));
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_pred_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -605,6 +760,18 @@ TestSuite *create_rulebase_pred_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, pred_set_expect_returns_false_if_the_statement_object_is_not_rdfs_literal_nor_rdfs_resource);
 	add_test_with_context(suite, spindle_common_rulebase, pred_set_expect_returns_true_and_sets_the_expected_term_type_to_raptor_literal_if_the_statement_object_is_rdfs_literal);
 	add_test_with_context(suite, spindle_common_rulebase, pred_set_expect_returns_true_and_sets_the_expected_term_type_to_raptor_uri_if_the_statement_object_is_rdfs_resource);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_prominence_returns_false_and_does_not_change_prominence_if_getting_intval_fails);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_prominence_returns_false_and_does_not_change_prominence_if_object_intval_is_negative);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_prominence_returns_true_and_sets_prominence_if_object_intval_is_positive);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_score_returns_false_and_does_not_change_score_if_getting_intval_fails);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_score_returns_false_and_does_not_change_score_if_object_intval_is_negative);
+	add_test_with_context(suite, spindle_common_rulebase, pred_set_score_returns_true_and_sets_score_if_object_intval_is_positive);
+	add_test_with_context(suite, spindle_common_rulebase, pred_dump_returns_no_error_and_only_has_side_effects_when_the_predicate_list_is_empty);
+	add_test_with_context(suite, spindle_common_rulebase, pred_dump_returns_no_error_and_only_has_side_effects_when_the_predicate_list_has_items);
+	add_test_with_context(suite, spindle_common_rulebase, pred_compare_returns_no_difference_if_both_scores_are_zero);
+	add_test_with_context(suite, spindle_common_rulebase, pred_compare_returns_no_difference_if_scores_are_equal_and_non_zero);
+	add_test_with_context(suite, spindle_common_rulebase, pred_compare_returns_b_sorts_later_if_b_has_a_higher_score);
+	add_test_with_context(suite, spindle_common_rulebase, pred_compare_returns_b_sorts_earlier_if_b_has_a_lower_score);
 	return suite;
 }
 
