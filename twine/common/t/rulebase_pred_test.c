@@ -48,7 +48,7 @@ typedef enum {
 #include "../rulebase-pred.c"
 
 Describe(spindle_common_rulebase);
-BeforeEach(spindle_common_rulebase) { cgreen_mocks_are(learning_mocks); always_expect(twine_logf); die_in(1); }
+BeforeEach(spindle_common_rulebase) { always_expect(twine_logf); die_in(1); }
 AfterEach(spindle_common_rulebase) {}
 
 /*
@@ -1346,6 +1346,339 @@ Ensure(spindle_common_rulebase, pred_add_matchnode_passes_the_prominence_when_ad
 }
 
 #pragma mark -
+#pragma mark spindle_rulebase_pred_add_node
+
+Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_loops_over_all_statements_in_the_model_whos_subject_is_the_node) {
+	SPINDLERULES rules = { 0 };
+	librdf_model *model = (librdf_model *) 0xA00;
+	librdf_node *node = (librdf_node *) 0xA10;
+	librdf_node *subject = (librdf_node *) 0xA11;
+	librdf_statement *query = (librdf_stream *) 0xA20;
+	librdf_stream *results = (librdf_stream *) 0xA30;
+	librdf_world *world = (librdf_world *) 0xA40;
+	const char *uri = "node as string";
+
+	expect(twine_rdf_world, will_return(world));
+	expect(spindle_rulebase_cachepred_add, will_return(0), when(rules, is_equal_to(&rules)), when(uri, is_equal_to(uri)));
+	expect(librdf_new_node_from_node, will_return(subject), when(node, is_equal_to(node)));
+	expect(librdf_new_statement_from_nodes, will_return(query), when(world, is_equal_to(world)), when(subject, is_equal_to(subject)), when(predicate, is_null), when(object, is_null));
+	expect(librdf_model_find_statements, will_return(results), when(model, is_equal_to(model)), when(statement, is_equal_to(query)));
+	expect(librdf_stream_end, will_return(1), when(stream, is_equal_to(results)));
+	expect(librdf_free_stream, when(stream, is_equal_to(results)));
+	expect(librdf_free_statement, when(statement, is_equal_to(query)));
+
+	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
+	assert_that(r, is_equal_to(1));
+	assert_that(rules.predcount, is_equal_to(1));
+	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
+}
+
+Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_score_when_present_in_the_model) {
+	SPINDLERULES rules = { 0 };
+	librdf_model *model = (librdf_model *) 0xA00;
+	librdf_node *node = (librdf_node *) 0xA10;
+	librdf_node *subject = (librdf_node *) 0xA11;
+	librdf_node *predicate = (librdf_node *) 0xA12;
+	librdf_statement *query = (librdf_stream *) 0xA20;
+	librdf_statement *result = (librdf_stream *) 0xA21;
+	librdf_stream *results = (librdf_stream *) 0xA30;
+	librdf_uri *predicate_uri = (librdf_uri *) 0xA40;
+	librdf_world *world = (librdf_world *) 0xA50;
+	const char *uri = "node as string";
+	const char *olo_index = NS_OLO "index";
+	long score = 999;
+
+	expect(twine_rdf_world, will_return(world));
+	expect(spindle_rulebase_cachepred_add, will_return(0), when(rules, is_equal_to(&rules)), when(uri, is_equal_to(uri)));
+	expect(librdf_new_node_from_node, will_return(subject), when(node, is_equal_to(node)));
+	expect(librdf_new_statement_from_nodes, will_return(query), when(world, is_equal_to(world)), when(subject, is_equal_to(subject)), when(predicate, is_null), when(object, is_null));
+	expect(librdf_model_find_statements, will_return(results), when(model, is_equal_to(model)), when(statement, is_equal_to(query)));
+	expect(librdf_stream_end, will_return(0), when(stream, is_equal_to(results)));
+	expect(librdf_stream_get_object, will_return(result), when(stream, is_equal_to(results)));
+	expect(librdf_statement_get_predicate, will_return(predicate), when(statement, is_equal_to(result)));
+	// does not check the predicate is a URI (librdf_node_is_resource)
+	expect(librdf_node_get_uri, will_return(predicate_uri), when(node, is_equal_to(predicate)));
+	expect(librdf_uri_as_string, will_return(olo_index), when(uri, is_equal_to(predicate_uri)));
+	expect(twine_rdf_st_obj_intval, will_return(1), will_set_contents_of_parameter(value, &score, sizeof score), when(statement, is_equal_to(result)));
+	expect(librdf_stream_next, when(stream, is_equal_to(results)));
+	expect(librdf_stream_end, will_return(1), when(stream, is_equal_to(results)));
+	expect(librdf_free_stream, when(stream, is_equal_to(results)));
+	expect(librdf_free_statement, when(statement, is_equal_to(query)));
+
+	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
+	assert_that(r, is_equal_to(-1)); // BUG: spindle_rulebase_pred_add_node returns -1 when result of setting predicate property returns > 0
+	assert_that(rules.predcount, is_equal_to(1));
+	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
+	assert_that(rules.predicates[0].score, is_equal_to(score));
+}
+
+Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_prominence_when_present_in_the_model) {
+	SPINDLERULES rules = { 0 };
+	librdf_model *model = (librdf_model *) 0xA00;
+	librdf_node *node = (librdf_node *) 0xA10;
+	librdf_node *subject = (librdf_node *) 0xA11;
+	librdf_node *predicate = (librdf_node *) 0xA12;
+	librdf_statement *query = (librdf_stream *) 0xA20;
+	librdf_statement *result = (librdf_stream *) 0xA21;
+	librdf_stream *results = (librdf_stream *) 0xA30;
+	librdf_uri *predicate_uri = (librdf_uri *) 0xA40;
+	librdf_world *world = (librdf_world *) 0xA50;
+	const char *uri = "node as string";
+	const char *spindle_prominence = NS_SPINDLE "prominence";
+	long prominence = 999;
+
+	expect(twine_rdf_world, will_return(world));
+	expect(spindle_rulebase_cachepred_add, will_return(0), when(rules, is_equal_to(&rules)), when(uri, is_equal_to(uri)));
+	expect(librdf_new_node_from_node, will_return(subject), when(node, is_equal_to(node)));
+	expect(librdf_new_statement_from_nodes, will_return(query), when(world, is_equal_to(world)), when(subject, is_equal_to(subject)), when(predicate, is_null), when(object, is_null));
+	expect(librdf_model_find_statements, will_return(results), when(model, is_equal_to(model)), when(statement, is_equal_to(query)));
+	expect(librdf_stream_end, will_return(0), when(stream, is_equal_to(results)));
+	expect(librdf_stream_get_object, will_return(result), when(stream, is_equal_to(results)));
+	expect(librdf_statement_get_predicate, will_return(predicate), when(statement, is_equal_to(result)));
+	// does not check the predicate is a URI (librdf_node_is_resource)
+	expect(librdf_node_get_uri, will_return(predicate_uri), when(node, is_equal_to(predicate)));
+	expect(librdf_uri_as_string, will_return(spindle_prominence), when(uri, is_equal_to(predicate_uri)));
+	expect(twine_rdf_st_obj_intval, will_return(1), will_set_contents_of_parameter(value, &prominence, sizeof prominence), when(statement, is_equal_to(result)));
+	expect(librdf_stream_next, when(stream, is_equal_to(results)));
+	expect(librdf_stream_end, will_return(1), when(stream, is_equal_to(results)));
+	expect(librdf_free_stream, when(stream, is_equal_to(results)));
+	expect(librdf_free_statement, when(statement, is_equal_to(query)));
+
+	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
+	assert_that(r, is_equal_to(-1)); // BUG: spindle_rulebase_pred_add_node returns -1 when result of setting predicate property returns > 0
+	assert_that(rules.predcount, is_equal_to(1));
+	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
+	assert_that(rules.predicates[0].prominence, is_equal_to(prominence));
+}
+
+Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_expected_term_type_when_present_in_the_model) {
+	SPINDLERULES rules = { 0 };
+	librdf_model *model = (librdf_model *) 0xA00;
+	librdf_node *node = (librdf_node *) 0xA10;
+	librdf_node *subject = (librdf_node *) 0xA11;
+	librdf_node *predicate = (librdf_node *) 0xA12;
+	librdf_node *object = (librdf_node *) 0xA13;
+	librdf_statement *query = (librdf_stream *) 0xA20;
+	librdf_statement *result = (librdf_stream *) 0xA21;
+	librdf_stream *results = (librdf_stream *) 0xA30;
+	librdf_uri *predicate_uri = (librdf_uri *) 0xA40;
+	librdf_uri *object_uri = (librdf_uri *) 0xA41;
+	librdf_world *world = (librdf_world *) 0xA50;
+	const char *uri = "node as string";
+	const char *spindle_expect = NS_SPINDLE "expect";
+	const char *rdfs_resource = NS_RDFS "Resource";
+	raptor_term_type expected_term_type = RAPTOR_TERM_TYPE_URI;
+
+	expect(twine_rdf_world, will_return(world));
+	expect(spindle_rulebase_cachepred_add, will_return(0), when(rules, is_equal_to(&rules)), when(uri, is_equal_to(uri)));
+	expect(librdf_new_node_from_node, will_return(subject), when(node, is_equal_to(node)));
+	expect(librdf_new_statement_from_nodes, will_return(query), when(world, is_equal_to(world)), when(subject, is_equal_to(subject)), when(predicate, is_null), when(object, is_null));
+	expect(librdf_model_find_statements, will_return(results), when(model, is_equal_to(model)), when(statement, is_equal_to(query)));
+	expect(librdf_stream_end, will_return(0), when(stream, is_equal_to(results)));
+	expect(librdf_stream_get_object, will_return(result), when(stream, is_equal_to(results)));
+	expect(librdf_statement_get_predicate, will_return(predicate), when(statement, is_equal_to(result)));
+	// does not check the predicate is a URI (librdf_node_is_resource)
+	expect(librdf_node_get_uri, will_return(predicate_uri), when(node, is_equal_to(predicate)));
+	expect(librdf_uri_as_string, will_return(spindle_expect), when(uri, is_equal_to(predicate_uri)));
+	expect(librdf_statement_get_object, will_return(object), when(statement, is_equal_to(result)));
+	expect(librdf_node_is_resource, will_return(1), when(node, is_equal_to(object)));
+	expect(librdf_node_get_uri, will_return(object_uri), when(node, is_equal_to(object)));
+	expect(librdf_uri_as_string, will_return(rdfs_resource), when(uri, is_equal_to(object_uri)));
+	expect(librdf_stream_next, when(stream, is_equal_to(results)));
+	expect(librdf_stream_end, will_return(1), when(stream, is_equal_to(results)));
+	expect(librdf_free_stream, when(stream, is_equal_to(results)));
+	expect(librdf_free_statement, when(statement, is_equal_to(query)));
+
+	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
+	assert_that(r, is_equal_to(-1)); // BUG: spindle_rulebase_pred_add_node returns -1 when result of setting predicate property returns > 0 [fixed on develop branch]
+	assert_that(rules.predcount, is_equal_to(1));
+	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
+	assert_that(rules.predicates[0].expected, is_equal_to(expected_term_type));
+}
+
+Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_expected_literal_type_when_present_in_the_model) {
+	SPINDLERULES rules = { 0 };
+	librdf_model *model = (librdf_model *) 0xA00;
+	librdf_node *node = (librdf_node *) 0xA10;
+	librdf_node *subject = (librdf_node *) 0xA11;
+	librdf_node *predicate = (librdf_node *) 0xA12;
+	librdf_node *object = (librdf_node *) 0xA13;
+	librdf_statement *query = (librdf_stream *) 0xA20;
+	librdf_statement *result = (librdf_stream *) 0xA21;
+	librdf_stream *results = (librdf_stream *) 0xA30;
+	librdf_uri *predicate_uri = (librdf_uri *) 0xA40;
+	librdf_uri *object_uri = (librdf_uri *) 0xA41;
+	librdf_world *world = (librdf_world *) 0xA50;
+	const char *uri = "node as string";
+	const char *spindle_expect = NS_SPINDLE "expectType";
+	const char *expected_literal_type = NS_XSD "nonNegativeInteger";
+
+	expect(twine_rdf_world, will_return(world));
+	expect(spindle_rulebase_cachepred_add, will_return(0), when(rules, is_equal_to(&rules)), when(uri, is_equal_to(uri)));
+	expect(librdf_new_node_from_node, will_return(subject), when(node, is_equal_to(node)));
+	expect(librdf_new_statement_from_nodes, will_return(query), when(world, is_equal_to(world)), when(subject, is_equal_to(subject)), when(predicate, is_null), when(object, is_null));
+	expect(librdf_model_find_statements, will_return(results), when(model, is_equal_to(model)), when(statement, is_equal_to(query)));
+	expect(librdf_stream_end, will_return(0), when(stream, is_equal_to(results)));
+	expect(librdf_stream_get_object, will_return(result), when(stream, is_equal_to(results)));
+	expect(librdf_statement_get_predicate, will_return(predicate), when(statement, is_equal_to(result)));
+	// does not check the predicate is a URI (librdf_node_is_resource)
+	expect(librdf_node_get_uri, will_return(predicate_uri), when(node, is_equal_to(predicate)));
+	expect(librdf_uri_as_string, will_return(spindle_expect), when(uri, is_equal_to(predicate_uri)));
+	expect(librdf_statement_get_object, will_return(object), when(statement, is_equal_to(result)));
+	expect(librdf_node_is_resource, will_return(1), when(node, is_equal_to(object)));
+	expect(librdf_node_get_uri, will_return(object_uri), when(node, is_equal_to(object)));
+	expect(librdf_uri_as_string, will_return(expected_literal_type), when(uri, is_equal_to(object_uri)));
+	expect(librdf_stream_next, when(stream, is_equal_to(results)));
+	expect(librdf_stream_end, will_return(1), when(stream, is_equal_to(results)));
+	expect(librdf_free_stream, when(stream, is_equal_to(results)));
+	expect(librdf_free_statement, when(statement, is_equal_to(query)));
+
+	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
+	assert_that(r, is_equal_to(1));
+	assert_that(rules.predcount, is_equal_to(1));
+	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
+	assert_that(rules.predicates[0].datatype, is_equal_to_string(expected_literal_type));
+}
+
+Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_proxy_only_flag_when_present_in_the_model) {
+	SPINDLERULES rules = { 0 };
+	librdf_model *model = (librdf_model *) 0xA00;
+	librdf_node *node = (librdf_node *) 0xA10;
+	librdf_node *subject = (librdf_node *) 0xA11;
+	librdf_node *predicate = (librdf_node *) 0xA12;
+	librdf_node *object = (librdf_node *) 0xA13;
+	librdf_statement *query = (librdf_stream *) 0xA20;
+	librdf_statement *result = (librdf_stream *) 0xA21;
+	librdf_stream *results = (librdf_stream *) 0xA30;
+	librdf_uri *predicate_uri = (librdf_uri *) 0xA40;
+	librdf_uri *object_dt_uri = (librdf_uri *) 0xA41;
+	librdf_world *world = (librdf_world *) 0xA50;
+	const char *uri = "node as string";
+	const char *spindle_proxyonly = NS_SPINDLE "proxyOnly";
+	const char *xsd_boolean = NS_XSD "boolean";
+	int expected_proxy_only_flag = 1;
+
+	expect(twine_rdf_world, will_return(world));
+	expect(spindle_rulebase_cachepred_add, will_return(0), when(rules, is_equal_to(&rules)), when(uri, is_equal_to(uri)));
+	expect(librdf_new_node_from_node, will_return(subject), when(node, is_equal_to(node)));
+	expect(librdf_new_statement_from_nodes, will_return(query), when(world, is_equal_to(world)), when(subject, is_equal_to(subject)), when(predicate, is_null), when(object, is_null));
+	expect(librdf_model_find_statements, will_return(results), when(model, is_equal_to(model)), when(statement, is_equal_to(query)));
+	expect(librdf_stream_end, will_return(0), when(stream, is_equal_to(results)));
+	expect(librdf_stream_get_object, will_return(result), when(stream, is_equal_to(results)));
+	expect(librdf_statement_get_predicate, will_return(predicate), when(statement, is_equal_to(result)));
+	// does not check the predicate is a URI (librdf_node_is_resource)
+	expect(librdf_node_get_uri, will_return(predicate_uri), when(node, is_equal_to(predicate)));
+	expect(librdf_uri_as_string, will_return(spindle_proxyonly), when(uri, is_equal_to(predicate_uri)));
+	expect(librdf_statement_get_object, will_return(object), when(statement, is_equal_to(result)));
+	expect(librdf_node_is_literal, will_return(1), when(node, is_equal_to(object)));
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(object_dt_uri), when(node, is_equal_to(object)));
+	expect(librdf_uri_as_string, will_return(xsd_boolean), when(uri, is_equal_to(object_dt_uri)));
+	expect(librdf_node_get_literal_value, will_return("true"), when(node, is_equal_to(object)));
+	expect(librdf_stream_next, when(stream, is_equal_to(results)));
+	expect(librdf_stream_end, will_return(1), when(stream, is_equal_to(results)));
+	expect(librdf_free_stream, when(stream, is_equal_to(results)));
+	expect(librdf_free_statement, when(statement, is_equal_to(query)));
+
+	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
+	assert_that(r, is_equal_to(-1)); // BUG as above
+	assert_that(rules.predcount, is_equal_to(1));
+	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
+	assert_that(rules.predicates[0].proxyonly, is_equal_to(expected_proxy_only_flag));
+}
+
+Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_indexed_flag_when_present_in_the_model) {
+	SPINDLERULES rules = { 0 };
+	librdf_model *model = (librdf_model *) 0xA00;
+	librdf_node *node = (librdf_node *) 0xA10;
+	librdf_node *subject = (librdf_node *) 0xA11;
+	librdf_node *predicate = (librdf_node *) 0xA12;
+	librdf_node *object = (librdf_node *) 0xA13;
+	librdf_statement *query = (librdf_stream *) 0xA20;
+	librdf_statement *result = (librdf_stream *) 0xA21;
+	librdf_stream *results = (librdf_stream *) 0xA30;
+	librdf_uri *predicate_uri = (librdf_uri *) 0xA40;
+	librdf_uri *object_dt_uri = (librdf_uri *) 0xA41;
+	librdf_world *world = (librdf_world *) 0xA50;
+	const char *uri = "node as string";
+	const char *spindle_indexed = NS_SPINDLE "indexed";
+	const char *xsd_boolean = NS_XSD "boolean";
+	int expected_indexed_flag = 1;
+
+	expect(twine_rdf_world, will_return(world));
+	expect(spindle_rulebase_cachepred_add, will_return(0), when(rules, is_equal_to(&rules)), when(uri, is_equal_to(uri)));
+	expect(librdf_new_node_from_node, will_return(subject), when(node, is_equal_to(node)));
+	expect(librdf_new_statement_from_nodes, will_return(query), when(world, is_equal_to(world)), when(subject, is_equal_to(subject)), when(predicate, is_null), when(object, is_null));
+	expect(librdf_model_find_statements, will_return(results), when(model, is_equal_to(model)), when(statement, is_equal_to(query)));
+	expect(librdf_stream_end, will_return(0), when(stream, is_equal_to(results)));
+	expect(librdf_stream_get_object, will_return(result), when(stream, is_equal_to(results)));
+	expect(librdf_statement_get_predicate, will_return(predicate), when(statement, is_equal_to(result)));
+	// does not check the predicate is a URI (librdf_node_is_resource)
+	expect(librdf_node_get_uri, will_return(predicate_uri), when(node, is_equal_to(predicate)));
+	expect(librdf_uri_as_string, will_return(spindle_indexed), when(uri, is_equal_to(predicate_uri)));
+	expect(librdf_statement_get_object, will_return(object), when(statement, is_equal_to(result)));
+	expect(librdf_node_is_literal, will_return(1), when(node, is_equal_to(object)));
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(object_dt_uri), when(node, is_equal_to(object)));
+	expect(librdf_uri_as_string, will_return(xsd_boolean), when(uri, is_equal_to(object_dt_uri)));
+	expect(librdf_node_get_literal_value, will_return("true"), when(node, is_equal_to(object)));
+	expect(librdf_stream_next, when(stream, is_equal_to(results)));
+	expect(librdf_stream_end, will_return(1), when(stream, is_equal_to(results)));
+	expect(librdf_free_stream, when(stream, is_equal_to(results)));
+	expect(librdf_free_statement, when(statement, is_equal_to(query)));
+
+	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
+	assert_that(r, is_equal_to(-1)); // BUG as above
+	assert_that(rules.predcount, is_equal_to(1));
+	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
+	assert_that(rules.predicates[0].indexed, is_equal_to(expected_indexed_flag));
+}
+
+Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_inverse_flag_when_present_in_the_model) {
+	SPINDLERULES rules = { 0 };
+	librdf_model *model = (librdf_model *) 0xA00;
+	librdf_node *node = (librdf_node *) 0xA10;
+	librdf_node *subject = (librdf_node *) 0xA11;
+	librdf_node *predicate = (librdf_node *) 0xA12;
+	librdf_node *object = (librdf_node *) 0xA13;
+	librdf_statement *query = (librdf_stream *) 0xA20;
+	librdf_statement *result = (librdf_stream *) 0xA21;
+	librdf_stream *results = (librdf_stream *) 0xA30;
+	librdf_uri *predicate_uri = (librdf_uri *) 0xA40;
+	librdf_uri *object_dt_uri = (librdf_uri *) 0xA41;
+	librdf_world *world = (librdf_world *) 0xA50;
+	const char *uri = "node as string";
+	const char *spindle_inverse = NS_SPINDLE "inverse";
+	const char *xsd_boolean = NS_XSD "boolean";
+	int expected_inverse_flag = 1;
+
+	expect(twine_rdf_world, will_return(world));
+	expect(spindle_rulebase_cachepred_add, will_return(0), when(rules, is_equal_to(&rules)), when(uri, is_equal_to(uri)));
+	expect(librdf_new_node_from_node, will_return(subject), when(node, is_equal_to(node)));
+	expect(librdf_new_statement_from_nodes, will_return(query), when(world, is_equal_to(world)), when(subject, is_equal_to(subject)), when(predicate, is_null), when(object, is_null));
+	expect(librdf_model_find_statements, will_return(results), when(model, is_equal_to(model)), when(statement, is_equal_to(query)));
+	expect(librdf_stream_end, will_return(0), when(stream, is_equal_to(results)));
+	expect(librdf_stream_get_object, will_return(result), when(stream, is_equal_to(results)));
+	expect(librdf_statement_get_predicate, will_return(predicate), when(statement, is_equal_to(result)));
+	// does not check the predicate is a URI (librdf_node_is_resource)
+	expect(librdf_node_get_uri, will_return(predicate_uri), when(node, is_equal_to(predicate)));
+	expect(librdf_uri_as_string, will_return(spindle_inverse), when(uri, is_equal_to(predicate_uri)));
+	expect(librdf_statement_get_object, will_return(object), when(statement, is_equal_to(result)));
+	expect(librdf_node_is_literal, will_return(1), when(node, is_equal_to(object)));
+	expect(librdf_node_get_literal_value_datatype_uri, will_return(object_dt_uri), when(node, is_equal_to(object)));
+	expect(librdf_uri_as_string, will_return(xsd_boolean), when(uri, is_equal_to(object_dt_uri)));
+	expect(librdf_node_get_literal_value, will_return("true"), when(node, is_equal_to(object)));
+	expect(librdf_stream_next, when(stream, is_equal_to(results)));
+	expect(librdf_stream_end, will_return(1), when(stream, is_equal_to(results)));
+	expect(librdf_free_stream, when(stream, is_equal_to(results)));
+	expect(librdf_free_statement, when(statement, is_equal_to(query)));
+
+	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
+	assert_that(r, is_equal_to(-1)); // BUG as above
+	assert_that(rules.predcount, is_equal_to(1));
+	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
+	assert_that(rules.predicates[0].inverse, is_equal_to(expected_inverse_flag));
+}
+
+#pragma mark -
 
 TestSuite *create_rulebase_pred_test_suite(void) {
 	TestSuite *suite = create_test_suite();
@@ -1403,6 +1736,14 @@ TestSuite *create_rulebase_pred_test_suite(void) {
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_matchnode_passes_the_prominence_when_adding_a_general_match);
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_matchnode_passes_the_priority_when_adding_a_domain_match);
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_matchnode_passes_the_prominence_when_adding_a_domain_match);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_loops_over_all_statements_in_the_model_whos_subject_is_the_node);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_score_when_present_in_the_model);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_prominence_when_present_in_the_model);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_expected_term_type_when_present_in_the_model);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_expected_literal_type_when_present_in_the_model);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_proxy_only_flag_when_present_in_the_model);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_indexed_flag_when_present_in_the_model);
+	add_test_with_context(suite, spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predicate_to_the_rulebase_and_sets_the_inverse_flag_when_present_in_the_model);
 	return suite;
 }
 
