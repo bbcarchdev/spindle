@@ -15,6 +15,7 @@
  */
 
 #include <sys/time.h>
+#include "mock_strset.h"
 
 #define AWSS3BUCKET void
 #define SPARQL void
@@ -122,13 +123,6 @@ struct spindle_trigger_struct {
 	char *uri;
 	unsigned int kind;
 	char *id;
-};
-
-struct spindle_strset_struct {
-	char **strings;
-	unsigned *flags;
-	size_t count;
-	size_t size;
 };
 
 struct spindle_classmap_struct {

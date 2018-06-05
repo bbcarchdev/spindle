@@ -1,5 +1,6 @@
 #!/bin/bash
 
+cc strset_test.c -o strset_test -lcgreen && ./strset_test
 cc rulebase_test.c -o rulebase_test -lcgreen && ./rulebase_test
 cc rulebase_cachepred_test.c -o rulebase_cachepred_test -lcgreen && ./rulebase_cachepred_test
 cc rulebase_class_test.c -o rulebase_class_test -lcgreen && ./rulebase_class_test
