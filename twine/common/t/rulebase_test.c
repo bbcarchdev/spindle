@@ -29,12 +29,9 @@
 #include "../../t/mock_spindle_rulebase_class.h"
 #include "../../t/mock_spindle_rulebase_coref.h"
 #include "../../t/mock_spindle_rulebase_pred.h"
+#include "../../t/rdf_namespaces.h"
 
 #define TWINEMODULEDIR "TWINEMODULEDIR "
-#define NS_OWL "NS_OWL "
-#define NS_RDF "NS_RDF "
-#define NS_SPINDLE "NS_SPINDLE "
-
 #define MIME_TURTLE "MIME_TURTLE"
 
 /* compile SUT inline due to static functions */

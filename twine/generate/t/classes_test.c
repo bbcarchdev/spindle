@@ -26,8 +26,7 @@
 #include "../../t/mock_spindle_db_methods.h"
 #include "../../t/mock_spindle_proxy_methods.h"
 #include "../../t/mock_spindle_strset_methods.h"
-
-#define NS_RDF
+#include "../../t/rdf_namespaces.h"
 
 /* compile SUT inline due to static functions */
 #define P_SPINDLE_GENERATE_H_

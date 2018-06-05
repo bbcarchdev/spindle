@@ -25,11 +25,7 @@
 #include "../../t/mock_libtwine.h"
 #include "../../t/mock_spindle_core.h"
 #include "../../t/mock_spindle_proxy_methods.h"
-
-#define NS_DCTERMS "NS_DCTERMS "
-#define NS_GEO "NS_GEO "
-#define NS_RDFS "NS_RDFS "
-#define NS_XSD "NS_XSD "
+#include "../../t/rdf_namespaces.h"
 
 /* compile SUT inline due to static functions */
 #define P_SPINDLE_GENERATE_H_

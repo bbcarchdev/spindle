@@ -29,9 +29,7 @@
 #include "../../t/mock_spindle_rulebase_cachepred.h"
 #include "../../t/mock_spindle_rulebase_coref.h"
 #include "../../t/mock_spindle_rulebase_pred.h"
-
-#define NS_OLO "NS_OLO "
-#define NS_SPINDLE "NS_SPINDLE "
+#include "../../t/rdf_namespaces.h"
 
 #define P_SPINDLE_H_
 #define PLUGIN_NAME "spindle-rulebase"
