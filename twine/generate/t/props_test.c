@@ -19,14 +19,6 @@
 #include <sys/syslog.h>
 #include <ctype.h>
 
-typedef enum {
-	RAPTOR_TERM_TYPE_UNKNOWN = 0,
-	RAPTOR_TERM_TYPE_URI = 1,
-	RAPTOR_TERM_TYPE_LITERAL = 2,
-	/* unused type 3 */
-	RAPTOR_TERM_TYPE_BLANK = 4
-} raptor_term_type;
-
 /* mocks of dependancies */
 #include "../../t/mock_librdf.h"
 #include "../../t/mock_libsql.h"

@@ -19,6 +19,14 @@
 #define AWSS3BUCKET void
 #define SPARQL void
 
+typedef enum {
+	RAPTOR_TERM_TYPE_UNKNOWN = 0,
+	RAPTOR_TERM_TYPE_URI = 1,
+	RAPTOR_TERM_TYPE_LITERAL = 2,
+	/* unused type 3 */
+	RAPTOR_TERM_TYPE_BLANK = 4
+} raptor_term_type;
+
 struct spindle_literalstring_struct {
 	char lang[8];
 	char *str;
