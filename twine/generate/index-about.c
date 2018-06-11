@@ -2,7 +2,7 @@
  *
  * Author: Mo McRoberts <mo.mcroberts@bbc.co.uk>
  *
- * Copyright (c) 2014-2015 BBC
+ * Copyright (c) 2014-2017 BBC
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -53,6 +53,7 @@ spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data)
 		NULL
 	};
 	
+#if SPINDLE_ENABLE_ABOUT_SELF
 	/* Force an entity to always 'about' itself, so that queries match both
 	 * topics and the things about those topics
 	 */
@@ -60,6 +61,7 @@ spindle_index_about(SQL *sql, const char *id, SPINDLEENTRY *data)
 	{
 		return -1;
 	}
+#endif
 	if(!(query = librdf_new_statement(data->spindle->world)))
 	{
 		return -1;

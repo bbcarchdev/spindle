@@ -39,6 +39,8 @@
 
 # define SPINDLE_THRESHOLD              40
 
+# define DEFAULT_SPINDLE_FETCH_LIMIT	( 2 * 1024 )
+
 # define MIME_NQUADS                    "application/n-quads"
 
 /* Namespaces */
@@ -74,9 +76,9 @@ typedef enum
 
 struct index_struct
 {
-	const char *uri;
-	const char *title;
-	const char *qclass;
+	char *uri;
+	char *title;
+	char *qclass;
 };
 
 struct query_struct
@@ -125,8 +127,9 @@ extern SQL *spindle_db;
 extern AWSS3BUCKET *spindle_bucket;
 extern char *spindle_cachepath;
 extern int spindle_s3_verbose;
-extern struct index_struct spindle_indices[];
+extern struct index_struct *spindle_indices;
 extern struct mediamatch_struct spindle_mediamatch[];
+extern int spindle_threshold;
 
 int spindle_process(QUILTREQ *request);
 

@@ -70,6 +70,10 @@ AC_SUBST([spindlehtdocdir])
 
 BT_DEFINE_PREFIX
 
+# Build options
+
+AC_DEFINE_UNQUOTED([SPINDLE_ENABLE_ABOUT_SELF], [0], [Whether to enable 'items are about themselves' in the index])
+
 AC_CONFIG_FILES([Makefile
 m4/Makefile
 twine/Makefile

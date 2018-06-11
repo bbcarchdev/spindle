@@ -607,7 +607,9 @@ spindle_audiences_db(QUILTREQ *request, struct query_struct *query)
 	const char *audience, *id;
 	librdf_statement *st;
 	const char *title;
+	librdf_node *graph;
 
+	graph = quilt_request_graph(request);
 	limit = request->limit;
 	offset = request->offset;
 
@@ -652,13 +654,13 @@ spindle_audiences_db(QUILTREQ *request, struct query_struct *query)
 		quilt_canon_set_param(dest, "for", audience);
 		deststr = quilt_canon_str(dest, QCO_DEFAULT);
 		st = quilt_st_create_uri(audience, NS_RDF "type", NS_ODRL "Group");
-		librdf_model_add_statement(request->model, st);
+		librdf_model_context_add_statement(request->model, graph, st);
 		librdf_free_statement(st);
 		st = quilt_st_create_uri(audience, NS_RDFS "seeAlso", deststr);
-		librdf_model_add_statement(request->model, st);
+		librdf_model_context_add_statement(request->model, graph, st);
 		librdf_free_statement(st);
 		st = quilt_st_create_uri(self, NS_RDFS "seeAlso", audience);
-		librdf_model_add_statement(request->model, st);
+		librdf_model_context_add_statement(request->model, graph, st);
 		librdf_free_statement(st);
 		if(title)
 		{
@@ -734,9 +736,10 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	QUILTCANON *slot;
 	char *slotstr, *uri, *related;
 	char nbuf[64];
-	librdf_node *node;
+	librdf_node *node, *graph;
 
 	uri = quilt_canon_str(item, QCO_SUBJECT);
+	graph = quilt_request_graph(request);
 
 	if(!strcmp(self, uri))
 	{
@@ -752,35 +755,35 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 
 	/* rdfs:seeAlso */
 	st = quilt_st_create_uri(self, NS_RDFS "seeAlso", uri);
-	librdf_model_add_statement(request->model, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
 
 	/* olo:slot */
 	st = quilt_st_create_uri(self, NS_OLO "slot", slotstr);
-	librdf_model_add_statement(request->model, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
 
 	/* <slot> rdf:type olo:Slot */
 	st = quilt_st_create_uri(slotstr, NS_RDF "type", NS_OLO "Slot");
-	librdf_model_add_statement(request->model, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
 
 	/* <slot> olo:item <item> */
 	st = quilt_st_create_uri(slotstr, NS_OLO "item", uri);
-	librdf_model_add_statement(request->model, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
 
 	/* <slot> rdfs:label "Result item %d" */
 	snprintf(nbuf, sizeof(nbuf) - 1, "Result #%d", index + 1);
 	st = quilt_st_create_literal(slotstr, NS_RDFS "label", nbuf, "en-gb");
-	librdf_model_add_statement(request->model, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
 
 	/* <slot> olo:index nn */
 	st = quilt_st_create(slotstr, NS_OLO "index");
 	node = quilt_node_create_int(index + 1);
 	librdf_statement_set_object(st, node);
-	librdf_model_add_statement(request->model, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
 
 	if(query->rcanon)
@@ -788,7 +791,7 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 		related = quilt_canon_str(query->rcanon, QCO_SUBJECT);
 		/* foaf:topic */
 		st = quilt_st_create_uri(uri, NS_FOAF "topic", related);
-		librdf_model_add_statement(request->model, st);
+		librdf_model_context_add_statement(request->model, graph, st);
 		librdf_free_statement(st);
 		free(related);
 	}
@@ -797,28 +800,28 @@ process_row(QUILTREQ *request, struct query_struct *query, SQL_STATEMENT *rs, co
 	s = sql_stmt_str(rs, 2);
 	if(s)
 	{
-		add_langvector(request->model, NULL, s, uri, NS_RDFS "label");
+		add_langvector(request->model, graph, s, uri, NS_RDFS "label");
 	}
 
 	/* rdfs:comment */
 	s = sql_stmt_str(rs, 3);
 	if(s)
 	{
-		add_langvector(request->model, NULL, s, uri, NS_RDFS "comment");
+		add_langvector(request->model, graph, s, uri, NS_RDFS "comment");
 	}
 
 	/* rdf:type */
 	s = sql_stmt_str(rs, 1);
 	if(s)
 	{
-		add_array(request->model, NULL, s, uri, NS_RDF "type", 0);
+		add_array(request->model, graph, s, uri, NS_RDF "type", 0);
 	}
 
 	/* geo:lat, geo:long */
 	s = sql_stmt_str(rs, 4);
 	if(s)
 	{
-		add_point(request->model, NULL, s, uri);
+		add_point(request->model, graph, s, uri);
 	}
 	free(uri);
 	quilt_canon_destroy(slot);
@@ -843,7 +846,7 @@ process_membership_row(QUILTREQ *request, SQL_STATEMENT *rs, const char *id, con
 		return 0;
 	}
 	st = quilt_st_create_uri(self, NS_DCTERMS "isPartOf", uri);
-	librdf_model_add_statement(request->model, st);
+	librdf_model_context_add_statement(request->model, quilt_request_graph(request), st);
 	librdf_free_statement(st);
 	free(uri);
 	return 0;
@@ -935,7 +938,7 @@ add_array(librdf_model *model, librdf_node *graph, const char *array, const char
 			}
 			else
 			{
-				librdf_model_add_statement(model, st);
+				librdf_model_context_add_statement(model, graph, st);
 			}
 			librdf_free_statement(st);
 		}

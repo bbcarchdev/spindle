@@ -24,32 +24,17 @@
 
 #include "p_spindle.h"
 
-/* XXX replace with config */
-struct index_struct spindle_indices[] = {
-	{ "/everything", "Everything", NULL },
-	{ "/people", "People", NS_FOAF "Person" },
-	{ "/groups", "Groups", NS_FOAF "Group" },
-	{ "/agents", "Agents", NS_FOAF "Agent" },
-	{ "/places", "Places", NS_GEO "SpatialThing" },
-	{ "/events", "Events", NS_EVENT "Event" },
-
-	{ "/things", "Physical things", NS_CRM "E18_Physical_Thing" },
-	{ "/collections", "Collections", NS_DCMITYPE "Collection" },
-	{ "/works", "Creative works", NS_FRBR "Work" },
-	{ "/assets", "Digital assets", NS_FOAF "Document" },
-	{ "/concepts", "Concepts", NS_SKOS "Concept" },
-	{ NULL, NULL, NULL }
-};
-
 int
 spindle_home(QUILTREQ *request)
 {
 	librdf_statement *st;
+	librdf_node *graph;
 	size_t c;
 	QUILTCANON *partcanon;
 	char *abstract, *partstr;
 	int r;
 
+	graph = quilt_request_graph(request);
 	r = spindle_query_osd(request);
 	if(r != 200)
 	{
@@ -61,13 +46,13 @@ spindle_home(QUILTREQ *request)
 	abstract = quilt_canon_str(request->canonical, (request->ext ? QCO_ABSTRACT : QCO_REQUEST));
 	/* Add data describing the root dataset itself */
 	st = quilt_st_create_literal(abstract, NS_RDFS "label", "Research & Education Space", "en");
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
 	
 	/* Add class partitions */
 	partcanon = NULL;
 	partstr = NULL;
-	for(c = 0; spindle_indices[c].uri; c++)
+	for(c = 0; spindle_indices && spindle_indices[c].uri; c++)
 	{
 		partcanon = quilt_canon_create(request->canonical);
 		if(!partcanon)
@@ -97,7 +82,7 @@ spindle_home(QUILTREQ *request)
 			r = -1;
 			break;
 		}
-		librdf_model_context_add_statement(request->model, request->basegraph, st);
+		librdf_model_context_add_statement(request->model, graph, st);
 		librdf_free_statement(st);
 	
 		st = quilt_st_create_literal(partstr, NS_RDFS "label", spindle_indices[c].title, "en");
@@ -106,7 +91,7 @@ spindle_home(QUILTREQ *request)
 			r = -1;
 			break;
 		}
-		librdf_model_context_add_statement(request->model, request->basegraph, st);
+		librdf_model_context_add_statement(request->model, graph, st);
 		librdf_free_statement(st);
 
 		st = quilt_st_create_uri(partstr, NS_RDF "type", NS_VOID "Dataset");
@@ -115,7 +100,7 @@ spindle_home(QUILTREQ *request)
 			r = -1;
 			break;
 		}
-		librdf_model_context_add_statement(request->model, request->basegraph, st);
+		librdf_model_context_add_statement(request->model, graph, st);
 		librdf_free_statement(st);
 
 		if(spindle_indices[c].qclass)
@@ -126,7 +111,7 @@ spindle_home(QUILTREQ *request)
 				r = -1;
 				break;
 			}
-			librdf_model_context_add_statement(request->model, request->basegraph, st);
+			librdf_model_context_add_statement(request->model, graph, st);
 			librdf_free_statement(st);
 		}
 	}
@@ -148,13 +133,13 @@ spindle_home(QUILTREQ *request)
 	quilt_canon_add_path(partcanon, "audiences");
 	partstr = quilt_canon_str(partcanon, QCO_ABSTRACT);
 	st = quilt_st_create_uri(abstract, NS_RDFS "seeAlso", partstr);
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);	
 	st = quilt_st_create_uri(partstr, NS_RDF "type", NS_VOID "Dataset");
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
-	st = quilt_st_create_literal(partstr, NS_RDFS "label", "Audiences", "en-gb");
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	st = quilt_st_create_literal(partstr, NS_RDFS "label", "Audiences", "en");
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);	
 	free(partstr);
 	quilt_canon_destroy(partcanon);	

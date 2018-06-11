@@ -44,13 +44,13 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 	const char *t;
 
 	t = quilt_request_getparam(request, "q");
-	if(t)
+	if(t && t[0])
 	{
 		dest->explicit = 1;
 		quilt_canon_set_param(request->canonical, "q", t);
 	}
 	t = quilt_request_getparam(request, "class");
-	if(t)
+	if(t && t[0])
 	{
 		dest->explicit = 1;
 		quilt_canon_set_param(request->canonical, "class", t);
@@ -73,7 +73,7 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 	dest->text = quilt_request_getparam(request, "q");
 	dest->lang = quilt_request_getparam(request, "lang");
 	dest->media = quilt_request_getparam(request, "media");
-	if(dest->text || dest->lang || dest->media)
+	if((dest->text && dest->text[0]) || (dest->lang && dest->lang[0]) || (dest->media && dest->media[0]))
 	{
 		dest->explicit = 1;
 	}
@@ -92,7 +92,7 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 	}
 
 	dest->type = quilt_request_getparam(request, "type");
-	if(dest->type)
+	if(dest->type && dest->type[0])
 	{
 		dest->explicit = 1;
 	}
@@ -101,7 +101,7 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 		quilt_canon_set_param(request->canonical, "type", dest->type);
 	}
 	t = quilt_request_getparam(request, "mode");
-	if(t)
+	if(t && t[0])
 	{
 		if(!strcmp(t, "autocomplete"))
 		{
@@ -116,9 +116,15 @@ spindle_query_request(struct query_struct *dest, QUILTREQ *request, const char *
 			quilt_canon_set_param(request->canonical, "mode", t);
 		}
 	}
+	t = quilt_request_getparam(request, "score");
+	if(t && t[0])
+	{
+		dest->score = atoi(t);
+		quilt_canon_set_param(request->canonical, "score", t);
+	}
 	if(dest->score == -1)
 	{
-		dest->score = SPINDLE_THRESHOLD;
+		dest->score = spindle_threshold;
 	}
 	return 200;
 }
@@ -271,7 +277,9 @@ spindle_query_osd(QUILTREQ *request)
 	char *self, *linkstr;
 	QUILTCANON *link;
 	librdf_statement *st;
+	librdf_node *graph;
 
+	graph = quilt_request_graph(request);
 	/* Add OpenSearch information to the index */
 	if(request->index)
 	{
@@ -297,32 +305,32 @@ spindle_query_osd(QUILTREQ *request)
 	quilt_canon_set_ext(link, NULL);
 	linkstr = quilt_canon_str(link, QCO_ABSTRACT|QCO_FRAGMENT);
 	st = quilt_st_create_literal(self, NS_OSD "template", linkstr, NULL);
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
 	free(linkstr);
 	quilt_canon_destroy(link);
 
 	st = quilt_st_create_literal(self, NS_OSD "Language", "en-gb", NULL);
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
 
 	st = quilt_st_create_literal(self, NS_OSD "Language", "cy-gb", NULL);
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
 
 	st = quilt_st_create_literal(self, NS_OSD "Language", "gd-gb", NULL);
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
 
 	st = quilt_st_create_literal(self, NS_OSD "Language", "ga-gb", NULL);
-	librdf_model_context_add_statement(request->model, request->basegraph, st);
+	librdf_model_context_add_statement(request->model, graph, st);
 	librdf_free_statement(st);
 
 	if(request->home)
 	{
 		/* Add VoID descriptive metadata */	
 		st = quilt_st_create_uri(self, NS_RDF "type", NS_VOID "Dataset");
-		librdf_model_context_add_statement(request->model, request->basegraph, st);
+		librdf_model_context_add_statement(request->model, graph, st);
 		librdf_free_statement(st);
 		
 		link = quilt_canon_create(request->canonical);
@@ -330,7 +338,7 @@ spindle_query_osd(QUILTREQ *request)
 		quilt_canon_add_param(link, "uri", "");
 		linkstr = quilt_canon_str(link, QCO_ABSTRACT);
 		st = quilt_st_create_uri(self, NS_VOID "uriLookupEndpoint", linkstr);
-		librdf_model_context_add_statement(request->model, request->basegraph, st);
+		librdf_model_context_add_statement(request->model, graph, st);
 		librdf_free_statement(st);	
 		free(linkstr);
 		quilt_canon_destroy(link);
@@ -345,7 +353,7 @@ spindle_query_osd(QUILTREQ *request)
 		quilt_canon_set_ext(link, "osd");
 		linkstr = quilt_canon_str(link, QCO_CONCRETE);
 		st = quilt_st_create_uri(self, NS_VOID "openSearchDescription", linkstr);	
-		librdf_model_context_add_statement(request->model, request->basegraph, st);
+		librdf_model_context_add_statement(request->model, graph, st);
 		librdf_free_statement(st);	
 		free(linkstr);
 		quilt_canon_destroy(link);
