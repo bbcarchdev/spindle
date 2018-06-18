@@ -27,7 +27,7 @@
  * 1..DB_SCHEMA_VERSION must be handled individually in spindle_db_migrate_
  * below.
  */
-#define DB_SCHEMA_VERSION               25
+#define DB_SCHEMA_VERSION               26
 
 static int spindle_db_migrate_(SQL *restrict, const char *identifier, int newversion, void *restrict userdata);
 
@@ -501,6 +501,14 @@ spindle_db_migrate_(SQL *restrict sql, const char *identifier, int newversion, v
 	if(newversion == 25)
 	{
 		if(sql_execute(sql, "DELETE FROM \"membership\" WHERE \"id\" = \"collection\""))
+		{
+			return -1;
+		}
+		return 0;
+	}
+	if(newversion == 26)
+	{
+		if(sql_execute(sql, "DELETE FROM \"about\" WHERE \"id\" = \"about\""))
 		{
 			return -1;
 		}

@@ -24,6 +24,8 @@
 
 #include "p_spindle.h"
 
+extern long spindle_s3_fetch_limit;
+
 struct data_struct
 {
 	char *buf;
@@ -132,6 +134,13 @@ spindle_s3_write_(char *ptr, size_t size, size_t nemb, void *userdata)
 	data = (struct data_struct *) userdata;
 
 	size *= nemb;
+
+	if(spindle_s3_fetch_limit && size > spindle_s3_fetch_limit)
+	{
+		quilt_logf(LOG_WARNING, QUILT_PLUGIN_NAME ": S3: failing write due to size exceeding fetch limit. input_size:%u > fetch_limit:%u \n", size, spindle_s3_fetch_limit);
+		return 0;
+	}
+
 	if(data->pos + size >= data->size)
 	{
 		p = (char *) realloc(data->buf, data->size + size + 1);
