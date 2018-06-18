@@ -2536,6 +2536,11 @@ Ensure(spindle_generate_props, prop_init_initialises_the_property_data_structure
 	assert_that(r, is_equal_to(0));
 	assert_that(data.matches, is_equal_to_contents_of(expected_matches, sizeof expected_matches));
 	expected_data.matches = data.matches; // fill in expected field with value of allocated pointer
+	// fill in any alignment bytes after has_geo (e.g. on LP64)
+	// see https://sites.google.com/site/embeddedmonologue/home/c-programming/padding-initializatioin
+	size_t align_start = offsetof(struct propdata_struct, has_geo) + sizeof data.has_geo;
+	size_t align_end = offsetof(struct propdata_struct, lon);
+	memset(&expected_data.has_geo + 1, 0, align_end - align_start);
 	assert_that(&data, is_equal_to_contents_of(&expected_data, sizeof expected_data));
 }
 
