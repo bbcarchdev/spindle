@@ -16,54 +16,23 @@
 
 #include <cgreen/cgreen.h>
 #include <cgreen/mocks.h>
+#include <syslog.h>
 
 /* declarations of functions to be tested */
 int twine_plugin_init(void);
 int twine_plugin_done(void);
 
 /* mocks of dependancies */
-int twine_logf(int level, char *msg, ...) {
-	return (int) mock(level, msg);
-}
+#include "../../t/mock_libsql.h"
+#include "../../t/mock_librdf.h"
+#include "../../t/mock_libtwine.h"
+#include "../../t/mock_spindle_core.h"
+#include "../../t/mock_spindle_rulebase.h"
 
-int spindle_rulebase_create(void) {
-	return (int) mock();
-}
-
-/* for when commit ada1846 "Refactor rulebase…" is deployed:
-int spindle_rulebase_add_config(void *rulebase) {
-	return (int) mock(rulebase);
-}
-
-void spindle_rulebase_finalise(void) {
-	return (void) mock();
-}
-*/
-
-int twine_config_get_bool(char *name, int fallback) {
-	return (int) mock(name, fallback);
-}
-
-int twine_preproc_register(char *plugin, int (*f)(void *graph, void *data), void *data) {
-	return (int) mock(plugin, f, data);
-}
-
-int spindle_rulebase_destroy(void *rules) {
-	return (int) mock(rules);
-}
-
-int spindle_rulebase_dump(void *rules) {
-	return (int) mock(rules);
-}
-
-typedef int (*twine_graph_fn)(void *graph, void *userdata);
-int twine_graph_register(const char *name, twine_graph_fn fn, void *data) {
-	return (int) mock(name, fn, data);
-}
-
-int spindle_strip(void *graph, void *data) {
-	return (int) mock(graph, data);
-}
+#define P_SPINDLE_STRIP_H_
+#define PLUGIN_NAME "spindle-strip"
+int spindle_strip(twine_graph *graph, void *data) { return 0; }
+#include "../strip-module.c"
 
 Describe(spindle_strip_module);
 BeforeEach(spindle_strip_module) { always_expect(twine_logf); die_in(1); }

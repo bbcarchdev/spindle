@@ -18,10 +18,22 @@ SPINDLERULES *spindle_rulebase_create(const char *path, const struct coref_match
 	return (SPINDLERULES *) mock(path, match_types);
 }
 
+int spindle_rulebase_finalise(SPINDLERULES *rules) {
+	return mock(rules);
+}
+
 int spindle_rulebase_destroy(SPINDLERULES *rules) {
 	return mock(rules);
 }
 
 int spindle_rulebase_dump(SPINDLERULES *rules) {
 	return mock(rules);
+}
+
+int spindle_rulebase_add_config(SPINDLERULES *rules) {
+	return mock(rules);
+}
+
+int spindle_rulebase_set_matchtypes(SPINDLERULES *rules, const struct coref_match_struct *match_types) {
+	return mock(rules, match_types);
 }

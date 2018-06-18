@@ -1,4 +1,4 @@
 #!/bin/bash
 
-cc module_test.c -o module_test -lcgreen ../strip-module.o && ./module_test
+cc module_test.c -o module_test -lcgreen && ./module_test
 cc processor_test.c -o processor_test -lcgreen && ./processor_test

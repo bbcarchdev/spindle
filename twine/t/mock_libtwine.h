@@ -25,12 +25,21 @@ char *twine_config_geta(const char *key, const char *defval) {
 	return (char *) mock(key, defval);
 }
 
+int twine_config_get_bool(char *name, int fallback) {
+	return (int) mock(name, fallback);
+}
+
 int twine_logf(int level, char *msg, ...) {
 	return (int) mock(level, msg);
 }
 
-int twine_plugin_init(void) {
-	return (int) mock();
+typedef int (*twine_graph_fn)(twine_graph *graph, void *userdata);
+int twine_graph_register(const char *name, twine_graph_fn fn, void *data) {
+	return (int) mock(name, fn, data);
+}
+
+int twine_preproc_register(char *plugin, int (*f)(twine_graph *graph, void *data), void *data) {
+	return (int) mock(plugin, f, data);
 }
 
 int twine_rdf_model_add_st(librdf_model *model, librdf_statement *statement, librdf_node *ctx) {
