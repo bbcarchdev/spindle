@@ -40,6 +40,8 @@ AfterEach(spindle_strip_module) {}
 
 Ensure(spindle_strip_module, initalisation_succeeds) {
 	expect(spindle_rulebase_create, will_return(555));
+	expect(spindle_rulebase_add_config, when(rules, is_equal_to(555)));
+	expect(spindle_rulebase_finalise, when(rules, is_equal_to(555)));
 	expect(twine_config_get_bool, will_return(666), when(name, is_equal_to_string("spindle:dumprules")), when(fallback, is_equal_to(0)));
 	expect(twine_config_get_bool, will_return(0), when(name, is_equal_to_string("spindle-strip:dumprules")), when(fallback, is_equal_to(666)));
 	expect(twine_preproc_register, when(plugin, is_equal_to_string("spindle")), when(f, is_equal_to(spindle_strip)), when(data, is_equal_to(555)));
@@ -63,6 +65,8 @@ Ensure(spindle_strip_module, initalisation_fails_if_rulebase_configuration_fails
 
 Ensure(spindle_strip_module, dumps_the_rulebase_during_initalisation_if_the_spindledumprules_config_is_set) {
 	expect(spindle_rulebase_create, will_return(555));
+	expect(spindle_rulebase_add_config, when(rules, is_equal_to(555)));
+	expect(spindle_rulebase_finalise, when(rules, is_equal_to(555)));
 	expect(twine_config_get_bool, will_return(1), when(name, is_equal_to_string("spindle:dumprules")), when(fallback, is_equal_to(0)));
 	expect(twine_config_get_bool, will_return(1), when(name, is_equal_to_string("spindle-strip:dumprules")), when(fallback, is_equal_to(1)));
 	expect(spindle_rulebase_dump, when(rules, is_equal_to(555)));
@@ -73,6 +77,8 @@ Ensure(spindle_strip_module, dumps_the_rulebase_during_initalisation_if_the_spin
 
 Ensure(spindle_strip_module, dumps_the_rulebase_during_initalisation_if_the_spindlestripdumprules_config_is_set) {
 	expect(spindle_rulebase_create, will_return(555));
+	expect(spindle_rulebase_add_config, when(rules, is_equal_to(555)));
+	expect(spindle_rulebase_finalise, when(rules, is_equal_to(555)));
 	expect(twine_config_get_bool, will_return(0), when(name, is_equal_to_string("spindle:dumprules")), when(fallback, is_equal_to(0)));
 	expect(twine_config_get_bool, will_return(1), when(name, is_equal_to_string("spindle-strip:dumprules")), when(fallback, is_equal_to(0)));
 	expect(spindle_rulebase_dump, when(rules, is_equal_to(555)));
@@ -83,6 +89,8 @@ Ensure(spindle_strip_module, dumps_the_rulebase_during_initalisation_if_the_spin
 
 Ensure(spindle_strip_module, spindlestripdumprules_overrides_spindledumprules) {
 	expect(spindle_rulebase_create, will_return(555));
+	expect(spindle_rulebase_add_config, when(rules, is_equal_to(555)));
+	expect(spindle_rulebase_finalise, when(rules, is_equal_to(555)));
 	expect(twine_config_get_bool, will_return(1), when(name, is_equal_to_string("spindle:dumprules")), when(fallback, is_equal_to(0)));
 	expect(twine_config_get_bool, will_return(0), when(name, is_equal_to_string("spindle-strip:dumprules")), when(fallback, is_equal_to(1)));
 	never_expect(spindle_rulebase_dump);
@@ -94,6 +102,8 @@ Ensure(spindle_strip_module, spindlestripdumprules_overrides_spindledumprules) {
 Ensure(spindle_strip_module, disposes_gracefully) {
 	expect(spindle_rulebase_destroy, when(rules, is_equal_to(555)));
 	always_expect(spindle_rulebase_create, will_return(555));
+	always_expect(spindle_rulebase_add_config, when(rules, is_equal_to(555)));
+	always_expect(spindle_rulebase_finalise, when(rules, is_equal_to(555)));
 	always_expect(twine_config_get_bool);
 	always_expect(twine_preproc_register);
 	always_expect(twine_graph_register);

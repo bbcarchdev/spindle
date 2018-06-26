@@ -231,7 +231,7 @@ Ensure(spindle_common_rulebase, coref_dump_only_has_side_effects) {
 
 #pragma mark -
 
-TestSuite *create_rulebase_coref_test_suite(void) {
+TestSuite *rulebase_coref_test_suite(void) {
 	TestSuite *suite = create_test_suite();
 	add_test_with_context(suite, spindle_common_rulebase, coref_add_returns_one_and_adds_the_coref_to_the_coref_list);
 	add_test_with_context(suite, spindle_common_rulebase, coref_add_returns_zero_and_replaces_the_callback_of_an_existing_coref);
@@ -245,14 +245,14 @@ TestSuite *create_rulebase_coref_test_suite(void) {
 	return suite;
 }
 
-int rulebase_coref_test(char *test) {
+int run(char *test) {
 	if(test) {
-		return run_single_test(create_rulebase_coref_test_suite(), test, create_text_reporter());
+		return run_single_test(rulebase_coref_test_suite(), test, create_text_reporter());
 	} else {
-		return run_test_suite(create_rulebase_coref_test_suite(), create_text_reporter());
+		return run_test_suite(rulebase_coref_test_suite(), create_text_reporter());
 	}
 }
 
 int main(int argc, char **argv) {
-	return rulebase_coref_test(argc > 1 ? argv[1] : NULL);
+	return run(argc > 1 ? argv[1] : NULL);
 }

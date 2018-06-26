@@ -21,6 +21,10 @@
 #define librdf_uri void
 #define librdf_world void
 
+int librdf_free_model(librdf_model *model) {
+	return (int) mock(model);
+}
+
 int librdf_free_node(librdf_node *node) {
 	return (int) mock(node);
 }

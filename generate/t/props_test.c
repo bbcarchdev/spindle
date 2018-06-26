@@ -3022,7 +3022,7 @@ Ensure(spindle_generate_props, prop_update_entry_returns_error_when_prop_apply_f
 
 #pragma mark -
 
-TestSuite *create_props_test_suite(void) {
+TestSuite *props_test_suite(void) {
 	TestSuite *suite = create_test_suite();
 	add_test_with_context(suite, spindle_generate_props, literal_copy_with_NULL_source_does_not_copy_and_returns_no_error);
 	add_test_with_context(suite, spindle_generate_props, literal_copy_with_no_source_literals_does_not_copy_and_returns_no_error);
@@ -3128,14 +3128,14 @@ TestSuite *create_props_test_suite(void) {
 	return suite;
 }
 
-int props_test(char *test) {
+int run(char *test) {
 	if(test) {
-		return run_single_test(create_props_test_suite(), test, create_text_reporter());
+		return run_single_test(props_test_suite(), test, create_text_reporter());
 	} else {
-		return run_test_suite(create_props_test_suite(), create_text_reporter());
+		return run_test_suite(props_test_suite(), create_text_reporter());
 	}
 }
 
 int main(int argc, char **argv) {
-	return props_test(argc > 1 ? argv[1] : NULL);
+	return run(argc > 1 ? argv[1] : NULL);
 }

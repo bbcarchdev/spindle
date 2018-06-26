@@ -139,7 +139,7 @@ Ensure(spindle_common_strset, add_flags_expands_the_string_list_if_necessary_and
 
 #pragma mark -
 
-TestSuite *create_strset_test_suite(void) {
+TestSuite *strset_test_suite(void) {
 	TestSuite *suite = create_test_suite();
 	add_test_with_context(suite, spindle_common_strset, create_succeeds);
 	add_test_with_context(suite, spindle_common_strset, destroy_returns_no_error_and_only_has_side_effects);
@@ -150,14 +150,14 @@ TestSuite *create_strset_test_suite(void) {
 	return suite;
 }
 
-int strset_test(char *test) {
+int run(char *test) {
 	if(test) {
-		return run_single_test(create_strset_test_suite(), test, create_text_reporter());
+		return run_single_test(strset_test_suite(), test, create_text_reporter());
 	} else {
-		return run_test_suite(create_strset_test_suite(), create_text_reporter());
+		return run_test_suite(strset_test_suite(), create_text_reporter());
 	}
 }
 
 int main(int argc, char **argv) {
-	return strset_test(argc > 1 ? argv[1] : NULL);
+	return run(argc > 1 ? argv[1] : NULL);
 }

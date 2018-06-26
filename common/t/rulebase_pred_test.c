@@ -1394,7 +1394,7 @@ Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predi
 	expect(librdf_free_statement, when(statement, is_equal_to(query)));
 
 	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
-	assert_that(r, is_equal_to(-1)); // BUG: spindle_rulebase_pred_add_node returns -1 when result of setting predicate property returns > 0
+	assert_that(r, is_equal_to(1));
 	assert_that(rules.predcount, is_equal_to(1));
 	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
 	assert_that(rules.predicates[0].score, is_equal_to(score));
@@ -1433,7 +1433,7 @@ Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predi
 	expect(librdf_free_statement, when(statement, is_equal_to(query)));
 
 	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
-	assert_that(r, is_equal_to(-1)); // BUG: spindle_rulebase_pred_add_node returns -1 when result of setting predicate property returns > 0
+	assert_that(r, is_equal_to(1));
 	assert_that(rules.predcount, is_equal_to(1));
 	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
 	assert_that(rules.predicates[0].prominence, is_equal_to(prominence));
@@ -1478,7 +1478,7 @@ Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predi
 	expect(librdf_free_statement, when(statement, is_equal_to(query)));
 
 	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
-	assert_that(r, is_equal_to(-1)); // BUG: spindle_rulebase_pred_add_node returns -1 when result of setting predicate property returns > 0 [fixed on develop branch]
+	assert_that(r, is_equal_to(1));
 	assert_that(rules.predcount, is_equal_to(1));
 	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
 	assert_that(rules.predicates[0].expected, is_equal_to(expected_term_type));
@@ -1568,7 +1568,7 @@ Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predi
 	expect(librdf_free_statement, when(statement, is_equal_to(query)));
 
 	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
-	assert_that(r, is_equal_to(-1)); // BUG as above
+	assert_that(r, is_equal_to(1));
 	assert_that(rules.predcount, is_equal_to(1));
 	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
 	assert_that(rules.predicates[0].proxyonly, is_equal_to(expected_proxy_only_flag));
@@ -1614,7 +1614,7 @@ Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predi
 	expect(librdf_free_statement, when(statement, is_equal_to(query)));
 
 	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
-	assert_that(r, is_equal_to(-1)); // BUG as above
+	assert_that(r, is_equal_to(1));
 	assert_that(rules.predcount, is_equal_to(1));
 	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
 	assert_that(rules.predicates[0].indexed, is_equal_to(expected_indexed_flag));
@@ -1660,7 +1660,7 @@ Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predi
 	expect(librdf_free_statement, when(statement, is_equal_to(query)));
 
 	int r = spindle_rulebase_pred_add_node(&rules, model, uri, node);
-	assert_that(r, is_equal_to(-1)); // BUG as above
+	assert_that(r, is_equal_to(1));
 	assert_that(rules.predcount, is_equal_to(1));
 	assert_that(rules.predicates[0].target, is_equal_to_string(uri));
 	assert_that(rules.predicates[0].inverse, is_equal_to(expected_inverse_flag));
@@ -1668,7 +1668,7 @@ Ensure(spindle_common_rulebase, pred_add_node_returns_success_and_adds_the_predi
 
 #pragma mark -
 
-TestSuite *create_rulebase_pred_test_suite(void) {
+TestSuite *rulebase_pred_test_suite(void) {
 	TestSuite *suite = create_test_suite();
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_returns_success_and_adds_the_predicate_to_the_match_list);
 	add_test_with_context(suite, spindle_common_rulebase, pred_add_match_returns_success_and_adds_the_predicate_to_the_match_list_when_class_restriction_is_not_null);
@@ -1735,14 +1735,14 @@ TestSuite *create_rulebase_pred_test_suite(void) {
 	return suite;
 }
 
-int rulebase_pred_test(char *test) {
+int run(char *test) {
 	if(test) {
-		return run_single_test(create_rulebase_pred_test_suite(), test, create_text_reporter());
+		return run_single_test(rulebase_pred_test_suite(), test, create_text_reporter());
 	} else {
-		return run_test_suite(create_rulebase_pred_test_suite(), create_text_reporter());
+		return run_test_suite(rulebase_pred_test_suite(), create_text_reporter());
 	}
 }
 
 int main(int argc, char **argv) {
-	return rulebase_pred_test(argc > 1 ? argv[1] : NULL);
+	return run(argc > 1 ? argv[1] : NULL);
 }

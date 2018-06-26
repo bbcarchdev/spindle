@@ -163,7 +163,7 @@ Ensure(spindle_common_rulebase, cachepred_dump_only_has_side_effects) {
 
 #pragma mark -
 
-TestSuite *create_rulebase_cachepred_test_suite(void) {
+TestSuite *rulebase_cachepred_test_suite(void) {
 	TestSuite *suite = create_test_suite();
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_adds_the_uri_to_the_rulebase_cachepred_list);
 	add_test_with_context(suite, spindle_common_rulebase, cachepred_add_adds_a_second_uri_to_the_rulebase_cachepred_list);
@@ -175,14 +175,14 @@ TestSuite *create_rulebase_cachepred_test_suite(void) {
 	return suite;
 }
 
-int rulebase_cachepred_test(char *test) {
+int run(char *test) {
 	if(test) {
-		return run_single_test(create_rulebase_cachepred_test_suite(), test, create_text_reporter());
+		return run_single_test(rulebase_cachepred_test_suite(), test, create_text_reporter());
 	} else {
-		return run_test_suite(create_rulebase_cachepred_test_suite(), create_text_reporter());
+		return run_test_suite(rulebase_cachepred_test_suite(), create_text_reporter());
 	}
 }
 
 int main(int argc, char **argv) {
-	return rulebase_cachepred_test(argc > 1 ? argv[1] : NULL);
+	return run(argc > 1 ? argv[1] : NULL);
 }

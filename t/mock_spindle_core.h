@@ -132,6 +132,7 @@ struct spindle_classmap_struct {
 	size_t matchsize;
 	int score;
 	int prominence;
+	struct spindle_strset_struct *roots;
 };
 
 struct spindle_classmatch_struct {

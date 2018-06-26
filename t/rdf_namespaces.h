@@ -21,4 +21,5 @@
 #define NS_RDF "NS_RDF "
 #define NS_RDFS "NS_RDFS "
 #define NS_SPINDLE "NS_SPINDLE "
+#define NS_VOID "NS_VOID "
 #define NS_XSD "NS_XSD "

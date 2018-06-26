@@ -14,8 +14,8 @@
  *  limitations under the License.
  */
 
-SPINDLERULES *spindle_rulebase_create(const char *path, const struct coref_match_struct *match_types) {
-	return (SPINDLERULES *) mock(path, match_types);
+SPINDLERULES *spindle_rulebase_create(void) {
+	return (SPINDLERULES *) mock();
 }
 
 int spindle_rulebase_finalise(SPINDLERULES *rules) {

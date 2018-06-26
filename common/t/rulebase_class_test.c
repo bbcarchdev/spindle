@@ -29,6 +29,7 @@
 #include "../../t/mock_spindle_rulebase_cachepred.h"
 #include "../../t/mock_spindle_rulebase_coref.h"
 #include "../../t/mock_spindle_rulebase_pred.h"
+#include "../../t/mock_spindle_strset_methods.h"
 #include "../../t/rdf_namespaces.h"
 
 #define P_SPINDLE_H_
@@ -316,6 +317,7 @@ Ensure(spindle_common_rulebase, class_compare_returns_b_sorts_earlier_if_b_has_a
 
 Ensure(spindle_common_rulebase, class_cleanup_frees_the_class_uri_and_class_alias_uris) {
 	SPINDLERULES rules = { 0 };
+	struct spindle_strset_struct *root_set = (struct spindle_strset_struct *) 0xA01;
 	rules.classcount = 5;
 	size_t classes_size = rules.classcount * sizeof (struct spindle_classmap_struct);
 	rules.classes = malloc(classes_size);
@@ -330,6 +332,8 @@ Ensure(spindle_common_rulebase, class_cleanup_frees_the_class_uri_and_class_alia
 		for(size_t d = 0; d < rules.classes[c].matchcount; d++) {
 			rules.classes[c].match[d].uri = strdup("class alias uri");
 		}
+		rules.classes[c].roots = root_set;
+		expect(spindle_strset_destroy, when(set, is_equal_to(root_set)));
 	}
 
 	int r = spindle_rulebase_class_cleanup(&rules);
@@ -434,7 +438,7 @@ Ensure(spindle_common_rulebase, class_add_matchnode_associates_a_match_url_with_
 }
 
 #pragma mark -
-#pragma mark spindle_rulebase_class_add_matchnode
+#pragma mark spindle_rulebase_class_add_node
 
 Ensure(spindle_common_rulebase, class_add_node_adds_the_class_url_to_the_class_list_with_the_olo_index_score_whos_subject_is_the_given_node) {
 	long score = 999;
@@ -460,12 +464,13 @@ Ensure(spindle_common_rulebase, class_add_node_adds_the_class_url_to_the_class_l
 	expect(librdf_node_get_uri, will_return(predicate_uri), when(node, is_equal_to(predicate)));
 	expect(librdf_uri_as_string, will_return(NS_OLO "index"), when(uri, is_equal_to(predicate_uri)));
 	expect(twine_rdf_st_obj_intval, will_return(score), will_set_contents_of_parameter(value, &score, sizeof score), when(statement, is_equal_to(result)));
+	expect(librdf_stream_next, when(stream, is_equal_to(stream)));
+	expect(librdf_stream_end, will_return(1), when(stream, is_equal_to(stream)));
 	expect(librdf_free_stream, when(stream, is_equal_to(stream)));
 	expect(librdf_free_statement, when(statement, is_equal_to(query)));
 
 	int r = spindle_rulebase_class_add_node(&rules, model, class_uri, node);
-//	assert_that(r, is_equal_to(1));
-	assert_that(r, is_equal_to(-1)); // BUG [fixed on develop]
+	assert_that(r, is_equal_to(1));
 
 	assert_that(rules.classcount, is_equal_to(1));
 	assert_that(rules.classes, is_non_null);
@@ -480,7 +485,7 @@ Ensure(spindle_common_rulebase, class_add_node_adds_the_class_url_to_the_class_l
 
 #pragma mark -
 
-TestSuite *create_rulebase_class_test_suite(void) {
+TestSuite *rulebase_class_test_suite(void) {
 	TestSuite *suite = create_test_suite();
 	add_test_with_context(suite, spindle_common_rulebase, class_dump_only_has_side_effects);
 	add_test_with_context(suite, spindle_common_rulebase, class_set_score_returns_false_if_the_statement_object_is_not_a_decimal_literal);
@@ -506,14 +511,14 @@ TestSuite *create_rulebase_class_test_suite(void) {
 	return suite;
 }
 
-int rulebase_class_test(char *test) {
+int run(char *test) {
 	if(test) {
-		return run_single_test(create_rulebase_class_test_suite(), test, create_text_reporter());
+		return run_single_test(rulebase_class_test_suite(), test, create_text_reporter());
 	} else {
-		return run_test_suite(create_rulebase_class_test_suite(), create_text_reporter());
+		return run_test_suite(rulebase_class_test_suite(), create_text_reporter());
 	}
 }
 
 int main(int argc, char **argv) {
-	return rulebase_class_test(argc > 1 ? argv[1] : NULL);
+	return run(argc > 1 ? argv[1] : NULL);
 }

@@ -176,7 +176,8 @@ Ensure(spindle_generate_classes, should_set_up_and_destroy_the_environment_neede
 		.world = world,
 		.rdftype = (librdf_node *) 0xA05
 	};
-	SPINDLEENTRY entry = { .spindle = &spindle };
+	SPINDLERULES rules = { 0 };
+	SPINDLEENTRY entry = { .spindle = &spindle, .rules = &rules };
 	struct spindle_strset_struct classes = { 0 };
 
 	expect(spindle_strset_create, will_return(&classes));
@@ -484,7 +485,7 @@ so could be private.
 
 #pragma mark -
 
-int classes_test(void) {
+TestSuite *classes_test_suite(void) {
 	TestSuite *suite = create_test_suite();
 	add_test_with_context(suite, spindle_generate_classes, can_determine_the_class_to_use_for_a_proxy_entry_given_the_current_rules);
 	add_test_with_context(suite, spindle_generate_classes, should_set_up_and_destroy_the_environment_needed_to_update_the_classes_of_a_proxy_entry);
@@ -492,9 +493,17 @@ int classes_test(void) {
 	add_test_with_context(suite, spindle_generate_classes, does_not_add_the_statement_to_the_root_model_when_not_in_multigraph_mode);
 	add_test_with_context(suite, spindle_generate_classes, fails_when_updating_the_classes_of_a_proxy_entry_if_cannot_create_string_set);
 	add_test_with_context(suite, spindle_generate_classes, fails_when_updating_the_classes_of_a_proxy_entry_if_cannot_add_statement_to_proxy_data);
-	return run_test_suite(suite, create_text_reporter());
+	return suite;
+}
+
+int run(char *test) {
+	if(test) {
+		return run_single_test(classes_test_suite(), test, create_text_reporter());
+	} else {
+		return run_test_suite(classes_test_suite(), create_text_reporter());
+	}
 }
 
 int main(int argc, char **argv) {
-	return classes_test();
+	return run(argc > 1 ? argv[1] : NULL);
 }

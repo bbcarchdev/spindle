@@ -17,6 +17,13 @@
 typedef struct sql_struct SQL;
 typedef struct sql_statement_struct SQL_STATEMENT;
 
+/* Return values for SQL_PERFORM_TXN */
+#define SQL_TXN_COMMIT 1
+#define SQL_TXN_ROLLBACK 0
+#define SQL_TXN_RETRY -1
+#define SQL_TXN_ABORT -2
+#define SQL_TXN_FAIL -3
+
 typedef enum {
 	SQL_TXN_DEFAULT,
 	SQL_TXN_CONSISTENT
