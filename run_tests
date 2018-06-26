@@ -1,0 +1,5 @@
+#!/bin/bash
+
+pushd common/t && ./run && popd
+pushd generate/t && ./run && popd
+pushd strip/t && ./run && popd
